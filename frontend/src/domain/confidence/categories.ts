@@ -1,14 +1,10 @@
-import {
-  CONFIDENCE_BANDS,
-  MAX_UNCALIBRATED_CONFIDENCE,
-} from '../../config/engine';
-
 /**
- * Confidence categories.
- *  - BELOW_THRESHOLD:     < 55%  (never recommended)
+ * Confidence categories (TYPE ONLY in Milestone 0).
+ *  - BELOW_THRESHOLD:     < 55%
  *  - EXPERIMENTAL:        55%–59%
  *  - QUALIFIED:           60%–69%
  *  - HIGH_RECOMMENDATION: 70%–75%
+ * The numeric bands are locked constants in `src/config/engine.ts`.
  */
 export enum ConfidenceCategory {
   BELOW_THRESHOLD = 'BELOW_THRESHOLD',
@@ -18,22 +14,13 @@ export enum ConfidenceCategory {
 }
 
 /**
- * Categorize a raw confidence (fraction of 1). The value is first clamped to
- * the maximum uncalibrated confidence (0.75) — the engine never claims more.
+ * MILESTONE 0 PLACEHOLDER — NOT IMPLEMENTED and NOT wired to any screen.
+ *
+ * Confidence calibration/categorisation is future-milestone work. Kept as an
+ * explicit non-runtime placeholder; it throws if ever executed.
  */
-export function categorizeConfidence(confidence: number): ConfidenceCategory {
-  const clamped = Math.min(
-    Math.max(confidence, 0),
-    MAX_UNCALIBRATED_CONFIDENCE,
+export function categorizeConfidence(_confidence: number): ConfidenceCategory {
+  throw new Error(
+    'categorizeConfidence is not implemented in Milestone 0 (bootstrap).',
   );
-  if (clamped < CONFIDENCE_BANDS.experimental.min) {
-    return ConfidenceCategory.BELOW_THRESHOLD;
-  }
-  if (clamped < CONFIDENCE_BANDS.experimental.maxExclusive) {
-    return ConfidenceCategory.EXPERIMENTAL;
-  }
-  if (clamped < CONFIDENCE_BANDS.qualified.maxExclusive) {
-    return ConfidenceCategory.QUALIFIED;
-  }
-  return ConfidenceCategory.HIGH_RECOMMENDATION;
 }

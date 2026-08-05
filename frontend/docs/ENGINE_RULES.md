@@ -1,5 +1,11 @@
 # Engine Rules (LOCKED)
 
+> **Milestone 0 note:** this document is the LOCKED *specification* of engine
+> behaviour. The functions referenced below (`categorizeConfidence`,
+> `evaluateStep`, `evaluateThreeWinSequence`) are **explicit non-runtime
+> placeholders** in Milestone 0 — they throw if executed and are **not** yet
+> implemented or accepted. Only the enums and locked constants are live.
+
 These rules are frozen. Any change is a **versioned engine decision** and must be
 documented and reflected in `src/config/versions.ts` (bump `ENGINE-###`). Never
 change a threshold silently.
@@ -19,8 +25,9 @@ Defined in `src/config/engine.ts`:
 - UI entry order: **P / T / B** (`UI_OUTCOME_ORDER`).
 - Pairs: Player Pair / Banker Pair each `YES | NO | UNKNOWN`
   (`src/domain/models/pair.ts`).
-- Warm-up: at least **8 non-Tie** results before predictions
-  (`isWarmedUp` in `src/domain/roadmap/beadPlate.ts`).
+- Warm-up: at least **8 non-Tie** results before predictions — locked constant
+  `MIN_WARMUP_NON_TIE = 8` (`src/config/engine.ts`). The warm-up *computation*
+  is future-milestone work.
 
 ## Prediction decisions
 `BET_PLAYER | BET_BANKER | SKIP` (`src/domain/prediction/decision.ts`).

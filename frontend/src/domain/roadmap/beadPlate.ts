@@ -1,12 +1,17 @@
-import { MIN_WARMUP_NON_TIE } from '../../config/engine';
 import { Outcome } from '../models/outcome';
 import { PairStatus } from '../models/pair';
 import type { RoundRecord } from '../models/round';
 
-/** The Bead Plate has a fixed height of 6 rows; it fills column by column. */
+/**
+ * Locked layout constant: the Bead Plate has a fixed height of 6 rows.
+ * (Constant only — no reconstruction is implemented in Milestone 0.)
+ */
 export const BEAD_PLATE_ROWS = 6;
 
-/** A single reconstructed cell of the Bead Plate roadmap. */
+/**
+ * Domain type for a reconstructed Bead Plate cell (shape only).
+ * The actual reconstruction is deferred to a later milestone.
+ */
 export interface BeadCell {
   readonly row: number;
   readonly col: number;
@@ -16,33 +21,15 @@ export interface BeadCell {
   readonly roundId: string;
 }
 
-/** Rounds sorted by their intra-shoe index (defensive copy — pure). */
-const orderedByIndex = (rounds: readonly RoundRecord[]): RoundRecord[] =>
-  [...rounds].sort((a, b) => a.index - b.index);
-
 /**
- * Reconstruct the Bead Plate purely from raw rounds (Project Principle #2).
- * Cells are laid out column-major over a fixed 6-row grid.
+ * MILESTONE 0 PLACEHOLDER — NOT IMPLEMENTED and NOT wired to any screen.
+ *
+ * Roadmap reconstruction from raw rounds is future-milestone work. This is kept
+ * as an explicit non-runtime placeholder purely to document the seam; it throws
+ * if ever executed so nothing can silently rely on unfinished logic.
  */
-export function reconstructBeadPlate(
-  rounds: readonly RoundRecord[],
-): BeadCell[] {
-  return orderedByIndex(rounds).map((round, position) => ({
-    row: position % BEAD_PLATE_ROWS,
-    col: Math.floor(position / BEAD_PLATE_ROWS),
-    outcome: round.outcome,
-    playerPair: round.playerPair,
-    bankerPair: round.bankerPair,
-    roundId: round.id,
-  }));
-}
-
-/** Count of non-Tie results — the warm-up metric. */
-export function countNonTie(rounds: readonly RoundRecord[]): number {
-  return rounds.filter((r) => r.outcome !== Outcome.TIE).length;
-}
-
-/** True once the minimum warm-up of non-Tie results is reached. */
-export function isWarmedUp(rounds: readonly RoundRecord[]): boolean {
-  return countNonTie(rounds) >= MIN_WARMUP_NON_TIE;
+export function reconstructBeadPlate(_rounds: readonly RoundRecord[]): BeadCell[] {
+  throw new Error(
+    'reconstructBeadPlate is not implemented in Milestone 0 (bootstrap).',
+  );
 }

@@ -14,6 +14,3 @@ export const UI_OUTCOME_ORDER: readonly Outcome[] = Object.freeze([
   Outcome.TIE,
   Outcome.BANKER,
 ]);
-
-/** A Tie neither advances nor breaks a recommendation sequence. */
-export const isTie = (outcome: Outcome): boolean => outcome === Outcome.TIE;

@@ -1,9 +1,22 @@
 {
   "project": "B-APP Baccarat Engine",
-  "repositoryRoot": "/app/frontend",
+  "gitRepositoryRoot": "/app",
+  "mobileProjectRoot": "/app/frontend",
+  "backendInRepository": false,
+  "trackedBackendFiles": [],
   "milestone": 0,
   "milestoneName": "Project Bootstrap",
   "status": "COMPLETE",
+  "milestone1Started": false,
+  "acceptedDomainImplementation": {
+    "roadmap": false,
+    "prediction": false,
+    "confidence": false,
+    "analyzers": false,
+    "voting": false,
+    "session": false,
+    "note": "Only domain types, locked constants, version registry, interfaces, a disabled/registry, and explicit non-runtime placeholders exist. Placeholder functions throw if executed and are imported by nothing except their scaffolding tests."
+  },
   "packageManager": "npm",
   "platform": {
     "framework": "expo-react-native-managed",
@@ -30,7 +43,7 @@
     "confidence": "CONF-001",
     "risk": "RISK-001"
   },
-  "engineRules": {
+  "lockedConstants": {
     "minWarmupNonTie": 8,
     "maxUncalibratedConfidence": 0.75,
     "threeWinTarget": 3,
@@ -41,7 +54,7 @@
     },
     "tieIsPush": true
   },
-  "analyzers": {
+  "analyzerRegistry": {
     "streak": "ACTIVE",
     "chop": "ACTIVE",
     "run-length": "ACTIVE",
@@ -52,6 +65,12 @@
     "derived-road": "SHADOW_ONLY",
     "historical-matcher": "DISABLED"
   },
+  "placeholders": [
+    "src/domain/roadmap/beadPlate.ts:reconstructBeadPlate",
+    "src/domain/confidence/categories.ts:categorizeConfidence",
+    "src/domain/prediction/sequence.ts:evaluateStep",
+    "src/domain/prediction/sequence.ts:evaluateThreeWinSequence"
+  ],
   "routes": [
     "Active Shoe",
     "History",
@@ -70,11 +89,18 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 3, "tests": 20, "status": "pass" },
-    "test:roadmap": { "suites": 1, "tests": 4, "status": "pass" },
+    "test": { "suites": 3, "tests": 19, "status": "pass" },
+    "test:roadmap": { "suites": 1, "tests": 3, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
-    "appBoots": true
+    "appBoots": true,
+    "testsValidateOnly": [
+      "locked constants",
+      "enum/type behaviour",
+      "disabled/analyzer registry (data)",
+      "diagnostics snapshot from constants",
+      "explicit unimplemented placeholders throw"
+    ]
   },
   "lockedDocs": [
     "AGENTS.md",
@@ -88,18 +114,6 @@
     "docs/HANDOFF.md",
     "docs/KNOWN_ISSUES.md"
   ],
-  "deferredFeatures": [
-    "Historical Matcher activation",
-    "Machine learning",
-    "Automatic self-learning",
-    "OCR",
-    "Provider scraping",
-    "Cloud sync",
-    "Login",
-    "Server backend",
-    "Martingale execution",
-    "Automated replay",
-    "Multi-device merge"
-  ],
+  "specificationSource": "AGENTS.md + docs/MVP_SPEC.md (single source; memory/PRD.md is a non-authoritative pointer)",
   "nextMilestone": "Milestone 1 — NOT STARTED (do not begin unless explicitly instructed)"
 }

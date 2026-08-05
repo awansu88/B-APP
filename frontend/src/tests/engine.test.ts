@@ -1,42 +1,74 @@
 import {
-  categorizeConfidence,
-  ConfidenceCategory,
-} from '@/src/domain/confidence/categories';
+  MAX_UNCALIBRATED_CONFIDENCE,
+  MIN_WARMUP_NON_TIE,
+  THREE_WIN_TARGET,
+} from '@/src/config/engine';
 import {
   ANALYZER_REGISTRY,
   AnalyzerMode,
 } from '@/src/domain/analyzers/registry';
 import {
-  evaluateStep,
-  evaluateThreeWinSequence,
-  StepEvaluation,
-} from '@/src/domain/prediction/sequence';
-import { PredictionDecision } from '@/src/domain/prediction/decision';
+  ConfidenceCategory,
+  categorizeConfidence,
+} from '@/src/domain/confidence/categories';
 import { Outcome } from '@/src/domain/models/outcome';
 import { ENGINE_VERSION } from '@/src/domain/prediction';
+import { PredictionDecision } from '@/src/domain/prediction/decision';
+import {
+  StepEvaluation,
+  evaluateStep,
+  evaluateThreeWinSequence,
+} from '@/src/domain/prediction/sequence';
 
-describe('engine — confidence categories (CONF-001)', () => {
-  it('classifies each locked confidence band', () => {
-    expect(categorizeConfidence(0.5)).toBe(ConfidenceCategory.BELOW_THRESHOLD);
-    expect(categorizeConfidence(0.55)).toBe(ConfidenceCategory.EXPERIMENTAL);
-    expect(categorizeConfidence(0.59)).toBe(ConfidenceCategory.EXPERIMENTAL);
-    expect(categorizeConfidence(0.6)).toBe(ConfidenceCategory.QUALIFIED);
-    expect(categorizeConfidence(0.69)).toBe(ConfidenceCategory.QUALIFIED);
-    expect(categorizeConfidence(0.7)).toBe(ConfidenceCategory.HIGH_RECOMMENDATION);
-    expect(categorizeConfidence(0.75)).toBe(ConfidenceCategory.HIGH_RECOMMENDATION);
+/**
+ * Milestone 0 checks ONLY: locked constants, enum/type behaviour, and the
+ * disabled/registry modes. NO engine logic (confidence, sequence) is
+ * implemented yet — the corresponding functions must be explicit placeholders.
+ */
+describe('engine — locked constants & version', () => {
+  it('carries the locked engine version', () => {
+    expect(ENGINE_VERSION).toBe('ENGINE-001');
   });
 
-  it('clamps anything above 0.75 to HIGH_RECOMMENDATION (max uncalibrated)', () => {
-    expect(categorizeConfidence(0.9)).toBe(ConfidenceCategory.HIGH_RECOMMENDATION);
-    expect(categorizeConfidence(1.5)).toBe(ConfidenceCategory.HIGH_RECOMMENDATION);
+  it('locks the core thresholds', () => {
+    expect(MIN_WARMUP_NON_TIE).toBe(8);
+    expect(MAX_UNCALIBRATED_CONFIDENCE).toBe(0.75);
+    expect(THREE_WIN_TARGET).toBe(3);
   });
 });
 
-describe('engine — locked analyzer modes', () => {
-  const mode = (id: string) =>
-    ANALYZER_REGISTRY.find((a) => a.id === id)?.mode;
+describe('engine — enum/type behaviour', () => {
+  it('defines the three prediction decisions', () => {
+    expect(Object.values(PredictionDecision)).toEqual([
+      'BET_PLAYER',
+      'BET_BANKER',
+      'SKIP',
+    ]);
+  });
 
-  it('keeps the six MVP analyzers active', () => {
+  it('defines the confidence categories', () => {
+    expect(Object.values(ConfidenceCategory)).toEqual([
+      'BELOW_THRESHOLD',
+      'EXPERIMENTAL',
+      'QUALIFIED',
+      'HIGH_RECOMMENDATION',
+    ]);
+  });
+
+  it('defines the step evaluations', () => {
+    expect(Object.values(StepEvaluation)).toEqual([
+      'WIN',
+      'LOSS',
+      'PUSH',
+      'SKIP',
+    ]);
+  });
+});
+
+describe('engine — analyzer registry modes (data only, no analyzer logic)', () => {
+  const mode = (id: string) => ANALYZER_REGISTRY.find((a) => a.id === id)?.mode;
+
+  it('registers the six MVP analyzers as ACTIVE', () => {
     for (const id of [
       'streak',
       'chop',
@@ -49,72 +81,29 @@ describe('engine — locked analyzer modes', () => {
     }
   });
 
-  it('runs Volatility & Derived Road in shadow and disables Historical Matcher', () => {
+  it('registers Volatility & Derived Road as SHADOW_ONLY and Historical Matcher as DISABLED', () => {
     expect(mode('volatility')).toBe(AnalyzerMode.SHADOW_ONLY);
     expect(mode('derived-road')).toBe(AnalyzerMode.SHADOW_ONLY);
     expect(mode('historical-matcher')).toBe(AnalyzerMode.DISABLED);
   });
 });
 
-describe('engine — step evaluation (Tie is PUSH)', () => {
-  it('scores a Player recommendation', () => {
-    expect(evaluateStep(PredictionDecision.BET_PLAYER, Outcome.PLAYER)).toBe(
-      StepEvaluation.WIN,
-    );
-    expect(evaluateStep(PredictionDecision.BET_PLAYER, Outcome.BANKER)).toBe(
-      StepEvaluation.LOSS,
-    );
-    expect(evaluateStep(PredictionDecision.BET_PLAYER, Outcome.TIE)).toBe(
-      StepEvaluation.PUSH,
+describe('engine — logic is NOT implemented in Milestone 0 (placeholders throw)', () => {
+  it('categorizeConfidence is an explicit unimplemented placeholder', () => {
+    expect(() => categorizeConfidence(0.7)).toThrow(
+      'not implemented in Milestone 0',
     );
   });
 
-  it('treats SKIP decisions as SKIP regardless of outcome', () => {
-    expect(evaluateStep(PredictionDecision.SKIP, Outcome.PLAYER)).toBe(
-      StepEvaluation.SKIP,
+  it('evaluateStep is an explicit unimplemented placeholder', () => {
+    expect(() =>
+      evaluateStep(PredictionDecision.BET_PLAYER, Outcome.PLAYER),
+    ).toThrow('not implemented in Milestone 0');
+  });
+
+  it('evaluateThreeWinSequence is an explicit unimplemented placeholder', () => {
+    expect(() => evaluateThreeWinSequence([])).toThrow(
+      'not implemented in Milestone 0',
     );
-    expect(evaluateStep(PredictionDecision.SKIP, Outcome.TIE)).toBe(
-      StepEvaluation.SKIP,
-    );
-  });
-});
-
-describe('engine — three-win sequence rules', () => {
-  it('achieves on three consecutive wins', () => {
-    const state = evaluateThreeWinSequence([
-      StepEvaluation.WIN,
-      StepEvaluation.WIN,
-      StepEvaluation.WIN,
-    ]);
-    expect(state.achieved).toBe(true);
-    expect(state.consecutiveWins).toBe(3);
-  });
-
-  it('ignores SKIP and PUSH (Tie) — they neither advance nor break', () => {
-    const state = evaluateThreeWinSequence([
-      StepEvaluation.WIN,
-      StepEvaluation.SKIP,
-      StepEvaluation.WIN,
-      StepEvaluation.PUSH,
-      StepEvaluation.WIN,
-    ]);
-    expect(state.achieved).toBe(true);
-    expect(state.failed).toBe(false);
-  });
-
-  it('fails (resets) the current sequence on a LOSS', () => {
-    const state = evaluateThreeWinSequence([
-      StepEvaluation.WIN,
-      StepEvaluation.WIN,
-      StepEvaluation.LOSS,
-      StepEvaluation.WIN,
-    ]);
-    expect(state.achieved).toBe(false);
-    expect(state.failed).toBe(true);
-    expect(state.consecutiveWins).toBe(1);
-  });
-
-  it('carries the locked engine version', () => {
-    expect(ENGINE_VERSION).toBe('ENGINE-001');
   });
 });
