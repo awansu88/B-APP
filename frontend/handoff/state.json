@@ -1,0 +1,105 @@
+{
+  "project": "B-APP Baccarat Engine",
+  "repositoryRoot": "/app/frontend",
+  "milestone": 0,
+  "milestoneName": "Project Bootstrap",
+  "status": "COMPLETE",
+  "packageManager": "npm",
+  "platform": {
+    "framework": "expo-react-native-managed",
+    "language": "typescript-strict",
+    "androidFirst": true,
+    "orientation": "landscape",
+    "targetDevice": "Samsung Galaxy Tab S7 FE",
+    "androidPackage": "com.bapp.baccaratengine",
+    "iosBundleIdentifier": "com.bapp.baccaratengine",
+    "offline": true,
+    "network": false,
+    "backend": false,
+    "auth": false,
+    "cloud": false
+  },
+  "versions": {
+    "app": "0.1.0",
+    "engine": "ENGINE-001",
+    "config": "CFG-001",
+    "databaseSchema": 0,
+    "roadmap": "ROADMAP-001",
+    "feature": "FEATURE-001",
+    "voting": "VOTE-001",
+    "confidence": "CONF-001",
+    "risk": "RISK-001"
+  },
+  "engineRules": {
+    "minWarmupNonTie": 8,
+    "maxUncalibratedConfidence": 0.75,
+    "threeWinTarget": 3,
+    "confidenceBands": {
+      "experimental": [0.55, 0.60],
+      "qualified": [0.60, 0.70],
+      "highRecommendation": [0.70, 0.75]
+    },
+    "tieIsPush": true
+  },
+  "analyzers": {
+    "streak": "ACTIVE",
+    "chop": "ACTIVE",
+    "run-length": "ACTIVE",
+    "distribution": "ACTIVE",
+    "regime-transition": "ACTIVE",
+    "data-quality-guard": "ACTIVE",
+    "volatility": "SHADOW_ONLY",
+    "derived-road": "SHADOW_ONLY",
+    "historical-matcher": "DISABLED"
+  },
+  "routes": [
+    "Active Shoe",
+    "History",
+    "Statistics",
+    "Export",
+    "Diagnostics",
+    "Settings"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "expo lint",
+    "test": "jest",
+    "test:roadmap": "jest roadmap",
+    "test:engine": "jest engine"
+  },
+  "verification": {
+    "typecheck": "pass",
+    "lint": "pass",
+    "test": { "suites": 3, "tests": 20, "status": "pass" },
+    "test:roadmap": { "suites": 1, "tests": 4, "status": "pass" },
+    "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
+    "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
+    "appBoots": true
+  },
+  "lockedDocs": [
+    "AGENTS.md",
+    "docs/MVP_SPEC.md",
+    "docs/ARCHITECTURE.md",
+    "docs/ENGINE_RULES.md",
+    "docs/ROADMAP_RULES.md",
+    "docs/DATA_MODEL.md",
+    "docs/TEST_PLAN.md",
+    "docs/CURRENT_STATE.md",
+    "docs/HANDOFF.md",
+    "docs/KNOWN_ISSUES.md"
+  ],
+  "deferredFeatures": [
+    "Historical Matcher activation",
+    "Machine learning",
+    "Automatic self-learning",
+    "OCR",
+    "Provider scraping",
+    "Cloud sync",
+    "Login",
+    "Server backend",
+    "Martingale execution",
+    "Automated replay",
+    "Multi-device merge"
+  ],
+  "nextMilestone": "Milestone 1 — NOT STARTED (do not begin unless explicitly instructed)"
+}
