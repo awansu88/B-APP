@@ -15,3 +15,6 @@ export interface ShoeSnapshot {
 
 /** Milestone 0 placeholder — full snapshot assembly arrives in a later milestone. */
 export type SnapshotSource = readonly RoundRecord[];
+
+// Milestone 3: the immutable ShoeStateSnapshot builder.
+export * from './shoe-snapshot';

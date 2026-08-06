@@ -102,5 +102,26 @@ rounds' ids and only reassigns `roundNumber` to a contiguous 1..n. Revision
 **Impact:** none in Milestone 2 (no predictions exist). **Action:** honour this
 when prediction records are introduced.
 
+## Milestone 3
+
+### 12. Analysis modules produce signals but no decision is made yet
+The 8 analyzers + runner compute signals/strength/reliability/reason-codes/risk-flags,
+but Milestone 3 performs **no voting, confidence scoring, risk decision, or
+prediction locking**. `runAnalysis` only returns per-module results (ACTIVE vs
+SHADOW separated). Volatility & Derived Road are **SHADOW_ONLY** (computed, never
+influential); the Historical Matcher is **DISABLED** (never computed).
+
+**Impact:** none — this is the intended scope. **Action:** implement voting /
+confidence / decisioning in a later, authorised milestone.
+
+### 13. Regime / volatility heuristics are deterministic MVP formulas
+Regime classification (alternation-rate thresholds) and the bounded 0–1
+volatility/stability scores are simple, deterministic heuristics chosen for the
+MVP, not calibrated statistics. They are versioned via the analyzer registry and
+can be revised as a future versioned engine decision.
+
+**Impact:** low (used only by SHADOW/ACTIVE signal shaping, not a final decision).
+**Action:** revisit during calibration.
+
 ## No functional defects
 All verification gates pass (see `docs/TEST_PLAN.md` and `docs/CURRENT_STATE.md`).

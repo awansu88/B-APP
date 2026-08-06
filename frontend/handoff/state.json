@@ -4,10 +4,11 @@
   "mobileProjectRoot": "/app/frontend",
   "backendInRepository": false,
   "trackedBackendFiles": [],
-  "completedMilestone": 2,
-  "milestoneName": "History Input Workflow and Roadmap UI",
+  "completedMilestone": 3,
+  "milestoneName": "Snapshots, Features, and Analysis Modules",
   "status": "COMPLETE",
   "milestone2Started": true,
+  "milestone3Started": true,
   "databaseSchemaVersion": "DB-001",
   "acceptedImplementation": {
     "domainModels": true,
@@ -27,7 +28,15 @@
     "voting": false,
     "session": false,
     "screens": true,
-    "note": "Milestone 2 adds the pure History domain (pair-mode, statistics, checkpoints, transaction-guard, session mutations), additive repository methods (update, replaceShoe, updateMeta) over the UNCHANGED DB-001 schema, the useHistorySession workflow with a platform-selected HistoryStore (SQLite on native, AsyncStorage fallback on web), and the Active Shoe History Input screen (left info panel, center roadmaps, bottom P/T/B controls + secondary controls, checkpoint banner, Review Data with per-round edit/delete, confirmation dialogs). Prediction/confidence/analyzers/voting/sequence remain explicit throwing placeholders; other route screens remain Milestone 0 placeholders."
+    "shoeSnapshot": true,
+    "featureExtraction": true,
+    "analysisModules": true,
+    "analysisRunner": true,
+    "voting": false,
+    "confidence": false,
+    "prediction": false,
+    "predictionLocking": false,
+    "note": "Milestone 3 adds pure domain-engine work: the immutable ShoeStateSnapshot (no future leakage), deterministic feature extraction (windows last5/8/12/full + distribution/streak/chop/big-road/derived/regime-transition/volatility/data-quality groups), the shared analysis-module interface, and 8 analyzers + a disabled Historical Matcher, plus a runner. Data Quality Guard ACTIVE; Volatility & Derived Road SHADOW_ONLY (computed, never influential); Historical Matcher DISABLED (not computed). Modules ABSTAIN below the 8 non-Tie warm-up. NO voting/confidence/risk decisions and NO prediction locking. Milestone 1 & 2 accepted code (roadmap engine, DB-001, history workflow/UI, repositories, engine thresholds, version registry) UNCHANGED."
   },
   "packageManager": "npm",
   "packageLockChanged": false,
@@ -121,7 +130,7 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 5, "tests": 79, "status": "pass" },
+    "test": { "suites": 6, "tests": 107, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
@@ -145,7 +154,7 @@
       ]
     },
     "databasePersistenceTests": "5 new tests in database.test.ts (update, replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, round-id stability); file total 15 (was 10)",
-    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "total": 79 },
+    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "total": 107 },
     "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite path implemented + covered by in-memory sql.js tests; not yet run on a physical Android device/build with restart.",
     "interactionValidation": "42/42 cases (A-H) PASS via frontend testing agent; no console errors.",
     "uiVerifiedInPreview": [
@@ -156,5 +165,29 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 3 — NOT STARTED (do not begin unless explicitly instructed). Analyzers and voting are explicitly out of scope."
+  "nextMilestone": "Milestone 4 — NOT STARTED (do not begin unless explicitly instructed). Voting, confidence, risk decisions, and prediction locking remain out of scope until authorised.",
+  "milestone3": {
+    "snapshot": "src/domain/snapshot/shoe-snapshot.ts (SNAPSHOT-001, immutable, no future leakage)",
+    "features": "src/domain/features/feature-extraction.ts (FEATURE-001)",
+    "analysis": "src/domain/analysis/* (types, helpers, modules, runner)",
+    "analyzerVersionRegistry": {
+      "streak": "STREAK-001",
+      "chop": "CHOP-001",
+      "run-length": "RUNLEN-001",
+      "distribution": "DIST-001",
+      "regime-transition": "REGIME-001",
+      "data-quality-guard": "DQG-001",
+      "volatility": "VOL-001",
+      "derived-road": "DERIVED-001",
+      "historical-matcher": "HMATCH-001"
+    },
+    "moduleModes": {
+      "active": ["streak", "chop", "run-length", "distribution", "regime-transition", "data-quality-guard"],
+      "shadowOnly": ["volatility", "derived-road"],
+      "disabled": ["historical-matcher"]
+    },
+    "warmupNonTie": 8,
+    "determinism": "same raw rounds + config + version => identical snapshot, features, and module results (tested)",
+    "constraints": "no randomness/ML/network/balance/prior-financial/target-sequence; no voting/confidence/risk/prediction locking"
+  }
 }

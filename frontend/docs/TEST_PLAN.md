@@ -70,3 +70,29 @@ stability** (edit/delete never recreate surviving round ids).
   (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
 - `package-lock.json` unchanged; interaction-level UI validation 42/42 PASS.
+
+## Milestone 3 additions (Snapshots, Features, Analysis Modules)
+### `src/tests/analysis.test.ts` (28 — pure domain engine)
+- **Snapshot immutability:** deep-frozen snapshot; mutation throws; `SNAPSHOT-001`.
+- **Future-leakage prevention:** `snapshotForTargetRound(rounds, N)` equals a
+  snapshot built from only rounds `< N`; future rounds never change a past target;
+  a caller-supplied roadmap cannot leak future info.
+- **Deterministic features:** identical rounds → identical features; fixed
+  distribution/streak/regime values; `FEATURE-001`.
+- **Tie handling:** ties excluded from non-Tie counts/streaks/warm-up; tieRatio.
+- **Analyzer activation / insufficient data:** all non-guard modules ABSTAIN below
+  the 8 non-Tie warm-up; Data Quality Guard always reports (never a side); locked
+  module statuses and version-registry ids.
+- **Fixed analyzer outputs:** streak-follow, distribution skew vs balanced, chop
+  continuation, run-length continuation vs break, streaky-regime alignment.
+- **Runner:** DISABLED (Historical Matcher) not computed; ACTIVE vs SHADOW
+  separation; shadow modules never in `activeResults`.
+- **Pipeline determinism:** same raw rounds + config + version → identical
+  snapshot, features, and module results.
+
+## Expected result (Milestone 3)
+- typecheck: **pass** · lint: **pass**
+- `npm test`: **6 suites, 107 tests passing**
+  (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28)
+- `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
+- `package-lock.json` unchanged; engine/DB-001/thresholds/version-registry unchanged.

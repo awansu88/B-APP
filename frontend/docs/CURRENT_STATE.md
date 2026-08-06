@@ -1,9 +1,10 @@
 # Current State
 
-**Completed milestone:** 2 — History Input Workflow and Roadmap UI. **Status: COMPLETE.**
-**Milestone 3: NOT STARTED.**
-**Database schema version:** DB-001 (unchanged — no new migration needed)
+**Completed milestone:** 3 — Snapshots, Features, and Analysis Modules. **Status: COMPLETE.**
+**Milestone 4: NOT STARTED.**
+**Database schema version:** DB-001 (unchanged)
 **App:** 0.1.0 · **Engine:** ENGINE-001 · **Config:** CFG-001 · **Roadmap:** ROADMAP-001
+· **Snapshot:** SNAPSHOT-001 · **Feature:** FEATURE-001
 
 ## Repository facts
 - **Git repository root: `/app`.** Expo app root: **`/app/frontend`** (run all
@@ -55,33 +56,41 @@
   Test are enabled once ≥ 8 non-Tie results exist and set the shoe environment
   (mapping new-round source to LIVE / HISTORICAL_TEST). **No prediction logic.**
 
-## What is explicitly NOT implemented (out of scope for Milestone 2)
-- No analyzers, voting, confidence, risk, prediction, or three-win sequence logic
-  (`categorizeConfidence` / `evaluateStep` / `evaluateThreeWinSequence` still throw).
-- Statistics/Export/Diagnostics/Settings routes remain Milestone 0 placeholders.
-- No final visual polish; category/prediction areas are intentionally absent.
+## What is explicitly NOT implemented (out of scope for Milestone 3)
+- No **final voting**, confidence scoring, risk decisions, or **prediction locking**
+  (`categorizeConfidence` / `evaluateStep` / `evaluateThreeWinSequence` still throw;
+  no prediction/snapshot/module-result/sequence records are written).
+- Historical Matcher is a **disabled interface** (never computed).
+- Volatility & Derived Road analyzers are **SHADOW_ONLY** (computed, never influence a decision).
+- Statistics/Export/Diagnostics/Settings routes remain Milestone 0 placeholders; the
+  History Input UI (Milestone 2) is unchanged.
+
+### Milestone 3 (new — pure domain engine)
+- **Immutable ShoeStateSnapshot** (`src/domain/snapshot/shoe-snapshot.ts`,
+  `SNAPSHOT-001`): completed/non-Tie/P/B/T counts, recent non-Tie history, current
+  streak, previous run, Big Road state, derived-road state, revision count, data
+  quality, snapshot version. Deep-frozen. **No future leakage** —
+  `snapshotForTargetRound(rounds, N)` uses only rounds before N (tested).
+- **Deterministic feature extraction** (`src/domain/features/feature-extraction.ts`,
+  `FEATURE-001`): windows last5/last8/last12/full and feature groups distribution,
+  streak, chop, Big Road, derived roads, regime & transition, volatility, data quality.
+- **Shared analysis interface + modules** (`src/domain/analysis/*`): every module
+  returns `{ moduleId, signal (PLAYER|BANKER|NEUTRAL|ABSTAIN), strength, reliability,
+  status, reasonCodes, riskFlags, version }`. 8 analyzers + a disabled Historical
+  Matcher + a runner. **Activation:** Data Quality Guard ACTIVE; Volatility & Derived
+  Road SHADOW_ONLY; Historical Matcher DISABLED (not computed); all non-guard modules
+  ABSTAIN below the 8 non-Tie warm-up. No randomness/ML/network/balance/prior-financial/
+  target-sequence inputs.
 
 ## Verification (this milestone)
-- `npm run typecheck` → pass (0 errors)
-- `npm run lint` → pass (0 problems)
-- `npm test` → 5 suites, **79 tests** passing. New this milestone: `history.test.ts`
-  (22) and **5** DB persistence tests added to `database.test.ts` (update,
-  replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, id-stability).
-  Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 (was 10) · history 22.
-- `npm run test:roadmap` → 26 tests passing (unchanged)
-- `npm run test:engine` → 10 tests passing (unchanged)
-- `npx expo-doctor` → 18/18 checks passed
-- `package-lock.json` unchanged; no dependencies added/upgraded.
-- App boots in the web preview (bundle HTTP 200, no console errors/warnings).
-  Full interaction-level validation (42 cases A–H) passed via the frontend
-  testing agent: round entry, input safety/double-tap, pair modes, edit/delete +
-  roadmap rebuild, warm-up gate, checkpoints (15/20/30/40/50), shoe controls, and
-  persistence across page reload.
+- `npm run typecheck` → pass · `npm run lint` → pass
+- `npm test` → **6 suites, 107 tests** (adds `analysis.test.ts` ×28: snapshot
+  immutability, future-leakage prevention, deterministic features, analyzer
+  activation/insufficient-data, fixed analyzer outputs, Tie handling, pipeline
+  determinism). Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28.
+- `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
+- `package-lock.json` unchanged; roadmap engine, DB-001, engine thresholds, and the
+  version registry all UNCHANGED.
 
 ## Native persistence status
-- **IMPLEMENTED_NOT_RUNTIME_VERIFIED.** The native path (`SqliteHistoryStore` →
-  `ExpoSqliteDatabase`, DB-001) is implemented and its logic is covered by the
-  in-memory `sql.js` driver tests, but it has NOT been executed on a physical
-  Android device/build with an app restart. Remaining Android verification: open
-  the app, enter rounds, kill & relaunch, confirm the same shoe + rounds restore
-  from on-device SQLite.
+- **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (Milestone 2; unchanged this milestone).
