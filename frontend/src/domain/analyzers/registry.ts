@@ -1,21 +1,13 @@
-/**
- * Analyzer operating modes (LOCKED for the MVP).
- *  - ACTIVE:            contributes to voting.
- *  - SHADOW_ONLY:       computed and logged, never influences a decision.
- *  - EXPERIMENTAL_ONLY: available behind an explicit experimental flag only.
- *  - DISABLED:          not computed at all in the MVP.
- */
-export enum AnalyzerMode {
-  ACTIVE = 'ACTIVE',
-  SHADOW_ONLY = 'SHADOW_ONLY',
-  EXPERIMENTAL_ONLY = 'EXPERIMENTAL_ONLY',
-  DISABLED = 'DISABLED',
-}
+import { ModuleStatus } from '../models/enums';
+
+// `AnalyzerMode` is the Milestone 0 name; `ModuleStatus` is the canonical
+// Milestone 1 enum. They are the same type (single source of truth).
+export { ModuleStatus as AnalyzerMode };
 
 export interface AnalyzerDescriptor {
   readonly id: string;
   readonly label: string;
-  readonly mode: AnalyzerMode;
+  readonly mode: ModuleStatus;
 }
 
 /**
@@ -23,25 +15,25 @@ export interface AnalyzerDescriptor {
  * architecture — do not flip a mode without a versioned engine decision.
  */
 export const ANALYZER_REGISTRY: readonly AnalyzerDescriptor[] = Object.freeze([
-  { id: 'streak', label: 'Streak Analyzer', mode: AnalyzerMode.ACTIVE },
-  { id: 'chop', label: 'Chop Analyzer', mode: AnalyzerMode.ACTIVE },
-  { id: 'run-length', label: 'Run-Length Analyzer', mode: AnalyzerMode.ACTIVE },
-  { id: 'distribution', label: 'Distribution Analyzer', mode: AnalyzerMode.ACTIVE },
+  { id: 'streak', label: 'Streak Analyzer', mode: ModuleStatus.ACTIVE },
+  { id: 'chop', label: 'Chop Analyzer', mode: ModuleStatus.ACTIVE },
+  { id: 'run-length', label: 'Run-Length Analyzer', mode: ModuleStatus.ACTIVE },
+  { id: 'distribution', label: 'Distribution Analyzer', mode: ModuleStatus.ACTIVE },
   {
     id: 'regime-transition',
     label: 'Regime and Transition Analyzer',
-    mode: AnalyzerMode.ACTIVE,
+    mode: ModuleStatus.ACTIVE,
   },
-  { id: 'data-quality-guard', label: 'Data Quality Guard', mode: AnalyzerMode.ACTIVE },
-  { id: 'volatility', label: 'Volatility Analyzer', mode: AnalyzerMode.SHADOW_ONLY },
+  { id: 'data-quality-guard', label: 'Data Quality Guard', mode: ModuleStatus.ACTIVE },
+  { id: 'volatility', label: 'Volatility Analyzer', mode: ModuleStatus.SHADOW_ONLY },
   {
     id: 'derived-road',
     label: 'Derived Road Analyzer',
-    mode: AnalyzerMode.SHADOW_ONLY,
+    mode: ModuleStatus.SHADOW_ONLY,
   },
   {
     id: 'historical-matcher',
     label: 'Historical Matcher',
-    mode: AnalyzerMode.DISABLED,
+    mode: ModuleStatus.DISABLED,
   },
 ] as const);

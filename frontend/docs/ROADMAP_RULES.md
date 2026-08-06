@@ -1,38 +1,45 @@
 # Roadmap Rules (LOCKED)
 
-> **Milestone 0 note:** this is the LOCKED *specification* of roadmap
-> reconstruction. `reconstructBeadPlate` is an **explicit non-runtime
-> placeholder** in Milestone 0 (it throws if executed) and is **not** yet
-> implemented or accepted. Only `BEAD_PLATE_ROWS`, the `BeadCell` type, and the
-> roadmap version constant are live.
-
-**Roadmap version:** `ROADMAP-001` (`src/config/versions.ts` → `roadmap`).
+**Roadmap version:** `ROADMAP-001`.
+**Implementation:** `src/domain/roadmap/engine.ts` → `buildRoadmap(rounds)`
+(pure; MUST NOT import React, React Native, Expo, SQLite, or UI components).
 
 ## Principle
-Roadmaps are **derived views**. They must always be **reconstructable purely
-from the raw `RoundRecord[]`** (Project Principle #2). A roadmap is never a
-source of truth and is never stored as authoritative data.
+Roadmaps are derived views, always **reconstructable purely from the ordered
+raw `RoundRecord[]`** (Project Principle #2). They are never a source of truth
+and are never stored as editable data. Editing any round and re-running
+`buildRoadmap` yields a complete, deterministic rebuild.
 
-## Bead Plate (SPEC — placeholder in Milestone 0)
-`src/domain/roadmap/beadPlate.ts`:
-- Fixed height: **6 rows** (`BEAD_PLATE_ROWS = 6`) — live constant.
-- `BeadCell { row, col, outcome, playerPair, bankerPair, roundId }` — live type.
-- Layout will be **column-major**: rounds fill top-to-bottom, then wrap to the
-  next column.
-- `reconstructBeadPlate(rounds)` will sort rounds by their intra-shoe `index`
-  and map each to a `BeadCell`. **In Milestone 0 this is an explicit placeholder
-  that throws — no reconstruction logic exists yet.**
-- Warm-up counting (≥ 8 non-Tie) is a future-milestone function; only the
-  `MIN_WARMUP_NON_TIE = 8` constant (in `src/config/engine.ts`) is live.
+## Output (`RoadmapResult`)
+Bead Plate, Big Road logical cells, Big Eye Boy, Small Road, Cockroach Pig, tie
+markers, player-pair markers, banker-pair markers, and the leading-tie count.
+
+## Colour / marker model
+- PLAYER = blue, BANKER = red, TIE = green (`RoadmapColor`; presentation only).
+- Player Pair = small blue marker; Banker Pair = small red marker.
+- Pair markers never change roadmap placement.
+- Derived roads use a structural `DerivedMark` enum (`RED` / `BLUE`). Derived red
+  is never stored as BANKER and derived blue is never stored as PLAYER.
+
+## Bead Plate
+Every round (including ties) is placed column-major on a fixed 6-row grid.
+Consecutive ties remain in raw history and appear on the Bead Plate.
+
+## Big Road
+- Only PLAYER/BANKER results occupy the grid (6 rows).
+- Same side moves down; when the column is full or blocked it **dragon-tails**
+  to the right along the same row.
+- A different side starts a new column.
+- A Tie never creates a new Big Road column; it is recorded as a tie marker
+  (with a running count) on the most recent PLAYER/BANKER cell.
+- **Leading ties** (before the first PLAYER/BANKER) are never discarded — they
+  are preserved on the Bead Plate and counted in `leadingTieCount`.
 
 ## Derived roads
-The Derived Road Analyzer (Big Eye Boy / Small Road / Cockroach Pig family) is
-`SHADOW_ONLY` in the MVP — it may be computed and logged but must not influence a
-recommendation. Its full reconstruction is deferred to a later milestone and,
-when added, must remain a pure function of the raw rounds.
+Big Eye Boy (offset 1), Small Road (offset 2), Cockroach Pig (offset 3) are
+generated from the Big Road's logical column heights via the standard
+column-comparison algorithm, producing structural RED/BLUE marks.
 
-## Determinism (target for the future implementation)
-When implemented, roadmap reconstruction must be a **pure function**: identical
-raw rounds always produce an identical roadmap, independent of input ordering.
-`src/tests/roadmap.test.ts` currently only checks the locked constant and that
-the reconstruction function is an unimplemented placeholder.
+## Determinism
+`buildRoadmap` is a pure function of the ordered raw rounds: identical input
+always yields identical output (covered by `src/tests/roadmap.test.ts`).

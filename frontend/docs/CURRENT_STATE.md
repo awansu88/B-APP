@@ -1,55 +1,59 @@
 # Current State
 
-**Milestone:** 0 — Project Bootstrap. **Status: COMPLETE.**
-**Milestone 1: NOT STARTED.**
-**Date:** 2026-06 (bootstrap + compliance cleanup).
-**App version:** 0.1.0 · **Engine:** ENGINE-001 · **Config:** CFG-001 · **DB schema:** 0
+**Completed milestone:** 1 — Local Data and Roadmap Engine. **Status: COMPLETE.**
+**Milestone 2: NOT STARTED.**
+**Database schema version:** DB-001
+**App:** 0.1.0 · **Engine:** ENGINE-001 · **Config:** CFG-001 · **Roadmap:** ROADMAP-001
 
 ## Repository facts
-- **Git repository root: `/app`.**
-- The Git repository contains only the Expo mobile project (`frontend/`) plus
-  platform meta (`.emergent/`, `memory/`, `test_reports/`, `tests/`, `README.md`).
-- **`/app/backend` has been removed** from both Git and disk — no backend
-  directory or backend file is tracked. The app has no backend, no cloud, no
-  auth, and makes no network calls.
+- **Git repository root: `/app`.** Expo app root: **`/app/frontend`** (run all
+  commands from there). No backend directory is tracked; the app makes no
+  network calls, has no cloud/auth.
+- Package manager: **npm** with committed `package-lock.json` (single lock file).
 
-## What exists (accepted for Milestone 0)
-- Clean Expo Router app (managed, strict TypeScript) under `frontend/`.
-- **Landscape**, **dark**, tablet-first shell with a persistent left nav rail
-  and six **navigable placeholder** routes: Active Shoe, History, Statistics,
-  Export, Diagnostics, Settings.
-- Android package `com.bapp.baccaratengine`; iOS bundle id matched;
-  `android.permissions: []`.
-- `src/` scaffolding: domain **types/enums**, **locked constants**, the
-  **version registry**, **interfaces**, a **disabled/analyzer registry**, and
-  **explicit non-runtime placeholders**.
-- Diagnostics screen shows the locked version registry and analyzer modes
-  (read-only view of constants).
-- npm tooling with committed `package-lock.json`; Jest domain tests.
+## What exists (accepted)
+### Milestone 0 (unchanged)
+- Landscape, dark, tablet shell + six navigable placeholder routes.
+- Version registry and locked engine thresholds.
 
-## What is explicitly NOT implemented / NOT accepted
-No roadmap, prediction, confidence, analyzer, voting, or session **logic** is
-implemented or accepted. Specifically:
-- `reconstructBeadPlate` (roadmap) → explicit placeholder that throws.
-- `categorizeConfidence` (confidence) → explicit placeholder that throws.
-- `evaluateStep` / `evaluateThreeWinSequence` (sequence) → explicit
-  placeholders that throw.
-- Analyzers/voting/risk/snapshot/features/repositories → interfaces/constants
-  only (no logic). Historical Matcher DISABLED; Volatility & Derived Road
-  SHADOW_ONLY (registry data only).
-- No screen or workflow imports or executes any placeholder logic. `workflows/`
-  is empty.
+### Milestone 1 (new — Parts A/B/C)
+- **Domain models & enums (Part A)** — strongly typed, no untyped string values:
+  `Winner`, `PairState`, `RoundSource`, `SessionEnvironment`, `ShoeStatus`,
+  `PredictionDecision`, `PredictionCategory`, `PredictionStatus`,
+  `EvaluationStatus`, `ModuleSignal`, `ModuleStatus`; records `ShoeRecord`,
+  `RoundRecord`, `SnapshotRecord`, `PredictionRecord`, `ModuleResult`,
+  `SequenceRecord`, `RevisionRecord`, `EngineConfig`. (`Outcome`/`PairStatus`/
+  `ConfidenceCategory`/`AnalyzerMode` remain as aliases of the new enums.)
+- **SQLite database (Part B)** — `expo-sqlite`, migration **DB-001** creating
+  `shoes, rounds, snapshots, predictions, module_results, sequences, revisions,
+  engine_configs, export_history, diagnostic_events` (+ `schema_migrations`).
+  Unique `(shoe_id, round_number)`; indexes on rounds.shoe_id and predictions
+  target_round_number / shoe_id / environment / category. Parameterized
+  statements, transactions for multi-table ops, WAL enabled when supported.
+  Repositories (`ShoeRepository`, `RoundRepository`, `RevisionRepository`)
+  depend only on a UI-independent `SqlDatabase` abstraction. Raw rounds are the
+  only source of truth; roadmap cells are never stored as editable data.
+- **Pure roadmap engine (Part C)** — `src/domain/roadmap/engine.ts`
+  (`buildRoadmap`). NO React/RN/Expo/SQLite/UI imports. Produces Bead Plate,
+  Big Road logical cells (6 rows + dragon tail), Big Eye Boy, Small Road,
+  Cockroach Pig, tie markers, player/banker pair markers, and the leading-tie
+  count. Colours are a UI model (P=blue, B=red, T=green); derived marks use a
+  structural `DerivedMark` enum (never stored as PLAYER/BANKER). Deterministic:
+  editing rounds and rebuilding reproduces identical output.
+
+## What is explicitly NOT implemented (out of scope for Milestone 1)
+- No screens beyond the Milestone 0 placeholders; no prediction modules,
+  voting, confidence, risk, or session logic. `categorizeConfidence`,
+  `evaluateStep`, `evaluateThreeWinSequence` remain explicit placeholders that
+  throw. Historical Matcher DISABLED; Volatility & Derived Road SHADOW_ONLY.
+- The `expo-sqlite` adapter is complete but intentionally not yet wired into any
+  screen (dormant infrastructure — no broken partial UI integration).
 
 ## Verification (this milestone)
-- `npm run typecheck` → pass (0 errors).
-- `npm run lint` → pass (0 problems).
-- `npm test` → 3 suites, 19 tests passing (smoke 6 / roadmap 3 / engine 10).
-- `npm run test:roadmap` → 1 suite, 3 tests passing.
-- `npm run test:engine` → 1 suite, 10 tests passing.
-- `npx expo-doctor` → 18/18 checks passed.
+- `npm run typecheck` → pass (0 errors)
+- `npm run lint` → pass (0 problems)
+- `npm test` → 4 suites, 40 tests passing
+- `npm run test:roadmap` → 1 suite, 16 golden tests passing
+- `npm run test:engine` → 1 suite, 10 tests passing
+- `npx expo-doctor` → 18/18 checks passed
 - App boots in the preview; navigation across all six routes verified.
-
-Tests intentionally validate ONLY: locked constants, enum/type behaviour, the
-disabled/registry, and that future-milestone functions are unimplemented
-placeholders. No test implies roadmap/analyzer/confidence/sequence logic is
-validated.

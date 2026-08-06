@@ -1,19 +1,7 @@
 /**
- * Database migrations.
- *
- * Accepted migrations are IMMUTABLE — never modify an accepted migration
- * (see AGENTS.md). New schema changes append a new migration entry.
+ * Database migrations moved to `src/data/database/migrations.ts` in Milestone 1
+ * (schema version DB-001). This module re-exports them so existing import paths
+ * keep working. Accepted migrations are immutable — append new ones.
  */
-export interface Migration {
-  readonly version: number;
-  readonly name: string;
-  /** Accepted migrations are locked and must never be edited. */
-  readonly accepted: boolean;
-}
-
-export const MIGRATIONS: readonly Migration[] = Object.freeze([
-  { version: 0, name: 'initial_baseline', accepted: true },
-] as const);
-
-/** The current (accepted) schema version. */
-export const CURRENT_SCHEMA_VERSION = 0;
+export { MIGRATIONS, CURRENT_DB_VERSION, runMigrations } from '../database/migrations';
+export type { DbMigration } from '../database/migrations';

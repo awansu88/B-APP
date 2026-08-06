@@ -14,7 +14,7 @@ describe('B-APP smoke — locked version registry & core enums', () => {
     expect(VERSION_REGISTRY.app).toBe('0.1.0');
     expect(VERSION_REGISTRY.engine).toBe('ENGINE-001');
     expect(VERSION_REGISTRY.config).toBe('CFG-001');
-    expect(VERSION_REGISTRY.databaseSchema).toBe(0);
+    expect(VERSION_REGISTRY.databaseSchema).toBe('DB-001');
     expect(VERSION_REGISTRY.roadmap).toBe('ROADMAP-001');
     expect(VERSION_REGISTRY.feature).toBe('FEATURE-001');
     expect(VERSION_REGISTRY.voting).toBe('VOTE-001');

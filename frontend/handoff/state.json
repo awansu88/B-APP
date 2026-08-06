@@ -4,20 +4,31 @@
   "mobileProjectRoot": "/app/frontend",
   "backendInRepository": false,
   "trackedBackendFiles": [],
-  "milestone": 0,
-  "milestoneName": "Project Bootstrap",
+  "completedMilestone": 1,
+  "milestoneName": "Local Data and Roadmap Engine",
   "status": "COMPLETE",
-  "milestone1Started": false,
-  "acceptedDomainImplementation": {
-    "roadmap": false,
+  "milestone2Started": false,
+  "databaseSchemaVersion": "DB-001",
+  "acceptedImplementation": {
+    "domainModels": true,
+    "domainEnums": true,
+    "sqliteDatabase": true,
+    "repositories": true,
+    "roadmapEngine": true,
     "prediction": false,
     "confidence": false,
     "analyzers": false,
     "voting": false,
     "session": false,
-    "note": "Only domain types, locked constants, version registry, interfaces, a disabled/registry, and explicit non-runtime placeholders exist. Placeholder functions throw if executed and are imported by nothing except their scaffolding tests."
+    "screens": false,
+    "note": "Milestone 1 delivers domain models/enums, the DB-001 SQLite layer over a UI-independent SqlDatabase abstraction, and the pure roadmap engine. Prediction/confidence/sequence functions remain explicit throwing placeholders; no screens beyond Milestone 0 placeholders; the expo-sqlite adapter is complete but intentionally not yet wired to any screen."
   },
   "packageManager": "npm",
+  "dependenciesAdded": {
+    "expo-sqlite": "~16.0.10",
+    "sql.js": "1.14.1 (devDependency, test-only)",
+    "@types/sql.js": "1.4.11 (devDependency)"
+  },
   "platform": {
     "framework": "expo-react-native-managed",
     "language": "typescript-strict",
@@ -25,60 +36,64 @@
     "orientation": "landscape",
     "targetDevice": "Samsung Galaxy Tab S7 FE",
     "androidPackage": "com.bapp.baccaratengine",
-    "iosBundleIdentifier": "com.bapp.baccaratengine",
     "offline": true,
     "network": false,
-    "backend": false,
-    "auth": false,
-    "cloud": false
+    "backend": false
   },
   "versions": {
     "app": "0.1.0",
     "engine": "ENGINE-001",
     "config": "CFG-001",
-    "databaseSchema": 0,
+    "databaseSchema": "DB-001",
     "roadmap": "ROADMAP-001",
     "feature": "FEATURE-001",
     "voting": "VOTE-001",
     "confidence": "CONF-001",
     "risk": "RISK-001"
   },
-  "lockedConstants": {
-    "minWarmupNonTie": 8,
-    "maxUncalibratedConfidence": 0.75,
-    "threeWinTarget": 3,
-    "confidenceBands": {
-      "experimental": [0.55, 0.60],
-      "qualified": [0.60, 0.70],
-      "highRecommendation": [0.70, 0.75]
-    },
-    "tieIsPush": true
+  "database": {
+    "migration": "DB-001",
+    "tables": [
+      "shoes",
+      "rounds",
+      "snapshots",
+      "predictions",
+      "module_results",
+      "sequences",
+      "revisions",
+      "engine_configs",
+      "export_history",
+      "diagnostic_events",
+      "schema_migrations"
+    ],
+    "constraints": [
+      "rounds UNIQUE(shoe_id, round_number)",
+      "idx_rounds_shoe_id",
+      "idx_predictions_target_round",
+      "idx_predictions_shoe_id",
+      "idx_predictions_environment",
+      "idx_predictions_category"
+    ],
+    "wal": "enabled when supported",
+    "parameterized": true,
+    "transactionsForMultiTable": true
   },
-  "analyzerRegistry": {
-    "streak": "ACTIVE",
-    "chop": "ACTIVE",
-    "run-length": "ACTIVE",
-    "distribution": "ACTIVE",
-    "regime-transition": "ACTIVE",
-    "data-quality-guard": "ACTIVE",
-    "volatility": "SHADOW_ONLY",
-    "derived-road": "SHADOW_ONLY",
-    "historical-matcher": "DISABLED"
+  "roadmapEngine": {
+    "path": "src/domain/roadmap/engine.ts",
+    "pure": true,
+    "forbiddenImportsAvoided": ["react", "react-native", "expo", "sqlite", "ui"],
+    "outputs": [
+      "beadPlate",
+      "bigRoad",
+      "bigEyeBoy",
+      "smallRoad",
+      "cockroachPig",
+      "tieMarkers",
+      "playerPairMarkers",
+      "bankerPairMarkers",
+      "leadingTieCount"
+    ]
   },
-  "placeholders": [
-    "src/domain/roadmap/beadPlate.ts:reconstructBeadPlate",
-    "src/domain/confidence/categories.ts:categorizeConfidence",
-    "src/domain/prediction/sequence.ts:evaluateStep",
-    "src/domain/prediction/sequence.ts:evaluateThreeWinSequence"
-  ],
-  "routes": [
-    "Active Shoe",
-    "History",
-    "Statistics",
-    "Export",
-    "Diagnostics",
-    "Settings"
-  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
@@ -89,31 +104,11 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 3, "tests": 19, "status": "pass" },
-    "test:roadmap": { "suites": 1, "tests": 3, "status": "pass" },
+    "test": { "suites": 4, "tests": 40, "status": "pass" },
+    "test:roadmap": { "suites": 1, "tests": 16, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
-    "appBoots": true,
-    "testsValidateOnly": [
-      "locked constants",
-      "enum/type behaviour",
-      "disabled/analyzer registry (data)",
-      "diagnostics snapshot from constants",
-      "explicit unimplemented placeholders throw"
-    ]
+    "appBoots": true
   },
-  "lockedDocs": [
-    "AGENTS.md",
-    "docs/MVP_SPEC.md",
-    "docs/ARCHITECTURE.md",
-    "docs/ENGINE_RULES.md",
-    "docs/ROADMAP_RULES.md",
-    "docs/DATA_MODEL.md",
-    "docs/TEST_PLAN.md",
-    "docs/CURRENT_STATE.md",
-    "docs/HANDOFF.md",
-    "docs/KNOWN_ISSUES.md"
-  ],
-  "specificationSource": "AGENTS.md + docs/MVP_SPEC.md (single source; memory/PRD.md is a non-authoritative pointer)",
-  "nextMilestone": "Milestone 1 — NOT STARTED (do not begin unless explicitly instructed)"
+  "nextMilestone": "Milestone 2 — NOT STARTED (do not begin unless explicitly instructed)"
 }
