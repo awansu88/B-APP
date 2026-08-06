@@ -101,3 +101,79 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  B-APP Baccarat Engine (Expo, local-first, landscape tablet). Milestone 2 —
+  build the Active Shoe "History Input" mode: left info panel (shoe info, totals,
+  history-confirmation status), center roadmaps (Bead Plate, Big Road, Big Eye
+  Boy, Small Road, Cockroach Pig), bottom large PLAYER/TIE/BANKER buttons (P/T/B
+  order) with PP/BP markers and COMPLETE/PARTIAL pair modes, plus secondary
+  controls (Undo, Edit/Delete Round, New/Clear Shoe, Start Live, Start Historical
+  Test). Include history checkpoints (15/20/30/+10), 8-non-Tie warm-up gate,
+  Review Data with edit/delete + full roadmap rebuild, and double-tap prevention.
+  No prediction logic. DB-001 must not be modified; no dependency upgrades.
+
+backend:
+  - task: "No backend (local-first, offline app)"
+    implemented: true
+    working: "NA"
+    file: "N/A"
+    stuck_count: 0
+    priority: "low"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "This app is fully offline with no backend/network. Persistence is on-device SQLite (native) with an AsyncStorage web fallback."
+
+frontend:
+  - task: "Active Shoe History Input screen (info panel + roadmaps + controls)"
+    implemented: true
+    working: true
+    file: "src/app/(shell)/index.tsx, src/ui/history/*, src/ui/roadmap/RoadmapBoards.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "main"
+        -comment: "Verified in web preview via screenshot automation: entered 10-15 rounds, stats update (total/non-Tie/P/T/B), roadmaps render (bead plate, big road with tie count, three derived roads), round-15 checkpoint banner appears, Review Data lists rounds with edit/delete, edit round + delete round rebuild the roadmap, Clear Shoe confirmation dialog shows. Start Live/Historical enabled after 8 non-Tie."
+  - task: "Pure History domain (pair-mode, statistics, checkpoints, guard, session)"
+    implemented: true
+    working: true
+    file: "src/domain/history/*, src/tests/history.test.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "main"
+        -comment: "22 Jest tests pass: add P/T/B, pair COMPLETE/PARTIAL, PP/BP auto-reset, double-tap/busy guard, undo, edit, delete+renumber, full roadmap rebuild, checkpoint cadence, 8-non-Tie gate."
+  - task: "History persistence (SQLite native / AsyncStorage web) + additive repo methods"
+    implemented: true
+    working: true
+    file: "src/workflows/history/*, src/data/repositories/round-repository.ts, shoe-repository.ts, src/tests/database.test.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "main"
+        -comment: "DB-001 unchanged. Added RoundRepository.update/replaceShoe and ShoeRepository.updateMeta (all atomic). 4 new DB persistence tests pass. Web bundle fixed by platform-specific create-store.web.ts so expo-sqlite/wa-sqlite wasm is not bundled on web."
+
+metadata:
+  created_by: "main_agent"
+  version: "2.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Active Shoe History Input screen (info panel + roadmaps + controls)"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    -agent: "main"
+    -message: "Milestone 2 complete. Audit gate green (typecheck, lint, 77 jest tests, roadmap 26, engine 10, expo-doctor 18/18, package-lock.json unchanged). UI verified via screenshot automation. Frontend automated testing (deep flows) NOT run yet — awaiting user go-ahead per protocol."

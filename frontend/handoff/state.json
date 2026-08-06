@@ -4,10 +4,10 @@
   "mobileProjectRoot": "/app/frontend",
   "backendInRepository": false,
   "trackedBackendFiles": [],
-  "completedMilestone": 1,
-  "milestoneName": "Local Data and Roadmap Engine",
+  "completedMilestone": 2,
+  "milestoneName": "History Input Workflow and Roadmap UI",
   "status": "COMPLETE",
-  "milestone2Started": false,
+  "milestone2Started": true,
   "databaseSchemaVersion": "DB-001",
   "acceptedImplementation": {
     "domainModels": true,
@@ -15,20 +15,23 @@
     "sqliteDatabase": true,
     "repositories": true,
     "roadmapEngine": true,
+    "historyDomain": true,
+    "historyWorkflow": true,
+    "activeShoeScreen": true,
+    "roadmapUi": true,
+    "reviewDataEditDelete": true,
+    "checkpoints": true,
     "prediction": false,
     "confidence": false,
     "analyzers": false,
     "voting": false,
     "session": false,
-    "screens": false,
-    "note": "Milestone 1 delivers domain models/enums, the DB-001 SQLite layer over a UI-independent SqlDatabase abstraction, and the pure roadmap engine. Prediction/confidence/sequence functions remain explicit throwing placeholders; no screens beyond Milestone 0 placeholders; the expo-sqlite adapter is complete but intentionally not yet wired to any screen."
+    "screens": true,
+    "note": "Milestone 2 adds the pure History domain (pair-mode, statistics, checkpoints, transaction-guard, session mutations), additive repository methods (update, replaceShoe, updateMeta) over the UNCHANGED DB-001 schema, the useHistorySession workflow with a platform-selected HistoryStore (SQLite on native, AsyncStorage fallback on web), and the Active Shoe History Input screen (left info panel, center roadmaps, bottom P/T/B controls + secondary controls, checkpoint banner, Review Data with per-round edit/delete, confirmation dialogs). Prediction/confidence/analyzers/voting/sequence remain explicit throwing placeholders; other route screens remain Milestone 0 placeholders."
   },
   "packageManager": "npm",
-  "dependenciesAdded": {
-    "expo-sqlite": "~16.0.10",
-    "sql.js": "1.14.1 (devDependency, test-only)",
-    "@types/sql.js": "1.4.11 (devDependency)"
-  },
+  "packageLockChanged": false,
+  "dependenciesAdded": {},
   "platform": {
     "framework": "expo-react-native-managed",
     "language": "typescript-strict",
@@ -53,6 +56,7 @@
   },
   "database": {
     "migration": "DB-001",
+    "unchangedThisMilestone": true,
     "tables": [
       "shoes",
       "rounds",
@@ -66,21 +70,34 @@
       "diagnostic_events",
       "schema_migrations"
     ],
-    "constraints": [
-      "rounds UNIQUE(shoe_id, round_number)",
-      "idx_rounds_shoe_id",
-      "idx_predictions_target_round",
-      "idx_predictions_shoe_id",
-      "idx_predictions_environment",
-      "idx_predictions_category"
+    "newRepositoryMethods": [
+      "RoundRepository.update (edit-in-place + UPDATE revision, atomic)",
+      "RoundRepository.replaceShoe (full renumbered replace + revision, atomic)",
+      "ShoeRepository.updateMeta (mutable shoe metadata via UPDATE, never REPLACE)"
     ],
     "wal": "enabled when supported",
     "parameterized": true,
     "transactionsForMultiTable": true
   },
+  "historyInput": {
+    "pureDomain": "src/domain/history/*",
+    "workflow": "src/workflows/history/use-history-session.ts",
+    "persistence": {
+      "native": "SqliteHistoryStore (expo-sqlite, DB-001)",
+      "web": "MemoryHistoryStore (AsyncStorage fallback)",
+      "platformFactory": "create-store.ts / create-store.web.ts"
+    },
+    "screen": "src/app/(shell)/index.tsx",
+    "pairModes": ["COMPLETE (unselected => NO)", "PARTIAL (unselected => UNKNOWN)"],
+    "minNonTieToStartForwardModes": 8,
+    "checkpointRounds": "15, 20, 30, then every +10",
+    "resultButtonOrder": "P / T / B",
+    "predictionImplemented": false
+  },
   "roadmapEngine": {
     "path": "src/domain/roadmap/engine.ts",
     "pure": true,
+    "unchangedThisMilestone": true,
     "forbiddenImportsAvoided": ["react", "react-native", "expo", "sqlite", "ui"],
     "outputs": [
       "beadPlate",
@@ -104,24 +121,37 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 4, "tests": 52, "status": "pass" },
+    "test": { "suites": 5, "tests": 77, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
+    "packageLockUnchanged": true,
     "appBoots": true,
-    "roadmapGoldenCoverage": {
-      "core": 16,
-      "derivedRoad": 9,
-      "sourceOfTruth": 1,
-      "derivedRoadFixtures": "literal, hand-computed (not engine-generated)",
-      "note": "Derived-road golden coverage complete: activation points, stable RED/BLUE runs, colour transition, dragon-tail interaction, middle-edit rebuild, structural-enum integrity."
+    "historyTests": {
+      "suite": "src/tests/history.test.ts",
+      "count": 22,
+      "covers": [
+        "add Player/Tie/Banker",
+        "pair COMPLETE mode",
+        "pair PARTIAL mode",
+        "automatic PP/BP reset",
+        "double-tap / busy guard",
+        "undo",
+        "edit",
+        "delete + renumber",
+        "full roadmap rebuild after edit/delete",
+        "checkpoint cadence (15/20/30/+10)",
+        "8 non-Tie warm-up gate"
+      ]
     },
-    "databaseIntegrity": {
-      "uniqueShoeRound": true,
-      "requiredIndexes": true,
-      "foreignKeyEnforced": true,
-      "transactionRollbackTested": true
-    }
+    "databasePersistenceTests": "update + replaceShoe + clear (4 new tests in database.test.ts)",
+    "uiVerifiedInPreview": [
+      "result entry + statistics",
+      "roadmap rendering (bead plate, big road, derived roads)",
+      "round-15 checkpoint banner",
+      "Review Data edit + delete with roadmap rebuild",
+      "Clear Shoe confirmation dialog"
+    ]
   },
-  "nextMilestone": "Milestone 2 — NOT STARTED (do not begin unless explicitly instructed)"
+  "nextMilestone": "Milestone 3 — NOT STARTED (do not begin unless explicitly instructed). Analyzers and voting are explicitly out of scope."
 }

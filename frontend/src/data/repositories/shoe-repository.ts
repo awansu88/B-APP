@@ -66,4 +66,25 @@ export class ShoeRepository {
       [roundCount, updatedAt, id],
     );
   }
+
+  /**
+   * Update a shoe's mutable metadata (label / environment / status /
+   * round_count) in place. Never uses INSERT OR REPLACE (that would cascade
+   * delete the shoe's rounds); a plain UPDATE keeps raw rounds intact.
+   */
+  async updateMeta(shoe: ShoeRecord): Promise<void> {
+    await this.db.runAsync(
+      `UPDATE shoes
+         SET label = ?, environment = ?, status = ?, round_count = ?, updated_at = ?
+       WHERE id = ?;`,
+      [
+        shoe.label,
+        shoe.environment,
+        shoe.status,
+        shoe.roundCount,
+        shoe.updatedAt,
+        shoe.id,
+      ],
+    );
+  }
 }

@@ -2,7 +2,7 @@
 
 **Project:** B-APP Baccarat Engine
 **Repository root:** `/app/frontend`
-**Status:** Milestone 0 (Bootstrap) — COMPLETE. Do **not** begin Milestone 1 unless explicitly instructed.
+**Status:** Milestone 2 (History Input Workflow & Roadmap UI) — COMPLETE. Do **not** begin Milestone 3 unless explicitly instructed.
 
 This file is LOCKED guidance. Read it fully before touching anything.
 

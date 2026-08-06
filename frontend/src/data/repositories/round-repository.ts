@@ -2,6 +2,7 @@ import { RoundSource } from '../../domain/models/enums';
 import { PairState } from '../../domain/models/pair';
 import { Winner } from '../../domain/models/outcome';
 import { RoundRecord } from '../../domain/models/round';
+import { RevisionRecord } from '../../domain/models/records';
 import { SqlDatabase } from '../database/sql-database';
 
 interface RoundRow {
@@ -108,5 +109,72 @@ export class RoundRepository {
         ],
       );
     });
+  }
+
+  /**
+   * Edit an existing round in place (winner / pair states only — the id, shoe
+   * and round_number never change). The supplied audit revision is written in
+   * the SAME transaction so an edit and its audit trail are atomic.
+   */
+  async update(round: RoundRecord, revision: RevisionRecord): Promise<void> {
+    await this.db.withTransactionAsync(async () => {
+      await this.db.runAsync(
+        `UPDATE rounds
+           SET winner = ?, player_pair = ?, banker_pair = ?
+         WHERE id = ?;`,
+        [round.winner, round.playerPair, round.bankerPair, round.id],
+      );
+      await this.insertRevision(revision);
+    });
+  }
+
+  /**
+   * Replace the ENTIRE ordered round set of a shoe with `rounds` (already
+   * renumbered 1..n by the caller) and write the audit revision — all inside a
+   * single transaction. Used for deleting a middle round (which renumbers the
+   * remainder) and for clearing a shoe (`rounds = []`). Raw rounds remain the
+   * only source of truth; roadmaps are rebuilt from them afterwards.
+   */
+  async replaceShoe(
+    shoeId: string,
+    rounds: readonly RoundRecord[],
+    revision: RevisionRecord,
+  ): Promise<void> {
+    await this.db.withTransactionAsync(async () => {
+      await this.db.runAsync('DELETE FROM rounds WHERE shoe_id = ?;', [shoeId]);
+      for (const round of rounds) {
+        await this.db.runAsync(
+          `INSERT INTO rounds (id, shoe_id, round_number, winner, player_pair, banker_pair, source, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+          [
+            round.id,
+            round.shoeId,
+            round.roundNumber,
+            round.winner,
+            round.playerPair,
+            round.bankerPair,
+            round.source,
+            round.createdAt,
+          ],
+        );
+      }
+      await this.insertRevision(revision);
+    });
+  }
+
+  private async insertRevision(revision: RevisionRecord): Promise<void> {
+    await this.db.runAsync(
+      `INSERT INTO revisions (id, shoe_id, round_number, action, before, after, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [
+        revision.id,
+        revision.shoeId,
+        revision.roundNumber,
+        revision.action,
+        revision.before,
+        revision.after,
+        revision.createdAt,
+      ],
+    );
   }
 }

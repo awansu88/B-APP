@@ -181,4 +181,71 @@ describe('database — DB-001 migrations & repositories', () => {
       new RoundRepository(db).append(makeRound('ghost-shoe', 1, Winner.PLAYER)),
     ).rejects.toThrow();
   });
+
+  it('update() edits a round in place and writes an UPDATE revision', async () => {
+    const db = await freshDb();
+    await new ShoeRepo(db).insert(makeShoe('s1'));
+    const rounds = new RoundRepository(db);
+    await rounds.append(makeRound('s1', 1, Winner.PLAYER));
+    const edited = { ...makeRound('s1', 1, Winner.BANKER) };
+    const revision = {
+      id: 'rev-s1-r1-update',
+      shoeId: 's1',
+      roundNumber: 1,
+      action: 'UPDATE' as const,
+      before: JSON.stringify(makeRound('s1', 1, Winner.PLAYER)),
+      after: JSON.stringify(edited),
+      createdAt: NOW,
+    };
+    await rounds.update(edited, revision);
+    const fetched = await rounds.getByShoeAndNumber('s1', 1);
+    expect(fetched?.winner).toBe(Winner.BANKER);
+    const revs = await new RevisionRepository(db).listByShoe('s1');
+    expect(revs.some((r) => r.action === 'UPDATE')).toBe(true);
+  });
+
+  it('replaceShoe() replaces the full renumbered round set atomically', async () => {
+    const db = await freshDb();
+    await new ShoeRepo(db).insert(makeShoe('s1'));
+    const rounds = new RoundRepository(db);
+    await rounds.append(makeRound('s1', 1, Winner.PLAYER));
+    await rounds.append(makeRound('s1', 2, Winner.BANKER));
+    await rounds.append(makeRound('s1', 3, Winner.PLAYER));
+
+    // Delete round 2 -> renumber remaining to 1..2
+    const replacement = [
+      makeRound('s1', 1, Winner.PLAYER),
+      { ...makeRound('s1', 2, Winner.PLAYER), id: 's1-r3' },
+    ];
+    const revision = {
+      id: 'rev-s1-delete',
+      shoeId: 's1',
+      roundNumber: 2,
+      action: 'DELETE' as const,
+      before: JSON.stringify(makeRound('s1', 2, Winner.BANKER)),
+      after: null,
+      createdAt: NOW,
+    };
+    await rounds.replaceShoe('s1', replacement, revision);
+    const list = await rounds.listByShoe('s1');
+    expect(list.map((r) => r.roundNumber)).toEqual([1, 2]);
+    expect(list.map((r) => r.winner)).toEqual([Winner.PLAYER, Winner.PLAYER]);
+  });
+
+  it('replaceShoe([]) clears every round of a shoe', async () => {
+    const db = await freshDb();
+    await new ShoeRepo(db).insert(makeShoe('s1'));
+    const rounds = new RoundRepository(db);
+    await rounds.append(makeRound('s1', 1, Winner.PLAYER));
+    await rounds.replaceShoe('s1', [], {
+      id: 'rev-s1-clear',
+      shoeId: 's1',
+      roundNumber: null,
+      action: 'DELETE',
+      before: null,
+      after: null,
+      createdAt: NOW,
+    });
+    expect(await rounds.listByShoe('s1')).toHaveLength(0);
+  });
 });
