@@ -52,10 +52,20 @@ still passing.
 
 ## Do NOT
 - Begin Milestone 4 unless explicitly instructed.
-- Implement voting / confidence / risk decisions / prediction locking.
+- Implement voting / confidence / risk decisions as a FINAL locked outcome.
+- Perform prediction database writes, **prediction locking**, result submission,
+  result evaluation, live workflow, or sequence/three-win tracking.
 - Activate the Historical Matcher or let SHADOW_ONLY modules influence decisions.
 - Modify engine thresholds or DB-001; upgrade dependencies; add a backend.
 - Introduce randomness, ML, network, balances, or target-sequence inputs into analysis.
+
+## Next milestone scope (for the next agent)
+**Milestone 4 = Decision Pipeline ONLY** (no persistence, no locking): Data Quality
+Gate, Weighted Voting, Family Correlation Cap, Conflict Detection, Confidence
+Engine, Risk Filter, Active & Shadow Decision, and a Prediction **Draft** + decision
+trace (in-memory only). Milestone 4 must NOT write prediction records, lock
+predictions, submit/evaluate results, run a live workflow, or track sequences.
+**Prediction LOCKING belongs to Milestone 5.**
 
 ## After your milestone
 Update `docs/CURRENT_STATE.md`, this file, `docs/KNOWN_ISSUES.md`,

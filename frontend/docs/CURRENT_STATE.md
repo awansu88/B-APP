@@ -1,7 +1,9 @@
 # Current State
 
 **Completed milestone:** 3 — Snapshots, Features, and Analysis Modules. **Status: COMPLETE.**
-**Milestone 4: NOT STARTED.**
+**Milestone 4: NOT STARTED** — Decision Pipeline only (voting → confidence → risk →
+Active/Shadow decision → Prediction **Draft** + trace; NO persistence, NO locking).
+**Prediction locking is Milestone 5.**
 **Database schema version:** DB-001 (unchanged)
 **App:** 0.1.0 · **Engine:** ENGINE-001 · **Config:** CFG-001 · **Roadmap:** ROADMAP-001
 · **Snapshot:** SNAPSHOT-001 · **Feature:** FEATURE-001

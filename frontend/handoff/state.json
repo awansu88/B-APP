@@ -165,7 +165,27 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 4 — NOT STARTED (do not begin unless explicitly instructed). Voting, confidence, risk decisions, and prediction locking remain out of scope until authorised.",
+  "nextMilestone": "Milestone 4 — Decision Pipeline ONLY (NOT STARTED; do not begin unless explicitly instructed). M4 scope: Data Quality Gate, Weighted Voting, Family Correlation Cap, Conflict Detection, Confidence Engine, Risk Filter, Active & Shadow Decision, Prediction Draft + decision trace. M4 must NOT include prediction database writes, prediction locking, result submission, result evaluation, live workflow, or sequence tracking. Prediction LOCKING belongs to Milestone 5.",
+  "milestone4Scope": {
+    "includes": [
+      "Data Quality Gate",
+      "Weighted Voting",
+      "Family Correlation Cap",
+      "Conflict Detection",
+      "Confidence Engine",
+      "Risk Filter",
+      "Active and Shadow Decision",
+      "Prediction Draft and decision trace"
+    ],
+    "excludes": [
+      "prediction database writes",
+      "prediction locking (Milestone 5)",
+      "result submission",
+      "result evaluation",
+      "live workflow",
+      "sequence / three-win tracking"
+    ]
+  },
   "milestone3": {
     "snapshot": "src/domain/snapshot/shoe-snapshot.ts (SNAPSHOT-001, immutable, no future leakage)",
     "features": "src/domain/features/feature-extraction.ts (FEATURE-001)",

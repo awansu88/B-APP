@@ -111,8 +111,12 @@ prediction locking**. `runAnalysis` only returns per-module results (ACTIVE vs
 SHADOW separated). Volatility & Derived Road are **SHADOW_ONLY** (computed, never
 influential); the Historical Matcher is **DISABLED** (never computed).
 
-**Impact:** none — this is the intended scope. **Action:** implement voting /
-confidence / decisioning in a later, authorised milestone.
+**Impact:** none — this is the intended scope. **Action:** Milestone 4 implements
+the **Decision Pipeline only** (Data Quality Gate, Weighted Voting, Family
+Correlation Cap, Conflict Detection, Confidence Engine, Risk Filter, Active &
+Shadow Decision, Prediction **Draft** + decision trace — all in-memory, no writes).
+**Prediction locking, result submission/evaluation, live workflow, and sequence
+tracking are Milestone 5+ and must not be built in Milestone 4.**
 
 ### 13. Regime / volatility heuristics are deterministic MVP formulas
 Regime classification (alternation-rate thresholds) and the bounded 0–1
