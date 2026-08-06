@@ -90,9 +90,21 @@ stability** (edit/delete never recreate surviving round ids).
 - **Pipeline determinism:** same raw rounds + config + version → identical
   snapshot, features, and module results.
 
+### `src/tests/reliability.test.ts` (13 — reliability-semantics correction)
+Locks the corrected meaning of `reliability` (a deterministic, versioned
+UNCALIBRATED MVP PRIOR per analyzer): the versioned prior registry
+(`RELPRIOR-001`); every non-ABSTAIN result reports exactly its module prior;
+reliability does **not** change when non-Tie count / stabilityScore /
+volatilityScore change (once activated); `strength` still responds to the current
+streak; modules still ABSTAIN below the warm-up (reliability 0); reliability stays
+within `[0,1]`; identical inputs stay deterministic; Historical Matcher stays
+DISABLED (never computed); Volatility & Derived Road stay SHADOW_ONLY; Data
+Quality Guard stays non-directional with `strength` = data quality and
+`reliability` = its fixed prior.
+
 ## Expected result (Milestone 3)
 - typecheck: **pass** · lint: **pass**
-- `npm test`: **6 suites, 107 tests passing**
-  (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28)
+- `npm test`: **7 suites, 120 tests passing**
+  (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
 - `package-lock.json` unchanged; engine/DB-001/thresholds/version-registry unchanged.

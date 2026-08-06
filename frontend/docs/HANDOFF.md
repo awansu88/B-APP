@@ -5,8 +5,18 @@
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
 ## Status
-- Milestone 3 is **complete**. **Milestone 4 has NOT started.**
+- Milestone 3 is **complete** (incl. the reliability-semantics correction
+  `RELPRIOR-001`). **Milestone 4 has NOT started.**
 - Database schema version: **DB-001** (unchanged).
+- **Reliability correction:** analyzer `reliability` is now a deterministic,
+  versioned **UNCALIBRATED MVP PRIOR** (`RELIABILITY_PRIORS` in
+  `src/domain/analysis/types.ts`) and no longer encodes any current-shoe
+  condition (non-Tie count, stability, volatility, streak, regime, distribution,
+  shoe position, results, sequence state). Current-shoe evidence stays in
+  `strength`; regime→context and volatility/stability→risk are deferred to
+  Milestone 4; data quality stays in the Data Quality Guard. See
+  `docs/ENGINE_RULES.md` → "Analyzer output semantics". Feature formulas, DB-001,
+  roadmap engine, thresholds, and the History workflow/UI are all UNCHANGED.
 - Accepted this milestone (pure domain engine, no UI/DB writes):
   - `src/domain/snapshot/shoe-snapshot.ts` — immutable `ShoeStateSnapshot`
     (`SNAPSHOT-001`) with future-leakage prevention.
@@ -25,7 +35,7 @@ commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
    Metro was already running, so it rebuilds its graph against the fresh install).
 3. Confirm the gate is green:
    `npm run typecheck && npm run lint && npm test && npm run test:roadmap && npm run test:engine && npx expo-doctor`.
-   Expected: **6 suites / 107 tests**, roadmap 26, engine 10, doctor 18/18.
+   Expected: **7 suites / 120 tests**, roadmap 26, engine 10, doctor 18/18.
 
 ## Key building blocks (Milestone 3)
 - Pure helpers: `src/domain/analysis/helpers.ts` (runs, alternation, deepFreeze…).
@@ -34,7 +44,11 @@ commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 - Analysis: `runAnalysis(ctx)` → `AnalysisReport` (`results` / `activeResults` /
   `shadowResults`). DISABLED modules are never computed; SHADOW_ONLY are computed
   but returned separately and must never influence a decision.
-- Tests: `src/tests/analysis.test.ts` (28).
+- Tests: `src/tests/analysis.test.ts` (28) + `src/tests/reliability.test.ts` (13,
+  reliability-semantics regression).
+- Reliability priors: `RELIABILITY_PRIORS` / `RELIABILITY_PRIOR_VERSION`
+  (`RELPRIOR-001`) in `src/domain/analysis/types.ts`; `reliabilityPrior(id)`
+  returns the fixed prior. UNCALIBRATED — do not treat as accuracy.
 
 ## Locked / do-not-touch (accepted M1 + M2 + M3)
 - Roadmap engine (`src/domain/roadmap/engine.ts`) + `types.ts`.

@@ -122,10 +122,26 @@ tracking are Milestone 5+ and must not be built in Milestone 4.**
 Regime classification (alternation-rate thresholds) and the bounded 0–1
 volatility/stability scores are simple, deterministic heuristics chosen for the
 MVP, not calibrated statistics. They are versioned via the analyzer registry and
-can be revised as a future versioned engine decision.
+can be revised as a future versioned engine decision. They feed **`strength`**
+and **risk flags** only — never `reliability`.
 
 **Impact:** low (used only by SHADOW/ACTIVE signal shaping, not a final decision).
 **Action:** revisit during calibration.
+
+### 14. Analyzer `reliability` is an UNCALIBRATED MVP PRIOR (corrected `RELPRIOR-001`)
+`reliability` is a deterministic, versioned prior trust value per analyzer
+(`RELIABILITY_PRIORS`), **not** observed accuracy or an empirical win rate. It is
+intentionally decoupled from all current-shoe conditions (non-Tie count,
+stability, volatility, streak, regime, distribution, shoe position, results,
+sequence state). The earlier formula
+`sampleFactor(min(nonTie/20,1)) × (0.5 + 0.5·stabilityScore)` coupled reliability
+to the current shoe and risked double-counting those conditions in Milestone 4;
+it has been replaced with fixed conservative priors. The priors are placeholders
+awaiting calibration and were not optimized against test data.
+
+**Impact:** none functionally (Milestone 3 makes no decision); this removes a
+Milestone-4 double-counting risk. **Action:** calibrate priors (and add
+`context`/`risk`) in a future versioned decision.
 
 ## No functional defects
 All verification gates pass (see `docs/TEST_PLAN.md` and `docs/CURRENT_STATE.md`).

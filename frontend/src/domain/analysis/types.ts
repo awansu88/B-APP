@@ -89,3 +89,58 @@ export const ANALYZER_VERSIONS = Object.freeze({
 } as const);
 
 export const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
+
+/**
+ * Versioned reliability-prior registry (bump per versioned engine decision).
+ *
+ * Bumped when any prior below is revised.
+ */
+export const RELIABILITY_PRIOR_VERSION = 'RELPRIOR-001';
+
+/**
+ * RELIABILITY_PRIORS — **UNCALIBRATED MVP PRIOR** trust assigned to each
+ * analyzer *itself*.
+ *
+ * IMPORTANT (locked semantics — see docs/ENGINE_RULES.md):
+ * - `reliability` is a deterministic, versioned prior for the analyzer module.
+ *   It is **NOT** observed accuracy, an empirical win rate, or a calibrated
+ *   statistic. These are conservative, hand-picked MVP placeholders and were
+ *   **not** optimized against any test data.
+ * - `reliability` MUST NOT depend on any current-shoe condition: non-Tie count,
+ *   stabilityScore, volatilityScore, current streak, current regime, current
+ *   Player/Banker distribution, shoe position, financial results, or sequence
+ *   state. Those belong to other layers:
+ *     • current pattern evidence  -> `strength`
+ *     • insufficient observations -> activation requirement / ABSTAIN
+ *     • regime suitability        -> Milestone-4 `context`
+ *     • volatility / stability    -> Milestone-4 `risk` / `context`
+ *     • data quality              -> Data Quality Guard
+ *
+ * Rationale for the conservative values (uncalibrated, domain-reasoned only):
+ *   streak/chop are the two most fundamental directional reads (0.50);
+ *   run-length and regime are secondary structural reads (0.45);
+ *   distribution is the weakest directional read given baccarat's near-symmetric
+ *   base rates (0.40); the Data Quality Guard is a non-directional meta guard
+ *   (0.50); SHADOW_ONLY analyzers carry a low prior (0.30) and never influence a
+ *   decision; the DISABLED Historical Matcher is 0.
+ */
+export const RELIABILITY_PRIORS = Object.freeze({
+  streak: 0.5,
+  chop: 0.5,
+  'run-length': 0.45,
+  distribution: 0.4,
+  'regime-transition': 0.45,
+  'data-quality-guard': 0.5,
+  volatility: 0.3,
+  'derived-road': 0.3,
+  'historical-matcher': 0,
+} as const);
+
+export type ReliabilityPriorId = keyof typeof RELIABILITY_PRIORS;
+
+/**
+ * Fixed, versioned reliability prior for a module id. Deterministic and fully
+ * independent of the current shoe. Unknown ids fall back to a conservative 0.3.
+ */
+export const reliabilityPrior = (moduleId: string): number =>
+  (RELIABILITY_PRIORS as Record<string, number>)[moduleId] ?? 0.3;

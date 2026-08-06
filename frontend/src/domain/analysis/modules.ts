@@ -21,15 +21,19 @@ import {
   ReasonCode,
   RiskFlag,
   clamp01,
+  reliabilityPrior,
 } from './types';
 
 const sideToSignal = (side: Side): AnalysisSignal =>
   side === Winner.PLAYER ? AnalysisSignal.PLAYER : AnalysisSignal.BANKER;
 
-const baseReliability = (f: FeatureSet): number => {
-  const sampleFactor = clamp01(f.nonTieCount / 20);
-  return round6(sampleFactor * (0.5 + 0.5 * f.volatility.stabilityScore));
-};
+// NOTE (Milestone-3 reliability correction):
+// `reliability` is a deterministic, versioned, UNCALIBRATED MVP PRIOR assigned
+// to each analyzer itself (see RELIABILITY_PRIORS in ./types). It MUST NOT
+// encode any current-shoe condition (non-Tie count, stability/volatility,
+// streak, regime, distribution, shoe position, results, sequence state). All
+// current-shoe evidence stays in `strength`; regime/volatility/data-quality live
+// in their own layers (Milestone-4 context/risk and the Data Quality Guard).
 
 const commonRiskFlags = (f: FeatureSet): RiskFlag[] => {
   const flags: RiskFlag[] = [];
@@ -76,7 +80,7 @@ export const streakAnalyzer: AnalysisModule = {
       return abstain(this.id, this.version, this.status, [ReasonCode.INSUFFICIENT_DATA], commonRiskFlags(f));
     }
     const { currentSide, currentStreak } = f.streak;
-    const reliability = baseReliability(f);
+    const reliability = reliabilityPrior(this.id);
     if (currentSide && currentStreak >= 3) {
       return {
         moduleId: this.id,
@@ -114,7 +118,7 @@ export const chopAnalyzer: AnalysisModule = {
     if (belowWarmup(f)) {
       return abstain(this.id, this.version, this.status, [ReasonCode.INSUFFICIENT_DATA], commonRiskFlags(f));
     }
-    const reliability = baseReliability(f);
+    const reliability = reliabilityPrior(this.id);
     const { currentSide } = f.streak;
     if (currentSide && f.chop.alternationRate >= 0.6 && f.chop.currentAlternationRun >= 3) {
       return {
@@ -153,7 +157,7 @@ export const runLengthAnalyzer: AnalysisModule = {
     if (belowWarmup(f) || f.bigRoad.currentColumn < 2) {
       return abstain(this.id, this.version, this.status, [ReasonCode.INSUFFICIENT_DATA], commonRiskFlags(f));
     }
-    const reliability = baseReliability(f);
+    const reliability = reliabilityPrior(this.id);
     const { currentSide, currentStreak, averageRunLength } = f.streak;
     const diff = currentStreak - averageRunLength;
     if (currentSide && diff <= -0.5) {
@@ -205,7 +209,7 @@ export const distributionAnalyzer: AnalysisModule = {
     if (belowWarmup(f)) {
       return abstain(this.id, this.version, this.status, [ReasonCode.INSUFFICIENT_DATA], commonRiskFlags(f));
     }
-    const reliability = baseReliability(f);
+    const reliability = reliabilityPrior(this.id);
     const skew = f.distribution.playerRatio - 0.5;
     if (Math.abs(skew) >= 0.1) {
       return {
@@ -244,7 +248,7 @@ export const regimeTransitionAnalyzer: AnalysisModule = {
     if (belowWarmup(f)) {
       return abstain(this.id, this.version, this.status, [ReasonCode.INSUFFICIENT_DATA], commonRiskFlags(f));
     }
-    const reliability = baseReliability(f);
+    const reliability = reliabilityPrior(this.id);
     const risks = commonRiskFlags(f);
     const { currentSide } = f.streak;
     if (f.regime.transitionState === TransitionState.TRANSITIONING) {
@@ -252,7 +256,7 @@ export const regimeTransitionAnalyzer: AnalysisModule = {
         moduleId: this.id,
         signal: AnalysisSignal.NEUTRAL,
         strength: 0,
-        reliability: round6(reliability * 0.5),
+        reliability,
         status: this.status,
         reasonCodes: [ReasonCode.IN_TRANSITION],
         riskFlags: risks,
@@ -316,7 +320,7 @@ export const dataQualityGuard: AnalysisModule = {
       moduleId: this.id,
       signal: AnalysisSignal.NEUTRAL,
       strength: quality,
-      reliability: quality,
+      reliability: reliabilityPrior(this.id),
       status: this.status,
       reasonCodes: [ReasonCode.DATA_QUALITY_OK],
       riskFlags: risks,
@@ -342,7 +346,7 @@ export const volatilityAnalyzer: AnalysisModule = {
       moduleId: this.id,
       signal: AnalysisSignal.NEUTRAL,
       strength: f.volatility.volatilityScore,
-      reliability: f.volatility.stabilityScore,
+      reliability: reliabilityPrior(this.id),
       status: this.status,
       reasonCodes: [ReasonCode.SHADOW_ONLY],
       riskFlags: risks,
@@ -376,7 +380,7 @@ export const derivedRoadAnalyzer: AnalysisModule = {
         moduleId: this.id,
         signal: sideToSignal(currentSide),
         strength: round6(clamp01(f.derivedRoads.bigEyeBoy.currentRun / 4)),
-        reliability: round6(baseReliability(f) * 0.5),
+        reliability: reliabilityPrior(this.id),
         status: this.status,
         reasonCodes: [ReasonCode.DERIVED_AGREEMENT, ReasonCode.SHADOW_ONLY],
         riskFlags: risks,
@@ -387,7 +391,7 @@ export const derivedRoadAnalyzer: AnalysisModule = {
       moduleId: this.id,
       signal: AnalysisSignal.NEUTRAL,
       strength: 0,
-      reliability: round6(baseReliability(f) * 0.5),
+      reliability: reliabilityPrior(this.id),
       status: this.status,
       reasonCodes: [ReasonCode.DERIVED_DISAGREEMENT, ReasonCode.SHADOW_ONLY],
       riskFlags: risks,

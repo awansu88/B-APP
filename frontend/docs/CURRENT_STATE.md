@@ -84,15 +84,36 @@ Active/Shadow decision → Prediction **Draft** + trace; NO persistence, NO lock
   ABSTAIN below the 8 non-Tie warm-up. No randomness/ML/network/balance/prior-financial/
   target-sequence inputs.
 
+### Milestone 3 correction (reliability semantics, `RELPRIOR-001`)
+- **`reliability` is now a deterministic, versioned UNCALIBRATED MVP PRIOR** per
+  analyzer (`RELIABILITY_PRIORS` in `src/domain/analysis/types.ts`), never observed
+  accuracy. It no longer depends on any current-shoe condition. The old
+  `sampleFactor(min(nonTie/20,1)) × (0.5 + 0.5·stabilityScore)` coupling (and the
+  regime `×0.5`, Volatility `reliability = stabilityScore`, Derived-Road
+  `×0.5`, Data-Quality `reliability = quality`) was removed.
+- Current-shoe evidence stays in the correct layer: pattern evidence → `strength`
+  (feature formulas UNCHANGED); insufficient data → ABSTAIN; regime suitability →
+  Milestone-4 `context`; volatility/stability → Milestone-4 `risk`; data quality →
+  the Data Quality Guard (its `strength` still reports data quality).
+- Priors (conservative, not tuned): streak 0.50 · chop 0.50 · run-length 0.45 ·
+  distribution 0.40 · regime-transition 0.45 · data-quality-guard 0.50 ·
+  volatility 0.30 · derived-road 0.30 · historical-matcher 0.00. See
+  `docs/ENGINE_RULES.md`. Data Quality Guard stays ACTIVE/non-directional;
+  Volatility & Derived Road stay SHADOW_ONLY; Historical Matcher stays DISABLED.
+
 ## Verification (this milestone)
 - `npm run typecheck` → pass · `npm run lint` → pass
-- `npm test` → **6 suites, 107 tests** (adds `analysis.test.ts` ×28: snapshot
-  immutability, future-leakage prevention, deterministic features, analyzer
-  activation/insufficient-data, fixed analyzer outputs, Tie handling, pipeline
-  determinism). Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28.
+- `npm test` → **7 suites, 120 tests** (adds `reliability.test.ts` ×13 for the
+  reliability-semantics correction: prior is decoupled from non-Tie count /
+  stability / volatility, strength still responds to features, ABSTAIN below
+  warm-up, `[0,1]` bounds, determinism, Historical Matcher DISABLED, shadow
+  modules SHADOW_ONLY, Data Quality Guard non-directional). Per-file: smoke 6 ·
+  engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13.
 - `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
 - `package-lock.json` unchanged; roadmap engine, DB-001, engine thresholds, and the
-  version registry all UNCHANGED.
+  version registry all UNCHANGED (only `src/domain/analysis/modules.ts`,
+  `src/domain/analysis/types.ts`, and the new `src/tests/reliability.test.ts`
+  changed for the reliability correction).
 
 ## Native persistence status
 - **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (Milestone 2; unchanged this milestone).

@@ -51,6 +51,49 @@ A prediction must be **locked before** the actual result is submitted
 SHADOW_ONLY analyzers are computed/logged but must **never** influence a decision.
 DISABLED analyzers are not computed at all in the MVP.
 
+## Analyzer output semantics (LOCKED terminology)
+Every analysis module returns `{ signal, strength, reliability, status,
+reasonCodes, riskFlags, version }`. The four scoring concepts are strictly
+separated so no layer double-counts current-shoe conditions:
+
+| Term          | Meaning                                                                 | Layer |
+|---------------|-------------------------------------------------------------------------|-------|
+| **strength**  | Evidence strength of the *current* signal (may respond to current features). | Analyzer (now) |
+| **reliability** | Versioned, **UNCALIBRATED MVP PRIOR** trust in the analyzer *itself*.  | Analyzer (now) |
+| **context**   | Suitability of the current shoe/regime (a contextual multiplier).        | Milestone 4 |
+| **risk**      | Current volatility, stability, uncertainty, and data quality.            | Milestone 4 (+ Data Quality Guard) |
+
+`reliability` is an **UNCALIBRATED MVP PRIOR** — it is NOT observed accuracy, an
+empirical win rate, or a calibrated statistic. It is a deterministic, versioned
+constant per analyzer (`RELIABILITY_PRIORS` / `RELIABILITY_PRIOR_VERSION` in
+`src/domain/analysis/types.ts`) and MUST NOT depend on any current-shoe
+condition: non-Tie count, stabilityScore, volatilityScore, current streak,
+current regime, current Player/Banker distribution, shoe position, financial
+results, or sequence state. Current-shoe evidence belongs elsewhere:
+- pattern evidence → `strength`;
+- insufficient observations → activation requirement / ABSTAIN (reliability 0);
+- regime suitability → Milestone-4 `context`;
+- volatility & stability → Milestone-4 `risk` / `context`;
+- data quality → the Data Quality Guard.
+
+### Reliability priors (`RELPRIOR-001`, UNCALIBRATED)
+Conservative, hand-picked MVP placeholders — **not** optimized against test data:
+
+| Analyzer            | Prior | Mode        |
+|---------------------|-------|-------------|
+| streak              | 0.50  | ACTIVE      |
+| chop                | 0.50  | ACTIVE      |
+| run-length          | 0.45  | ACTIVE      |
+| distribution        | 0.40  | ACTIVE      |
+| regime-transition   | 0.45  | ACTIVE      |
+| data-quality-guard  | 0.50  | ACTIVE (non-directional) |
+| volatility          | 0.30  | SHADOW_ONLY |
+| derived-road        | 0.30  | SHADOW_ONLY |
+| historical-matcher  | 0.00  | DISABLED    |
+
+Reliability is clamped to `[0, 1]`; an ABSTAINing module reports `reliability = 0`.
+Changing a prior is a versioned engine decision (bump `RELIABILITY_PRIOR_VERSION`).
+
 ## Tie evaluation
 `evaluateStep(decision, outcome)` (`src/domain/prediction/sequence.ts`):
 - `SKIP` decision → `SKIP` step.
