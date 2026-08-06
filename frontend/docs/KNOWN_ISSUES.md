@@ -79,5 +79,28 @@ HISTORICAL_TEST). They do **not** produce predictions — that is a later milest
 
 **Impact:** none. **Action:** implement prediction flow when authorised.
 
+### 10. Native SQLite persistence not yet runtime-verified on Android (status A)
+The native persistence path (`SqliteHistoryStore` → `ExpoSqliteDatabase`, DB-001)
+is implemented and its repository/migration logic is covered by the in-memory
+`sql.js` driver tests, but it has **not** been executed on a physical Android
+device or build with an app restart. Web preview persistence (AsyncStorage) is
+verified across page reloads. Status: **A. IMPLEMENTED_NOT_RUNTIME_VERIFIED**.
+
+**Impact:** low — logic is tested and the on-device adapter is a thin wrapper
+over the same `SqlDatabase` interface used in tests. **Action (remaining Android
+verification):** open the app on Android, enter rounds, kill & relaunch, and
+confirm the same shoe + rounds restore from on-device SQLite. Not a Milestone-2
+blocker.
+
+### 11. Round ids are stable across edits/deletes; roundNumber is positional
+Editing a round preserves its id; deleting a middle round preserves the surviving
+rounds' ids and only reassigns `roundNumber` to a contiguous 1..n. Revision
+`before/after` JSON captures full round snapshots, so edits are always audited.
+**Forward note:** future prediction references should key off the stable round
+`id` (not the positional `roundNumber`) or be invalidated when history is edited.
+
+**Impact:** none in Milestone 2 (no predictions exist). **Action:** honour this
+when prediction records are introduced.
+
 ## No functional defects
 All verification gates pass (see `docs/TEST_PLAN.md` and `docs/CURRENT_STATE.md`).

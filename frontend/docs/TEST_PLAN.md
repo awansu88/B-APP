@@ -48,3 +48,25 @@ schema integrity (UNIQUE + required indexes), and foreign-key enforcement.
 - `npm test`: **4 suites, 52 tests passing**
 - `test:roadmap`: **26 tests** · `test:engine`: **10 tests**
 - expo-doctor: **18/18 checks pass**
+
+## Milestone 2 additions (History Input)
+### `src/tests/history.test.ts` (22 — pure History domain)
+Result entry (add Player/Tie/Banker + INSERT revision), pair modes
+(COMPLETE⇒NO / PARTIAL⇒UNKNOWN), automatic PP/BP draft reset, the double-tap /
+busy `TransactionGuard`, undo, edit (+ UPDATE revision, id/roundNumber preserved),
+delete (+ renumber 1..n), full roadmap rebuild after edit/delete, checkpoint
+cadence (15/20/30 then +10; 25/35 excluded), and the 8-non-Tie warm-up gate
+(ties never count).
+
+### `src/tests/database.test.ts` (now 15 — +5)
+Adds `RoundRepository.update` (edit + UPDATE revision), `replaceShoe` (renumbered
+replace), `replaceShoe([])` (clear), **New-Shoe preservation** (archiving a shoe
+keeps its rounds; a new shoe starts empty with a distinct id), and **round-id
+stability** (edit/delete never recreate surviving round ids).
+
+## Expected result (Milestone 2)
+- typecheck: **pass** · lint: **pass**
+- `npm test`: **5 suites, 79 tests passing**
+  (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22)
+- `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
+- `package-lock.json` unchanged; interaction-level UI validation 42/42 PASS.

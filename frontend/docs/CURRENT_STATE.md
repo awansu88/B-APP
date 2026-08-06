@@ -64,12 +64,24 @@
 ## Verification (this milestone)
 - `npm run typecheck` → pass (0 errors)
 - `npm run lint` → pass (0 problems)
-- `npm test` → 5 suites, **77 tests** passing (adds `history.test.ts` ×22 and
-  4 new DB persistence tests for update/replaceShoe)
+- `npm test` → 5 suites, **79 tests** passing. New this milestone: `history.test.ts`
+  (22) and **5** DB persistence tests added to `database.test.ts` (update,
+  replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, id-stability).
+  Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 (was 10) · history 22.
 - `npm run test:roadmap` → 26 tests passing (unchanged)
 - `npm run test:engine` → 10 tests passing (unchanged)
 - `npx expo-doctor` → 18/18 checks passed
 - `package-lock.json` unchanged; no dependencies added/upgraded.
-- App boots in the web preview; full flow verified visually: result entry,
-  statistics, roadmap rebuild, round-15 checkpoint, Review Data edit + delete
-  (roadmap rebuilds), and the Clear Shoe confirmation dialog.
+- App boots in the web preview (bundle HTTP 200, no console errors/warnings).
+  Full interaction-level validation (42 cases A–H) passed via the frontend
+  testing agent: round entry, input safety/double-tap, pair modes, edit/delete +
+  roadmap rebuild, warm-up gate, checkpoints (15/20/30/40/50), shoe controls, and
+  persistence across page reload.
+
+## Native persistence status
+- **IMPLEMENTED_NOT_RUNTIME_VERIFIED.** The native path (`SqliteHistoryStore` →
+  `ExpoSqliteDatabase`, DB-001) is implemented and its logic is covered by the
+  in-memory `sql.js` driver tests, but it has NOT been executed on a physical
+  Android device/build with an app restart. Remaining Android verification: open
+  the app, enter rounds, kill & relaunch, confirm the same shoe + rounds restore
+  from on-device SQLite.

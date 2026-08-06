@@ -248,4 +248,67 @@ describe('database — DB-001 migrations & repositories', () => {
     });
     expect(await rounds.listByShoe('s1')).toHaveLength(0);
   });
+
+  it('New Shoe semantics: archiving preserves the previous shoe rounds; the new shoe starts empty', async () => {
+    const db = await freshDb();
+    const shoes = new ShoeRepo(db);
+    const rounds = new RoundRepository(db);
+    await shoes.insert(makeShoe('A'));
+    await rounds.append(makeRound('A', 1, Winner.PLAYER));
+    await rounds.append(makeRound('A', 2, Winner.BANKER));
+
+    // "New Shoe": archive A (metadata-only UPDATE, never REPLACE) then insert B.
+    const a = await shoes.getById('A');
+    await shoes.updateMeta({ ...a!, status: ShoeStatus.ARCHIVED, updatedAt: NOW });
+    await shoes.insert({ ...makeShoe('B'), id: 'B' });
+
+    // Previous shoe A rounds are untouched; A is archived.
+    const aRounds = await rounds.listByShoe('A');
+    expect(aRounds.map((r) => r.roundNumber)).toEqual([1, 2]);
+    expect((await shoes.getById('A'))!.status).toBe(ShoeStatus.ARCHIVED);
+    // New shoe B is empty and ACTIVE with a distinct id.
+    expect(await rounds.listByShoe('B')).toHaveLength(0);
+    expect((await shoes.getById('B'))!.status).toBe(ShoeStatus.ACTIVE);
+    expect('B').not.toBe('A');
+  });
+
+  it('round ids are preserved across update() and replaceShoe() renumbering', async () => {
+    const db = await freshDb();
+    await new ShoeRepo(db).insert(makeShoe('s1'));
+    const rounds = new RoundRepository(db);
+    await rounds.append(makeRound('s1', 1, Winner.PLAYER)); // id s1-r1
+    await rounds.append(makeRound('s1', 2, Winner.BANKER)); // id s1-r2
+    await rounds.append(makeRound('s1', 3, Winner.PLAYER)); // id s1-r3
+
+    // Edit round 2 in place -> id must NOT change.
+    const edited = { ...makeRound('s1', 2, Winner.PLAYER) }; // id s1-r2
+    await rounds.update(edited, {
+      id: 'rev-upd',
+      shoeId: 's1',
+      roundNumber: 2,
+      action: 'UPDATE',
+      before: null,
+      after: JSON.stringify(edited),
+      createdAt: NOW,
+    });
+    expect((await rounds.getByShoeAndNumber('s1', 2))!.id).toBe('s1-r2');
+
+    // Delete round 1 -> survivors renumber to 1..2 but keep their original ids.
+    const replacement = [
+      { ...makeRound('s1', 1, Winner.PLAYER), id: 's1-r2' },
+      { ...makeRound('s1', 2, Winner.PLAYER), id: 's1-r3' },
+    ];
+    await rounds.replaceShoe('s1', replacement, {
+      id: 'rev-del',
+      shoeId: 's1',
+      roundNumber: 1,
+      action: 'DELETE',
+      before: null,
+      after: null,
+      createdAt: NOW,
+    });
+    const list = await rounds.listByShoe('s1');
+    expect(list.map((r) => r.id)).toEqual(['s1-r2', 's1-r3']);
+    expect(list.map((r) => r.roundNumber)).toEqual([1, 2]);
+  });
 });
