@@ -41,14 +41,14 @@ Milestone 1 (roadmap + data only), not a defect.
 
 **Impact:** none. **Action:** implement in the authorised future milestone.
 
-### 6. Derived roads are computed but not asserted to fixed coordinates
-Big Eye Boy / Small Road / Cockroach Pig are produced by the engine using the
-standard column-comparison algorithm and are covered by a chop sanity check.
-The 16 required golden tests assert Bead Plate / Big Road / ties / pairs /
-leading-tie / rebuild determinism (the milestone's enumerated scenarios); exact
-derived-road coordinate goldens can be added in a later milestone.
+### 6. Derived-road golden coverage (RESOLVED)
+Big Eye Boy / Small Road / Cockroach Pig now have literal, independently
+hand-computed golden tests: first activation points, stable RED and BLUE runs,
+structural colour transitions, derived dragon-tail, big-road dragon-tail
+interaction, deterministic rebuild after a middle-round edit, and structural
+enum integrity. The earlier deferral is resolved.
 
-**Impact:** low. **Action:** optional future hardening.
+**Impact:** none. **Action:** none.
 
 ## No functional defects
 All verification gates pass (see `docs/TEST_PLAN.md` and `docs/CURRENT_STATE.md`).

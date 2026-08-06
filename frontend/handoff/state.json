@@ -104,11 +104,24 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 4, "tests": 40, "status": "pass" },
-    "test:roadmap": { "suites": 1, "tests": 16, "status": "pass" },
+    "test": { "suites": 4, "tests": 52, "status": "pass" },
+    "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
-    "appBoots": true
+    "appBoots": true,
+    "roadmapGoldenCoverage": {
+      "core": 16,
+      "derivedRoad": 9,
+      "sourceOfTruth": 1,
+      "derivedRoadFixtures": "literal, hand-computed (not engine-generated)",
+      "note": "Derived-road golden coverage complete: activation points, stable RED/BLUE runs, colour transition, dragon-tail interaction, middle-edit rebuild, structural-enum integrity."
+    },
+    "databaseIntegrity": {
+      "uniqueShoeRound": true,
+      "requiredIndexes": true,
+      "foreignKeyEnforced": true,
+      "transactionRollbackTested": true
+    }
   },
   "nextMilestone": "Milestone 2 — NOT STARTED (do not begin unless explicitly instructed)"
 }

@@ -52,8 +52,9 @@
 ## Verification (this milestone)
 - `npm run typecheck` → pass (0 errors)
 - `npm run lint` → pass (0 problems)
-- `npm test` → 4 suites, 40 tests passing
-- `npm run test:roadmap` → 1 suite, 16 golden tests passing
+- `npm test` → 4 suites, 52 tests passing
+- `npm run test:roadmap` → 1 suite, 26 tests passing (16 core + 9 derived-road
+  golden fixtures + 1 source-of-truth rebuild)
 - `npm run test:engine` → 1 suite, 10 tests passing
 - `npx expo-doctor` → 18/18 checks passed
 - App boots in the preview; navigation across all six routes verified.

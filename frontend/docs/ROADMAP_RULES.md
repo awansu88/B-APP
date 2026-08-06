@@ -43,3 +43,12 @@ column-comparison algorithm, producing structural RED/BLUE marks.
 ## Determinism
 `buildRoadmap` is a pure function of the ordered raw rounds: identical input
 always yields identical output (covered by `src/tests/roadmap.test.ts`).
+
+## Golden test coverage
+`src/tests/roadmap.test.ts` asserts literal, independently hand-computed
+fixtures for the Bead Plate, Big Road, tie/pair markers, leading-tie count, and
+the three derived roads (coordinates + structural RED/BLUE marks), including
+each derived road's first activation point, stable RED/BLUE runs, a colour
+transition, dragon-tail interaction, and deterministic rebuild after editing a
+middle round. Structural marks are a dedicated enum (`DerivedMark`): RED is
+never BANKER and BLUE is never PLAYER.

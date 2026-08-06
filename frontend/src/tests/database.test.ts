@@ -152,4 +152,33 @@ describe('database — DB-001 migrations & repositories', () => {
     expect(revisions[0].action).toBe('INSERT');
     expect(revisions[0].roundNumber).toBe(1);
   });
+
+  it('schema integrity: UNIQUE(shoe_id, round_number) and required indexes exist', async () => {
+    const db = await freshDb();
+    const roundsSql = await db.getFirstAsync<{ sql: string }>(
+      "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'rounds';",
+    );
+    expect(roundsSql?.sql).toContain('UNIQUE (shoe_id, round_number)');
+
+    const indexRows = await db.getAllAsync<NameRow>(
+      "SELECT name FROM sqlite_master WHERE type = 'index';",
+    );
+    const indexes = indexRows.map((r) => r.name);
+    for (const idx of [
+      'idx_rounds_shoe_id',
+      'idx_predictions_target_round',
+      'idx_predictions_shoe_id',
+      'idx_predictions_environment',
+      'idx_predictions_category',
+    ]) {
+      expect(indexes).toContain(idx);
+    }
+  });
+
+  it('foreign key enforcement: a round for a missing shoe is rejected', async () => {
+    const db = await freshDb();
+    await expect(
+      new RoundRepository(db).append(makeRound('ghost-shoe', 1, Winner.PLAYER)),
+    ).rejects.toThrow();
+  });
 });
