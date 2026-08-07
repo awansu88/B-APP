@@ -146,28 +146,54 @@ neutrals still complete; PLAYED/NOT_PLAYED + revision invalidation survive; no d
 target-round lock); and a shadow-isolation regression (a SHADOW-only volatility input
 never mutates the ACTIVE lock).
 
-### `src/tests/session-persistence.test.ts` (17 — DB-backed, sql.js)
+### `src/tests/session-persistence.test.ts` (18 — DB-backed, sql.js)
 DB-002 migration (fresh DB-001+DB-002; upgrade on top of an existing DB-001 database
 preserving shoes/rounds/revisions; idempotent; FK enforcement; rollback leaves no
 half-migrated schema); DB-enforced duplicate-lock rejection (partial-unique
 `WHERE invalidated = 0`); lock-before-result failure (lock persist fails → nothing
 accepted; result persist fails → pending lock untouched); transactional recovery of a
 missing pending lock; revision linkage (invalidated + `invalidated_by_revision_id` +
-coexisting old/new locks for one target); restart reconstruction A–G (identical frozen
-lock; WIN evaluation/sequences/paper; interleaved neutrals still complete;
-PLAYED/NOT_PLAYED survives; revision invalidation survives; valid locks unique per
-target); and `MemorySessionStore` web-fallback parity.
+coexisting old/new locks for one target); **native delete-history** (renumber rounds
+1..n, invalidate affected locks, recover one valid lock, INVALIDATED survives restart);
+restart reconstruction A–G; and `MemorySessionStore` web-fallback parity.
+
+### `src/tests/session-workflow.test.ts` (22 — store/workflow integration, MemorySessionStore)
+A–O: lock-before-result eligibility + persist-failure rejection; both directional
+evaluations; Tie→PUSH and SKIP→SKIPPED sequence-neutral; PLAYED vs NOT_PLAYED engine/
+played advance; reload-between-steps completion; LOSS reset; reload keeps the same lock
+(no duplicate target); revision invalidation immutability; New-Shoe boundary.
+**M5C continuation (P–J):** edit before a locked target → revision + INVALIDATED +
+immutable payload; delete → renumber/rebuild + recovered valid lock; engine and played
+sequences reconstruct **from valid entries only** after a revision; revision survives
+persistence/reconstruction; no duplicate valid lock after edit; **TransactionGuard**
+rejects a concurrent rapid duplicate; PARTIAL⇒UNKNOWN and COMPLETE⇒NO pair persistence
+on a live round; and PP/BP auto-reset (mode sticky).
+
+### `src/tests/session-factory.test.ts` (3 — platform factory fail-safe)
+Web factory returns the AsyncStorage-compatible memory adapter (`kind=memory`); native
+factory success returns the durable SQLite adapter (`kind=sqlite`); native SQLite init
+failure throws `SessionPersistenceUnavailableError` and **never** returns a volatile
+memory store for a live persisted session.
 
 ## Expected result (Milestone 5)
-- typecheck: **pass** · lint: **pass**
-- `npm test`: **11 suites, 216 tests passing**
+- typecheck: **pass** · lint: **pass (0 errors / 0 warnings)**
+- `npm test`: **13 suites, 242 tests passing**
   (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
-  reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 17)
+  reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 18 ·
+  session-workflow 22 · session-factory 3)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
-- `package-lock.json` unchanged; **DB-001 migration unchanged**; **Database = DB-002
-  (current)**; thresholds/version-registry (except `databaseSchema` → DB-002)/analyzer
-  modes/reliability priors/decision pipeline/snapshot+feature/History workflow & UI
-  unchanged.
+- `package-lock.json` unchanged; **DB-001 + DB-002 schema unchanged** (M5C added no
+  migration); thresholds/version-registry/analyzer modes/reliability priors/decision
+  pipeline/snapshot+feature unchanged. M5C added only the live workflow/UI seam
+  (`use-live-session.ts`, `LiveSessionPanel.tsx`), additive `SessionStore.deleteHistory`
+  + `deleteHistory` domain fn, the native fail-safe factory, additive `ControlBar`
+  props, and `useHistorySession.resetPairSelections`.
+- **M5C interaction validation (web preview / MemorySessionStore, 1280×800):** Start
+  Live → LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual P/T/B
+  evaluation; Tie→PUSH (on a BET decision); engine/played progress + paper; reload
+  restores the exact pending target; Review Data edit + delete during live rebuild
+  roadmaps/stats; New Shoe fully resets; zero console errors/rejections/key warnings
+  (expected AsyncStorage web diagnostic only). Native SQLite runtime NOT verified from a browser.
 
 ## Expected result (Milestone 4)
 - typecheck: **pass** · lint: **pass**

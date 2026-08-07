@@ -12,7 +12,7 @@
     "M5A_domainCore": "COMPLETE",
     "M5B_domainHardening": "COMPLETE",
     "M5B_persistence": "COMPLETE",
-    "M5C_liveWorkflowUi": "NOT_STARTED"
+    "M5C_liveWorkflowUi": "IMPLEMENTED"
   },
   "milestone2Started": true,
   "milestone3Started": true,
@@ -49,8 +49,8 @@
     "shadowAuditInLock": true,
     "sessionPersistence": true,
     "predictionRepository": true,
-    "liveWorkflowUi": false,
-    "note": "M5A/M5B COMPLETE. Pure domain (M5A + hardening): prediction lifecycle + immutable deep-frozen locking (canonical lockPrediction shared by create and reconstruct), ACTIVE decision trace + SHADOW audit in the lock (shadow never influences active), WIN/LOSS/PUSH/SKIPPED/INVALIDATED evaluation, engine-vs-played three-win trackers across 3 profiles, history-revision invalidation, fixed-unit paper, serialize/reconstruct. Persistence (M5B, DB-002): additive forward-only migration adds session_state (per-shoe workflow/cursor + paper cache) and locked_prediction_entries (immutable lock JSON payload + queryable lifecycle columns; partial-unique index WHERE invalidated=0 enforces one valid lock per shoe+target). SqliteSessionStore (native, authoritative) + MemorySessionStore (web AsyncStorage) share one contract with NO business logic; lock-before-result + transactional result submission + deterministic recovery of a missing pending lock. Authority: raw rounds + revisions (DB-001) = baccarat history; locked_prediction_entries = engine-decision audit; sequences + paper = DERIVED; session_state = cursor only. Legacy DB-001 predictions/module_results/sequences scaffolding is non-authoritative for M5 (kept, not dropped). DB-001 migration UNCHANGED. Historical Matcher DISABLED; Volatility & Derived Road SHADOW_ONLY. Milestone 1-4 accepted code UNCHANGED. M5C live workflow/UI NOT started."
+    "liveWorkflowUi": true,
+    "note": "M5A/M5B COMPLETE; M5C IMPLEMENTED (live workflow/UI). Pure domain (M5A + hardening): prediction lifecycle + immutable deep-frozen locking (canonical lockPrediction shared by create and reconstruct), ACTIVE decision trace + SHADOW audit in the lock (shadow never influences active), WIN/LOSS/PUSH/SKIPPED/INVALIDATED evaluation, engine-vs-played three-win trackers across 3 profiles, history-revision invalidation, fixed-unit paper, serialize/reconstruct. Persistence (M5B, DB-002): additive forward-only migration adds session_state (per-shoe workflow/cursor + paper cache) and locked_prediction_entries (immutable lock JSON payload + queryable lifecycle columns; partial-unique index WHERE invalidated=0 enforces one valid lock per shoe+target). SqliteSessionStore (native, authoritative) + MemorySessionStore (web AsyncStorage) share one contract with NO business logic; lock-before-result + transactional result submission + deterministic recovery of a missing pending lock. M5C wires the Active Shoe screen to the persisted session via useLiveSession + LiveSessionPanel: Start Live / Start Historical Test, persisted LOCKED prediction display (decision/confidence-score/category/risk), PLAYED-NOT_PLAYED operator control, actual P/T/B routed to the store (never a history append in a forward session), engine-vs-played progress + fixed-unit paper, and live-mode Review Data edit/delete routed through SessionStore.editHistory/deleteHistory (invalidation + renumber + rebuild) with the raw-round views (roadmap/stats/review list) sourced from the authoritative live session. Native fail-safe: createSessionStore throws SessionPersistenceUnavailableError if SQLite/DB-002 cannot init (NEVER silently downgrades to a volatile store); actual-result input is disabled unless a healthy store + valid persisted lock exist. Authority: raw rounds + revisions (DB-001) = baccarat history; locked_prediction_entries = engine-decision audit; sequences + paper = DERIVED; session_state = cursor only. Historical Matcher DISABLED; Volatility & Derived Road SHADOW_ONLY. Milestone 1-4 accepted code UNCHANGED; DB-001 + DB-002 schema UNCHANGED this task."
   },
   "packageManager": "npm",
   "packageLockChanged": false,
@@ -143,8 +143,8 @@
   },
   "verification": {
     "typecheck": "pass",
-    "lint": "pass",
-    "test": { "suites": 11, "tests": 216, "status": "pass" },
+    "lint": "pass (0 errors, 0 warnings)",
+    "test": { "suites": 13, "tests": 242, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
@@ -168,9 +168,9 @@
       ]
     },
     "databasePersistenceTests": "5 new tests in database.test.ts (update, replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, round-id stability); file total 15 (was 10)",
-    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 44, "session-persistence": 17, "total": 216 },
-    "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite path implemented + covered by in-memory sql.js tests; not yet run on a physical Android device/build with restart.",
-    "interactionValidation": "42/42 cases (A-H) PASS via frontend testing agent; no console errors.",
+    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 44, "session-persistence": 18, "session-workflow": 22, "session-factory": 3, "total": 242 },
+    "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite/DB-002 path implemented + covered by in-memory sql.js tests (incl. delete-history renumber/invalidation) and the native fail-safe factory test; not yet run on a physical Android device/build with restart.",
+    "interactionValidation": "M5C web-preview (MemorySessionStore) interaction validation PASS at 1280x800: Start Live -> LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual P/T/B evaluation; Tie -> PUSH (verified on a BET decision, not SKIPPED); engine/played progress + paper; reload restores the EXACT pending target; Review Data edit + delete during live rebuild roadmaps/stats; New Shoe fully resets to History Input; zero console errors / rejections / React key warnings (expected AsyncStorage web diagnostic only). Native SQLite runtime NOT verified from browser.",
     "uiVerifiedInPreview": [
       "result entry + statistics",
       "roadmap rendering (bead plate, big road, derived roads)",
@@ -179,7 +179,7 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 5C (live workflow / UI). Wire Active Shoe -> Start Live / Start Historical Test on top of the finished domain + DB-002 persistence: display the locked recommendation + confidence/category + SKIP, submit an actual live result (the store enforces lock-before-result + transactional persistence + deterministic recovery), show engine vs played sequence progress and the PLAYED/NOT_PLAYED control, and reload/reconstruct via createSessionStore(...) (native SQLite/DB-002, web AsyncStorage). Fixed-unit paper only; no Martingale/bet-sizing. DO NOT alter the DB-001 migration. Milestone 6 (advanced statistics & export) remains NOT started.",
+  "nextMilestone": "Milestone 5 FINAL ACCEPTANCE AUDIT. M5A/M5B COMPLETE + M5C IMPLEMENTED (live workflow/UI wired, revision routing, native fail-safe persistence). Remaining before marking Milestone 5 COMPLETE: (1) native SQLite/DB-002 runtime verification on a physical Android build with app restart (currently IMPLEMENTED_NOT_RUNTIME_VERIFIED); (2) optional surfacing of the invalidated historical prediction audit in the live UI (currently persisted in DB-002 but not rendered in the minimal panel); (3) full acceptance audit sign-off. Milestone 6 (advanced statistics & export) remains NOT started. Fixed-unit paper only; no Martingale/bet-sizing; do NOT alter DB-001/DB-002 migrations.",
   "db002": {
     "status": "IMPLEMENTED",
     "appendOnly": true,

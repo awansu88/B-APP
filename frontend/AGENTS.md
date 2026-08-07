@@ -2,7 +2,7 @@
 
 **Project:** B-APP Baccarat Engine
 **Repository root:** `/app/frontend`
-**Status:** Milestone 5 (Live Workflow & Session Tracker) — **IN PROGRESS**. M5A (domain core) COMPLETE; M5B (domain hardening + persistence) COMPLETE — DB-002 persistent locked session implemented; M5C (live workflow/UI) NOT STARTED. **Database: DB-002 current** (DB-001 is a historical accepted migration, unchanged). Do **not** begin Milestone 6, and do **not** modify the DB-001 migration.
+**Status:** Milestone 5 (Live Workflow & Session Tracker) — **IN PROGRESS — READY FOR FINAL ACCEPTANCE AUDIT**. M5A (domain core) COMPLETE; M5B (domain hardening + persistence) COMPLETE — DB-002 persistent locked session implemented; M5C (live workflow/UI) **IMPLEMENTED** — Active Shoe wired to the persisted session (`use-live-session.ts` + `LiveSessionPanel.tsx`), live-mode Review Data edit/delete routed through `SessionStore.editHistory`/`deleteHistory`, and native fail-safe persistence (`SessionPersistenceUnavailableError`; no silent volatile downgrade). **Database: DB-002 current** (DB-001 is a historical accepted migration, unchanged; M5C added no migration). Do **not** begin Milestone 6, and do **not** modify the DB-001/DB-002 migrations.
 
 This file is LOCKED guidance. Read it fully before touching anything.
 

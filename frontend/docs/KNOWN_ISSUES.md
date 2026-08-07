@@ -175,14 +175,45 @@ versioned engine decision.
 
 ## Milestone 5
 
-### 17. Session engine is pure domain (not yet wired to the UI) — M5C pending
-`src/domain/session/*` (SESSION-001) implements the live/historical workflow, an
-immutable prediction lock (with ACTIVE trace + SHADOW audit), result evaluation, the
-three-win tracker (engine vs played), revision invalidation, fixed-unit paper tracking,
-and serialize/restart reconstruction (with a canonical deep-freeze re-applied on
-reconstruction) — but it is **not yet driven by any screen** (Milestone 5C).
+### 17. Session engine wired to the UI — RESOLVED (M5C IMPLEMENTED)
+`src/domain/session/*` (SESSION-001) is now driven by the Active Shoe screen via
+`src/workflows/session/use-live-session.ts` (orchestration only) + `src/ui/live/
+LiveSessionPanel.tsx` (pure renderer). Start Live / Start Historical Test show the
+persisted LOCKED prediction (decision / confidence-score / category / risk), the
+PLAYED–NOT_PLAYED control, engine-vs-played progress, and fixed-unit paper. Actual
+P/T/B is routed to the store (lock-before-result gated) and, in a forward session,
+is **never** appended through the History workflow. Live-mode Review Data edit/delete
+route through `SessionStore.editHistory`/`deleteHistory`; raw-round views (roadmap,
+statistics, review list) are sourced from the authoritative live session.
 
-**Impact:** none — intended MVP scope. **Action:** M5C wires the Active Shoe UI.
+**Impact:** none — intended scope now delivered. **Action:** final acceptance audit.
+
+### 17a. Native session persistence is fail-safe (no silent volatile downgrade)
+`createSessionStore` (native) throws `SessionPersistenceUnavailableError` if
+SQLite/DB-002 cannot open/migrate — it does **not** fall back to the volatile
+`MemorySessionStore` for a live persisted session. The UI then disables actual-result
+submission and shows a retryable error. The web preview still uses `MemorySessionStore`
+(AsyncStorage) by design; a dev diagnostic logs the active store kind.
+
+**Impact:** none. **Action:** none.
+
+### 17b. Invalidated historical prediction audit is persisted but not surfaced in the live panel
+When live history is edited/deleted, affected locked-prediction entries are marked
+INVALIDATED in DB-002 (immutable payload preserved, revision linked) and sequences/
+paper rebuild from survivors. The minimal `LiveSessionPanel` renders only the current
+valid lock + last result; it does not yet list the invalidated historical audit.
+
+**Impact:** cosmetic (audit is fully persisted and queryable). **Action:** optional
+UI surfacing in a later milestone.
+
+### 17c. A rapid double-tap that fully completes yields two DISTINCT rounds (by design)
+The `TransactionGuard` rejects a *concurrent* second submission while a write is in
+flight (no duplicate/partial state, no duplicate valid lock per target — verified).
+Two taps spaced far enough apart that the first transaction fully commits are two
+legitimate distinct rounds against successive targets (N then N+1), not a duplicate.
+There is intentionally no time-debounce (each result is a real round).
+
+**Impact:** none (safety contract intact). **Action:** none.
 
 ### 19. Session/prediction persistence — RESOLVED via DB-002 (M5B)
 DB-001 could not represent the M5 locked-prediction audit, so an **additive, forward-only

@@ -1,10 +1,10 @@
 # Current State
 
-**Current milestone:** 5 — Live Workflow & Session Tracker. **Status: IN PROGRESS.**
+**Current milestone:** 5 — Live Workflow & Session Tracker. **Status: IN PROGRESS — READY FOR FINAL ACCEPTANCE AUDIT.**
 - **M5A (domain core): COMPLETE** — pure session engine (locking, evaluation, three-win tracker, revision invalidation, serialize/reconstruct).
 - **M5B (domain hardening + persistence): COMPLETE** — domain hardening (PLAYER+BANKER coverage, exact sequence literals, future-leakage/lock-before-result, canonical deep-freeze on reconstruction, active+shadow audit) **plus DB-002 persistence**: a `session_state` cursor table + a `locked_prediction_entries` table storing the immutable lock payload with queryable lifecycle columns, a DB partial-unique index (one valid lock per shoe+target), revision linkage, lock-before-result + transactional result submission, and native (SQLite/DB-002) + web (AsyncStorage) session stores.
-- **M5C (live workflow / UI): NOT STARTED.**
-- **Database:** **DB-002 current** (additive, forward-only). **DB-001** is a historical accepted migration, **unchanged**.
+- **M5C (live workflow / UI): IMPLEMENTED** — Active Shoe wired to the persisted session via `useLiveSession` + `LiveSessionPanel`: Start Live / Start Historical Test, persisted **LOCKED** prediction display (decision / confidence-score / category / risk), PLAYED–NOT_PLAYED operator control, actual **P/T/B routed to the store** (lock-before-result gated; never a history append in a forward session), engine-vs-played progress + fixed-unit paper, and **live-mode Review Data edit/delete routed through `SessionStore.editHistory`/`deleteHistory`** (invalidation + renumber + rebuild) with the raw-round views (roadmap / stats / review list) sourced from the authoritative live session. **Native fail-safe:** `createSessionStore` throws `SessionPersistenceUnavailableError` if SQLite/DB-002 cannot initialize — it NEVER silently downgrades to a volatile store; actual input is disabled unless a healthy store + a valid persisted lock exist. **Native SQLite runtime not yet device-verified.**
+- **Database:** **DB-002 current** (additive, forward-only). **DB-001** is a historical accepted migration, **unchanged**. DB-002 schema **unchanged** this task (M5C added no migration).
 **Milestone 6: NOT STARTED** — advanced statistics & export (none built yet).
 **Milestone 5 built the live/historical session engine** (pure domain): manual
 one-result-at-a-time workflow, prediction **locking** (immutable), result
@@ -148,16 +148,11 @@ serialize/restart reconstruction. Predictions are locked BEFORE their result
   completed rounds before the target). No advanced statistics/export (Milestone 6).
 
 ## Verification (this milestone)
-- `npm run typecheck` → pass · `npm run lint` → pass
-- `npm test` → **11 suites, 216 tests** (adds `session-persistence.test.ts` ×17:
-  DB-002 migration fresh + on top of an existing DB-001 DB, idempotency, FK
-  enforcement, rollback leaves no half-migrated schema, DB-enforced duplicate-lock
-  rejection, lock-before-result failure (lock persist + result persist), transactional
-  recovery of a missing pending lock, revision linkage with coexisting old/new locks,
-  restart A–G, and web-fallback parity). `session.test.ts` = 44 (M5B hardening).
-  Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
-  reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 17.
+- `npm run typecheck` → pass · `npm run lint` → pass (**0 errors / 0 warnings**)
+- `npm test` → **13 suites, 242 tests**. M5C continuation adds: `session-workflow.test.ts` 12→**22** (live revision edit/delete invalidation, engine-vs-played reconstruct-from-valid-only, revision persistence survival, no-duplicate-valid-lock, TransactionGuard rapid-duplicate rejection, PARTIAL⇒UNKNOWN / COMPLETE⇒NO pair persistence, PP/BP auto-reset), `session-persistence.test.ts` 17→**18** (native DB-002 delete-history renumber + invalidation + valid-lock recovery), and new `session-factory.test.ts` **×3** (web memory adapter; native SQLite success; native init failure ⇒ `SessionPersistenceUnavailableError`, never a memory store).
+  Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 18 · session-workflow 22 · session-factory 3.
 - `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
+- **M5C interaction validation (web preview / MemorySessionStore, 1280×800):** Start Live → LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual P/T/B evaluation; **Tie → PUSH** (verified on a BET decision); engine/played progress + paper; **reload restores the exact pending target**; Review Data **edit + delete during live** rebuild roadmaps/stats; **New Shoe fully resets** to History Input; zero console errors / rejections / React key warnings (only the expected AsyncStorage web diagnostic). Native SQLite runtime NOT verified from a browser.
 - **Persistence (DB-002):** `session_state` (per-shoe workflow/cursor + paper cache)
   and `locked_prediction_entries` (immutable lock payload + queryable lifecycle
   columns; partial-unique `WHERE invalidated = 0`). Authority: raw rounds + revisions
