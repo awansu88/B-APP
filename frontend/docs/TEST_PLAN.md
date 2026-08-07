@@ -15,7 +15,7 @@
 `npm run typecheck` · `npm run lint` · `npm test` · `npm run test:roadmap` ·
 `npm run test:engine` · `npx expo-doctor`.
 
-## Suites (52 tests total)
+## Milestone 1 Suites (52 tests total)
 ### `src/tests/smoke.test.ts` (6)
 Version registry (incl. `databaseSchema = DB-002`), thresholds, UI order P/T/B,
 session environments, prediction decisions, diagnostics snapshot.
