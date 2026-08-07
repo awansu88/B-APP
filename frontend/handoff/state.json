@@ -4,9 +4,16 @@
   "mobileProjectRoot": "/app/frontend",
   "backendInRepository": false,
   "trackedBackendFiles": [],
-  "completedMilestone": 5,
+  "completedMilestone": 4,
+  "currentMilestone": 5,
   "milestoneName": "Live Workflow & Session Tracker",
-  "status": "COMPLETE",
+  "status": "IN_PROGRESS",
+  "milestone5SubStatus": {
+    "M5A_domainCore": "COMPLETE",
+    "M5B_domainHardening": "COMPLETE",
+    "M5B_persistence": "BLOCKED_PENDING_DB_002_APPROVAL",
+    "M5C_liveWorkflowUi": "NOT_STARTED"
+  },
   "milestone2Started": true,
   "milestone3Started": true,
   "milestone4Started": true,
@@ -24,21 +31,26 @@
     "roadmapUi": true,
     "reviewDataEditDelete": true,
     "checkpoints": true,
-    "prediction": false,
-    "confidence": false,
-    "analyzers": false,
-    "voting": false,
-    "session": false,
     "screens": true,
     "shoeSnapshot": true,
     "featureExtraction": true,
     "analysisModules": true,
     "analysisRunner": true,
-    "voting": false,
-    "confidence": false,
-    "prediction": false,
-    "predictionLocking": false,
-    "note": "Milestone 3 adds pure domain-engine work: the immutable ShoeStateSnapshot (no future leakage), deterministic feature extraction (windows last5/8/12/full + distribution/streak/chop/big-road/derived/regime-transition/volatility/data-quality groups), the shared analysis-module interface, and 8 analyzers + a disabled Historical Matcher, plus a runner. Data Quality Guard ACTIVE; Volatility & Derived Road SHADOW_ONLY (computed, never influential); Historical Matcher DISABLED (not computed). Modules ABSTAIN below the 8 non-Tie warm-up. NO voting/confidence/risk decisions and NO prediction locking. Milestone 1 & 2 accepted code (roadmap engine, DB-001, history workflow/UI, repositories, engine thresholds, version registry) UNCHANGED."
+    "voting": true,
+    "confidence": true,
+    "riskFilter": true,
+    "decisionPipeline": true,
+    "predictionLifecycleDomain": true,
+    "predictionLockingDomain": true,
+    "sessionEngineDomain": true,
+    "threeWinTrackerDomain": true,
+    "revisionInvalidationDomain": true,
+    "serializeReconstructDomain": true,
+    "shadowAuditInLock": true,
+    "sessionPersistence": false,
+    "predictionRepository": false,
+    "liveWorkflowUi": false,
+    "note": "M5A/M5B (pure domain) COMPLETE: prediction lifecycle + immutable locking (deep-frozen, canonical lockPrediction shared by create and reconstruct), ACTIVE decision trace + SHADOW audit stored in the lock (shadow never influences active), WIN/LOSS/PUSH/SKIPPED/INVALIDATED evaluation, engine-vs-played three-win trackers across 3 profiles, history-revision invalidation, fixed-unit paper tracking, and serialize/reconstruct. M5B PERSISTENCE is BLOCKED: DB-001 cannot represent the locked-prediction audit (missing side-trace scores, active/shadow risk flags + reason codes, operator PLAYED/NOT_PLAYED, INVALIDATED evaluation, and the voting/confidence/risk/snapshot/feature/decisionConfig versions) — a forward-only DB-002 migration is proposed and awaiting approval; DB-001 is NOT altered. M5C live workflow/UI NOT started. Historical Matcher DISABLED; Volatility & Derived Road SHADOW_ONLY. Milestone 1-4 accepted code UNCHANGED."
   },
   "packageManager": "npm",
   "packageLockChanged": false,
@@ -132,7 +144,7 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 10, "tests": 179, "status": "pass" },
+    "test": { "suites": 10, "tests": 199, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
@@ -156,7 +168,7 @@
       ]
     },
     "databasePersistenceTests": "5 new tests in database.test.ts (update, replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, round-id stability); file total 15 (was 10)",
-    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 24, "total": 179 },
+    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 44, "total": 199 },
     "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite path implemented + covered by in-memory sql.js tests; not yet run on a physical Android device/build with restart.",
     "interactionValidation": "42/42 cases (A-H) PASS via frontend testing agent; no console errors.",
     "uiVerifiedInPreview": [
@@ -167,7 +179,17 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 5 — Prediction locking + evaluation (NOT STARTED; do not begin unless explicitly instructed). M5 scope: persist a locked prediction BEFORE its result, submit/evaluate actual results, live forward / historical-test workflow, and three-win sequence tracking; consumes the Milestone-4 Prediction Draft + decision trace and implements evaluateStep / evaluateThreeWinSequence.",
+  "nextMilestone": "Milestone 5B persistence continuation (BLOCKED pending DB-002 approval), then Milestone 5C (live workflow / UI). M5B persistence: after DB-002 is approved, implement the thinnest repository/store to persist + reconstruct the full session (shoe/session identity, workflow, locked target-round prediction with active+shadow audit, actual result/evaluation, PLAYED/NOT_PLAYED, engine+played sequences, fixed paper units, revision-invalidation state, and all versions). Raw rounds + revisions (DB-001) remain the source of truth; enforce lock-before-result + transactional submission with deterministic recovery. DO NOT alter DB-001; DO NOT implement DB-002 until approved. Milestone 6 (advanced statistics & export) remains NOT started.",
+  "db002Proposal": {
+    "reason": "DB-001 cannot represent the M5 locked-prediction audit (see acceptedImplementation.note and docs/KNOWN_ISSUES.md #19).",
+    "appendOnly": true,
+    "db001Altered": false,
+    "proposedTables": [
+      "session_state (shoe_id PK, version, workflow, environment, paper_units_staked, paper_net_units, paper_wins, paper_losses, paper_pushes, updated_at)",
+      "prediction_entries (id PK, shoe_id, target_round_number, sequence_index, status, evaluation, operator_action, actual_winner, invalidated, locked_at, evaluated_at, payload TEXT = full serialized LockedPrediction incl. active trace + shadow audit + all versions + moduleResults; INDEX(shoe_id, target_round_number))"
+    ],
+    "notes": "sequences + paper are derived on reconstruct (session_state paper columns are an optional cache); enforce 'one PENDING entry per (shoe_id, target_round_number)' in the store layer since an invalidated + a fresh entry may share a target round."
+  },
   "milestone4": {
     "path": "src/domain/decision/*",
     "decisionConfigVersion": "DECISION-001",

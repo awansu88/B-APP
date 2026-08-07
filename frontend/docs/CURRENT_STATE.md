@@ -1,6 +1,9 @@
 # Current State
 
-**Completed milestone:** 5 — Live Workflow & Session Tracker. **Status: COMPLETE.**
+**Current milestone:** 5 — Live Workflow & Session Tracker. **Status: IN PROGRESS.**
+- **M5A (domain core): COMPLETE** — pure session engine (locking, evaluation, three-win tracker, revision invalidation, serialize/reconstruct).
+- **M5B (domain hardening + persistence): PARTIAL** — domain hardening COMPLETE (PLAYER+BANKER evaluation coverage, exact sequence literals, future-leakage/lock-before-result, canonical deep-freeze on reconstruction, active+shadow audit stored in the lock). **Persistence BLOCKED** — DB-001 cannot represent the M5 locked-prediction audit; a forward migration **DB-002** is proposed and awaiting approval (DB-001 is NOT altered).
+- **M5C (live workflow / UI): NOT STARTED.**
 **Milestone 6: NOT STARTED** — advanced statistics & export (none built yet).
 **Milestone 5 built the live/historical session engine** (pure domain): manual
 one-result-at-a-time workflow, prediction **locking** (immutable), result
@@ -64,14 +67,19 @@ serialize/restart reconstruction. Predictions are locked BEFORE their result
   Test are enabled once ≥ 8 non-Tie results exist and set the shoe environment
   (mapping new-round source to LIVE / HISTORICAL_TEST). **No prediction logic.**
 
-## What is explicitly NOT implemented (out of scope for Milestone 3)
-- No **final voting**, confidence scoring, risk decisions, or **prediction locking**
-  (`categorizeConfidence` / `evaluateStep` / `evaluateThreeWinSequence` still throw;
-  no prediction/snapshot/module-result/sequence records are written).
-- Historical Matcher is a **disabled interface** (never computed).
-- Volatility & Derived Road analyzers are **SHADOW_ONLY** (computed, never influence a decision).
+## Historical note (Milestone 2/3 scope boundary — superseded)
+- Milestones 2–3 deliberately shipped **no** final voting, confidence scoring, risk
+  decisions, or prediction locking. Those were later delivered by **Milestone 4**
+  (decision pipeline) and **Milestone 5A/5B** (prediction locking + evaluation, pure
+  domain). The legacy M0 placeholders `categorizeConfidence` / `evaluateStep` /
+  `evaluateThreeWinSequence` still throw and are **superseded** by the decision +
+  session modules (kept only to avoid touching M0 surface).
+- Historical Matcher remains a **disabled interface** (never computed).
+- Volatility & Derived Road analyzers remain **SHADOW_ONLY** (computed, never influence
+  the active decision; captured in the locked prediction's shadow audit only).
 - Statistics/Export/Diagnostics/Settings routes remain Milestone 0 placeholders; the
-  History Input UI (Milestone 2) is unchanged.
+  History Input UI (Milestone 2) is unchanged. The **session engine is not yet wired to
+  any screen** (Milestone 5C).
 
 ### Milestone 3 (new — pure domain engine)
 - **Immutable ShoeStateSnapshot** (`src/domain/snapshot/shoe-snapshot.ts`,
@@ -140,15 +148,30 @@ serialize/restart reconstruction. Predictions are locked BEFORE their result
 
 ## Verification (this milestone)
 - `npm run typecheck` → pass · `npm run lint` → pass
-- `npm test` → **10 suites, 179 tests** (adds `session.test.ts` ×24: evaluation
-  WIN/LOSS/PUSH/SKIPPED/INVALIDATED, three-win completion / loss-after-two /
-  SKIP·PUSH no-op / profile filtering, Start Live, Start Historical Test, lock
-  immutability, WIN/LOSS/PUSH submission, engine-vs-played separation, duplicate
-  rejection + atomic transaction, disabled input, New-Shoe reset, history-revision
-  invalidation, restart reconstruction). Per-file: smoke 6 · engine 10 · roadmap 26
-  · database 15 · history 22 · analysis 28 · reliability 13 · decision 18 ·
-  decision-audit 17 · session 24.
+- `npm test` → **10 suites, 199 tests** (`session.test.ts` grew 24 → **44** with the
+  M5B hardening: BET_PLAYER + BET_BANKER WIN/LOSS on synthetic locks (engine-independent),
+  Tie/SKIP sequence-neutral, exact literals WIN·PUSH·WIN·SKIP·WIN → complete and
+  WIN·PUSH·LOSS → reset, engine-vs-played independence + shoe-boundary reset,
+  future-leakage / lock-before-result (a locked prediction for target N is identical
+  regardless of N's actual result), reconstructed locks remain **deeply frozen**
+  (canonical `lockPrediction`/`deepFreeze` shared by create + reconstruct), restart
+  reconstruction A–G (persist→JSON→reconstruct: identical lock, evaluation/sequences/
+  paper, interleaved neutrals still complete, PLAYED/NOT_PLAYED + revision invalidation
+  survive, no duplicate target-round lock), and a shadow-isolation regression proving a
+  SHADOW-only (volatility) input never mutates the ACTIVE lock). Per-file: smoke 6 ·
+  engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13 ·
+  decision 18 · decision-audit 17 · session 44.
 - `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
+- The locked prediction now stores the ACTIVE decision trace (riskScore/riskLevel/
+  reasonCodes) **and** a SHADOW audit record (shadow decision/side/confidence/category/
+  risk + `differsFromActive`); shadow is auditable only and never influences the active
+  fields, BET/SKIP, or the sequence result.
+- **Persistence is NOT yet implemented (M5B BLOCKED):** DB-001 cannot represent the M5
+  locked-prediction audit (no columns for side-trace scores, active/shadow risk flags,
+  operator PLAYED/NOT_PLAYED, INVALIDATED evaluation, or the voting/confidence/risk/
+  snapshot/feature/decisionConfig versions). A forward migration **DB-002** (append-only;
+  DB-001 untouched) is proposed and awaiting approval. Pure `serializeSession` /
+  `reconstructSession` (JSON) are the current restart bridge and are fully tested.
 - `package-lock.json` unchanged; roadmap engine, DB-001, thresholds, version
   registry, analyzer modes, reliability priors, decision pipeline, snapshot/feature
   layers, and History workflow/UI all UNCHANGED (only new `src/domain/session/*`

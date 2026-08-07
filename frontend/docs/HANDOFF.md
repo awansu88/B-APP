@@ -1,36 +1,35 @@
 # Handoff
 
-**From:** Milestone 4 (Decision Pipeline). **To:** Next agent (Milestone 5).
+**From:** Milestone 5A/5B (session domain core + hardening). **To:** Next agent
+(Milestone 5B persistence continuation, then 5C live workflow/UI).
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
 ## Status
-- Milestone 5 (Live Workflow & Session Tracker) is **complete**. **Milestone 6
-  (advanced statistics & export) has NOT started.**
-- Database schema version: **DB-001** (unchanged).
+- Milestone 5 (Live Workflow & Session Tracker) is **IN PROGRESS**:
+  - **M5A (domain core): COMPLETE.**
+  - **M5B (domain hardening + persistence): PARTIAL.** Domain hardening COMPLETE;
+    **persistence BLOCKED** — DB-001 cannot represent the M5 locked-prediction audit,
+    so a forward migration **DB-002** is proposed and awaiting approval. DB-001 is
+    NOT altered. Until DB-002 is approved, `serializeSession`/`reconstructSession`
+    (pure JSON) are the restart bridge (fully unit-tested).
+  - **M5C (live workflow/UI): NOT STARTED.**
+  - **Milestone 6 (advanced statistics & export): NOT started.**
+- Database schema version: **DB-001** (unchanged; DB-002 proposed, not applied).
 - **Session engine (`src/domain/session/*`, pure, SESSION-001):** manual
   one-result-at-a-time workflow shared by LIVE_FORWARD and HISTORICAL_TEST;
   `startSession` / `submitResult` / `editHistory` / `newShoe` reducers plus
-  `serializeSession` / `reconstructSession`. Predictions are **locked** (deep-frozen)
-  before their result; result evaluation → WIN/LOSS/PUSH/SKIPPED/INVALIDATED; a
-  three-win tracker runs separately for engine vs played across three profiles;
-  history edits create revisions and invalidate affected predictions without
-  deleting the audit trail; fixed-unit paper tracking only.
+  `serializeSession` / `reconstructSession` and the canonical `lockPrediction`
+  (deep-freeze). Predictions are **locked** (deep-frozen) before their result and
+  now carry the ACTIVE decision trace + a SHADOW audit record; result evaluation →
+  WIN/LOSS/PUSH/SKIPPED/INVALIDATED; a three-win tracker runs separately for engine
+  vs played across three profiles; history edits create revisions and invalidate
+  affected predictions without deleting the audit trail; fixed-unit paper tracking only.
 - Prior milestones (M1–M4 + RELPRIOR-001) remain in force and unchanged.
-- **NOT built (Milestone 6+):** advanced statistics, export, and any UI wiring of
-  the session engine (the engine is pure-domain and not yet driven by a screen).
+- **NOT built:** persistence adapter/repository (M5B, blocked on DB-002), any UI
+  wiring of the session engine (M5C), and advanced statistics/export (M6).
   The M0 placeholders `evaluateStep` / `evaluateThreeWinSequence` /
   `categorizeConfidence` remain (superseded by the session/decision modules).
-- Accepted this milestone (pure domain engine, no UI/DB writes):
-  - `src/domain/snapshot/shoe-snapshot.ts` — immutable `ShoeStateSnapshot`
-    (`SNAPSHOT-001`) with future-leakage prevention.
-  - `src/domain/features/feature-extraction.ts` — deterministic `FeatureSet`
-    (`FEATURE-001`), windows + feature groups.
-  - `src/domain/analysis/*` — shared module interface, 8 analyzers, disabled
-    Historical Matcher, and a runner (analyzer version registry `ANALYZER_VERSIONS`).
-- **NOT accepted / out of scope:** final voting, confidence scoring, risk
-  decisions, prediction locking, activating the Historical Matcher, and letting
-  SHADOW_ONLY analyzers (Volatility, Derived Road) influence a decision.
 
 ## Before you start
 1. Read `AGENTS.md`, `docs/ENGINE_RULES.md`, `docs/ROADMAP_RULES.md`,
@@ -83,19 +82,33 @@ still passing.
 
 ## Do NOT
 - Do NOT begin Milestone 6 unless explicitly instructed.
-- Perform prediction database writes, **prediction locking**, result submission,
-  result evaluation, live workflow, or sequence/three-win tracking.
-- Activate the Historical Matcher or let SHADOW_ONLY modules influence the ACTIVE decision.
-- Modify engine thresholds, DB-001, or the Decision Pipeline config silently;
-  upgrade dependencies; add a backend.
+- Do NOT implement the DB-002 migration or any persistence writes until DB-002 is
+  approved. Do NOT alter the accepted **DB-001** migration (append a new migration only).
+- Do NOT recompute a locked historical prediction (locks are immutable historical truth;
+  reconstruct restores them verbatim and re-freezes them — never regenerate their contents).
+- Activate the Historical Matcher or let SHADOW_ONLY modules (Volatility, Derived Road)
+  influence the ACTIVE decision / side / confidence / category / BET-SKIP / sequence result.
+- Modify engine thresholds or the Decision Pipeline config (DECISION-001/VOTE-001/
+  CONF-001/RISK-001) silently; upgrade dependencies; add a backend; add Martingale /
+  bet-sizing / progression (fixed-unit paper only).
 - Introduce randomness, ML, network, balances, or target-sequence inputs.
 
 ## Next milestone scope (for the next agent)
-**Milestone 6 = advanced statistics & export.** Aggregate session/sequence
-analytics, per-profile hit-rate reporting, and data export — consuming the
-Milestone-5 session audit trail (locked predictions + evaluations). Optionally
-wire the session engine into the Active Shoe UI (locked recommendation panel +
-result submission), which Milestone 5 intentionally left as pure domain.
+**Immediate (M5B continuation) = persistence, once DB-002 is approved.** Implement the
+thinnest repository/store over the new DB-002 tables to persist + reconstruct the session
+(shoe/session identity, workflow state, locked target-round prediction with active+shadow
+audit, actual result/evaluation, PLAYED/NOT_PLAYED, engine+played sequences, fixed paper
+units, revision-invalidation state, and all engine/config/snapshot/feature/analyzer/
+reliability/vote/confidence/risk/decision versions). Raw rounds + revisions (DB-001) remain
+the source of truth; roadmaps are never persisted as authoritative state. Enforce
+lock-before-result (persist the lock for target N before accepting actual N) and a
+transactional result submission with deterministic recovery (never leave an actual with a
+missing lock, a duplicate target-round lock, duplicate evaluations, or a sequence count
+inconsistent with the surviving evaluation history).
+**Then M5C = live workflow / UI** (Active Shoe → Start Live/Historical, display locked
+recommendation + confidence/category + SKIP, submit actual result, engine/played progress,
+PLAYED control, reload persistence).
+**Then Milestone 6 = advanced statistics & export.**
 
 ## After your milestone
 Update `docs/CURRENT_STATE.md`, this file, `docs/KNOWN_ISSUES.md`,

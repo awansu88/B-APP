@@ -5,11 +5,14 @@
  * locked predictions; the workflow + persistence are tested with real all-Banker
  * sessions (the engine reliably recommends BET_BANKER for a banker-dominated shoe).
  */
-import { PredictionCategory, PredictionDecision, RoundSource } from '@/src/domain/models/enums';
+import { PredictionCategory, PredictionDecision, ModuleStatus, RoundSource } from '@/src/domain/models/enums';
 import { Winner } from '@/src/domain/models/outcome';
 import { PairState } from '@/src/domain/models/pair';
 import type { RoundRecord } from '@/src/domain/models/round';
-import { VoteSide } from '@/src/domain/decision';
+import { VoteSide, RiskLevel, DecisionRiskFlag, decide } from '@/src/domain/decision';
+import type { DecisionContext } from '@/src/domain/decision';
+import { AnalysisSignal, type ModuleAnalysis } from '@/src/domain/analysis';
+import { computePrediction } from '@/src/domain/session';
 import {
   DuplicateResultError,
   InsufficientHistoryError,
@@ -69,6 +72,20 @@ function fakePrediction(
     category,
     moduleResults: [],
     riskFlags: [],
+    riskScore: 0,
+    riskLevel: RiskLevel.NONE,
+    reasonCodes: [],
+    shadow: {
+      decision,
+      side,
+      confidence: 0.65,
+      category,
+      riskScore: 0,
+      riskLevel: RiskLevel.NONE,
+      riskFlags: [],
+      reasonCodes: [],
+      differsFromActive: false,
+    },
     playerScore: 0,
     bankerScore: 0,
     weightedAgreement: 0,
@@ -350,5 +367,307 @@ describe('session — application restart reconstruction', () => {
     expect(map.EXPERIMENTAL_PLUS.consecutiveWins).toBe(1);
     expect(map.QUALIFIED_PLUS.consecutiveWins).toBe(1);
     expect(map.HIGH_ONLY.consecutiveWins).toBe(1);
+  });
+});
+
+// ===========================================================================
+// M5B — EVALUATION: BOTH DIRECTIONAL PATHS (synthetic locks, engine-independent)
+// ===========================================================================
+describe('session M5B — evaluation both directional paths', () => {
+  const betP = fakePrediction(PredictionDecision.BET_PLAYER, PredictionCategory.QUALIFIED);
+  const betB = fakePrediction(PredictionDecision.BET_BANKER, PredictionCategory.QUALIFIED);
+  const Q = PredictionCategory.QUALIFIED;
+  const adv = (s: ReturnType<typeof initialSequence>, r: StepResult) =>
+    advanceSequence(s, r, Q, SessionProfile.EXPERIMENTAL_PLUS);
+
+  it('BET_PLAYER + PLAYER -> WIN', () => {
+    expect(evaluatePrediction(betP, Winner.PLAYER)).toBe(StepResult.WIN);
+  });
+  it('BET_PLAYER + BANKER -> LOSS', () => {
+    expect(evaluatePrediction(betP, Winner.BANKER)).toBe(StepResult.LOSS);
+  });
+  it('BET_BANKER + BANKER -> WIN', () => {
+    expect(evaluatePrediction(betB, Winner.BANKER)).toBe(StepResult.WIN);
+  });
+  it('BET_BANKER + PLAYER -> LOSS', () => {
+    expect(evaluatePrediction(betB, Winner.PLAYER)).toBe(StepResult.LOSS);
+  });
+  it('Tie -> PUSH and leaves the sequence unchanged', () => {
+    expect(evaluatePrediction(betP, Winner.TIE)).toBe(StepResult.PUSH);
+    let s = adv(initialSequence(), StepResult.WIN);
+    const before = s.consecutiveWins;
+    s = adv(s, StepResult.PUSH);
+    expect(s.consecutiveWins).toBe(before);
+    expect(s.achieved).toBe(false);
+  });
+  it('SKIP -> SKIPPED and leaves the sequence unchanged', () => {
+    const skip = fakePrediction(PredictionDecision.SKIP, PredictionCategory.BELOW_THRESHOLD);
+    expect(evaluatePrediction(skip, Winner.PLAYER)).toBe(StepResult.SKIPPED);
+    let s = adv(initialSequence(), StepResult.WIN);
+    const before = s.consecutiveWins;
+    s = adv(s, StepResult.SKIPPED);
+    expect(s.consecutiveWins).toBe(before);
+  });
+});
+
+// ===========================================================================
+// M5B — EXACT THREE-WIN SEQUENCE LITERALS
+// ===========================================================================
+describe('session M5B — exact sequence literals', () => {
+  const Q = PredictionCategory.QUALIFIED;
+  const adv = (s: ReturnType<typeof initialSequence>, r: StepResult) =>
+    advanceSequence(s, r, Q, SessionProfile.EXPERIMENTAL_PLUS);
+
+  it('WIN, PUSH, WIN, SKIP, WIN completes the three-win sequence', () => {
+    let s = initialSequence();
+    s = adv(s, StepResult.WIN); // 1
+    s = adv(s, StepResult.PUSH); // neutral
+    s = adv(s, StepResult.WIN); // 2
+    s = adv(s, StepResult.SKIPPED); // neutral
+    expect(s.consecutiveWins).toBe(2);
+    expect(s.achieved).toBe(false);
+    s = adv(s, StepResult.WIN); // 3 -> complete
+    expect(s.achieved).toBe(true);
+    expect(s.completions).toBe(1);
+    expect(s.consecutiveWins).toBe(0);
+  });
+
+  it('WIN, PUSH, LOSS resets the active chain', () => {
+    let s = initialSequence();
+    s = adv(s, StepResult.WIN);
+    s = adv(s, StepResult.PUSH);
+    s = adv(s, StepResult.LOSS);
+    expect(s.consecutiveWins).toBe(0);
+    expect(s.achieved).toBe(false);
+  });
+});
+
+// ===========================================================================
+// M5B — ENGINE vs PLAYED INDEPENDENCE + SHOE BOUNDARY (session-level)
+// ===========================================================================
+describe('session M5B — engine vs played independence + shoe boundary', () => {
+  const playB = (s: ReturnType<typeof start>) =>
+    submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+  const watchB = (s: ReturnType<typeof start>) =>
+    submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.NOT_PLAYED });
+
+  it('NOT_PLAYED advances engine only; PLAYED advances both; counters stay independent', () => {
+    let s = start();
+    s = watchB(s);
+    expect(s.sequences.engine.EXPERIMENTAL_PLUS.consecutiveWins).toBe(1);
+    expect(s.sequences.played.EXPERIMENTAL_PLUS.consecutiveWins).toBe(0);
+    s = playB(s);
+    expect(s.sequences.engine.EXPERIMENTAL_PLUS.consecutiveWins).toBe(2);
+    expect(s.sequences.played.EXPERIMENTAL_PLUS.consecutiveWins).toBe(1);
+  });
+
+  it('a sequence never crosses a shoe boundary (New Shoe resets both counters)', () => {
+    let s = start();
+    s = playB(s);
+    s = playB(s);
+    expect(s.sequences.engine.EXPERIMENTAL_PLUS.consecutiveWins).toBe(2);
+    const fresh = newShoe(s, { shoeId: 'shoe-boundary' });
+    expect(fresh.sequences.engine.EXPERIMENTAL_PLUS.consecutiveWins).toBe(0);
+    expect(fresh.sequences.played.EXPERIMENTAL_PLUS.consecutiveWins).toBe(0);
+    expect(fresh.rounds).toHaveLength(0);
+  });
+});
+
+// ===========================================================================
+// M5B — FUTURE-LEAKAGE / LOCK-BEFORE-RESULT
+// ===========================================================================
+describe('session M5B — future-leakage protection (lock before result)', () => {
+  it('the locked prediction for target N is identical regardless of the actual result of N', () => {
+    const s = start(); // 12 banker rounds -> locks target 13 BEFORE its result
+    const lockedBefore = s.currentPrediction!;
+    const afterBanker = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    const afterPlayer = submitResult(s, Winner.PLAYER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    const lockedB = afterBanker.predictions.find((e) => e.prediction.targetRound === 13)!.prediction;
+    const lockedP = afterPlayer.predictions.find((e) => e.prediction.targetRound === 13)!.prediction;
+    // the future actual (BANKER vs PLAYER) never rewrote the pre-locked prediction for 13
+    expect(lockedB.decision).toBe(lockedBefore.decision);
+    expect(lockedP.decision).toBe(lockedBefore.decision);
+    expect(lockedB.confidence).toBe(lockedBefore.confidence);
+    expect(lockedP.confidence).toBe(lockedBefore.confidence);
+    expect(lockedB.category).toBe(lockedBefore.category);
+    expect(lockedP.category).toBe(lockedBefore.category);
+    expect(lockedB.snapshotVersion).toBe(lockedBefore.snapshotVersion);
+  });
+
+  it('target N snapshot/decision uses only rounds < N (round N is never in its own snapshot)', () => {
+    const rounds = bankerRounds(14);
+    const opts = { now: NOW, historyConfirmed: true } as const;
+    const p12a = computePrediction(rounds.slice(0, 12), SessionEnvironment.LIVE_FORWARD, 'shoe-fl', opts);
+    const p12b = computePrediction(rounds.slice(0, 12), SessionEnvironment.LIVE_FORWARD, 'shoe-fl', opts);
+    expect(p12a.targetRound).toBe(13);
+    expect(p12a).toEqual(p12b); // deterministic, depends only on rounds < 13
+    // including round 13 shifts the target to 14 — proving round N never feeds target N
+    const p13 = computePrediction(rounds.slice(0, 13), SessionEnvironment.LIVE_FORWARD, 'shoe-fl', opts);
+    expect(p13.targetRound).toBe(14);
+  });
+});
+
+// ===========================================================================
+// M5B — RECONSTRUCTED LOCKS REMAIN DEEPLY FROZEN
+// ===========================================================================
+describe('session M5B — reconstructed locks remain deeply frozen', () => {
+  it('serialize -> JSON -> reconstruct yields deep-frozen locked predictions', () => {
+    let s = start();
+    s = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    const persisted = JSON.parse(JSON.stringify(serializeSession(s)));
+    const restored = reconstructSession(persisted);
+    const p = restored.currentPrediction!;
+    expect(Object.isFrozen(p)).toBe(true);
+    expect(() => {
+      (p as { confidence: number }).confidence = 0.01;
+    }).toThrow();
+    expect(Object.isFrozen(p.moduleResults)).toBe(true);
+    expect(Object.isFrozen(p.riskFlags)).toBe(true);
+    expect(Object.isFrozen(p.reasonCodes)).toBe(true);
+    expect(Object.isFrozen(p.shadow)).toBe(true);
+    expect(() => {
+      (p.shadow as { confidence: number }).confidence = 0.01;
+    }).toThrow();
+    if (p.moduleResults.length > 0) expect(Object.isFrozen(p.moduleResults[0])).toBe(true);
+    // a resolved historical lock is frozen too
+    const resolved = restored.predictions.find((e) => e.result === StepResult.WIN)!.prediction;
+    expect(Object.isFrozen(resolved)).toBe(true);
+  });
+});
+
+// ===========================================================================
+// M5B — RESTART RECONSTRUCTION (persist -> JSON -> reconstruct)
+// ===========================================================================
+describe('session M5B — restart reconstruction scenarios', () => {
+  const roundTrip = (s: ReturnType<typeof start>) =>
+    reconstructSession(JSON.parse(JSON.stringify(serializeSession(s))));
+
+  it('A. lock N -> persist -> reconstruct -> identical locked prediction', () => {
+    const s = start();
+    const before = s.currentPrediction!;
+    const restored = roundTrip(s);
+    expect(restored.currentPrediction).toEqual(before);
+  });
+
+  it('B. lock -> WIN -> persist -> reconstruct -> same evaluation + sequences + paper', () => {
+    let s = start();
+    s = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    const restored = roundTrip(s);
+    expect(restored.predictions.find((e) => e.prediction.targetRound === 13)!.result).toBe(
+      StepResult.WIN,
+    );
+    expect(restored.sequences).toEqual(s.sequences);
+    expect(restored.paper).toEqual(s.paper);
+  });
+
+  it('C. WIN, PUSH, WIN, WIN survives reconstruction between steps and still completes', () => {
+    let s = start();
+    s = roundTrip(submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED })); // eng 1
+    s = roundTrip(submitResult(s, Winner.TIE, { now: NOW, operatorAction: OperatorAction.PLAYED })); // neutral PUSH
+    s = roundTrip(submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED })); // eng 2
+    expect(s.sequences.engine.EXPERIMENTAL_PLUS.achieved).toBe(false);
+    s = roundTrip(submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED })); // eng 3 -> complete
+    expect(s.sequences.engine.EXPERIMENTAL_PLUS.achieved).toBe(true);
+    expect(s.sequences.engine.EXPERIMENTAL_PLUS.completions).toBe(1);
+  });
+
+  it('D. PLAYED / NOT_PLAYED distinction survives reconstruction', () => {
+    let s = start();
+    s = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.NOT_PLAYED });
+    s = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    const restored = roundTrip(s);
+    expect(restored.sequences.engine.EXPERIMENTAL_PLUS.consecutiveWins).toBe(2);
+    expect(restored.sequences.played.EXPERIMENTAL_PLUS.consecutiveWins).toBe(1);
+    expect(restored.paper.wins).toBe(1); // only the PLAYED win is staked
+    const actions = restored.predictions
+      .filter((e) => e.result === StepResult.WIN)
+      .map((e) => e.operatorAction)
+      .sort();
+    expect(actions).toEqual([OperatorAction.NOT_PLAYED, OperatorAction.PLAYED]);
+  });
+
+  it('E. revision invalidation survives reconstruction', () => {
+    let s = start();
+    s = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    s = editHistory(
+      s,
+      13,
+      { winner: Winner.PLAYER, playerPair: PairState.NO, bankerPair: PairState.NO },
+      { now: '2026-01-02T00:00:00.000Z', historyConfirmed: true },
+    );
+    const restored = roundTrip(s);
+    const invalidated = restored.predictions.filter((e) => e.invalidated);
+    expect(invalidated.length).toBeGreaterThanOrEqual(1);
+    expect(invalidated.every((e) => e.result === StepResult.INVALIDATED)).toBe(true);
+    expect(restored.revisions.length).toBe(s.revisions.length);
+    // sequences reconstructed ONLY from surviving (non-invalidated) evaluations
+    expect(restored.sequences).toEqual(s.sequences);
+  });
+
+  it('G. reconstruction never creates a duplicate lock for a target round', () => {
+    let s = start();
+    s = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    s = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
+    const restored = roundTrip(s);
+    const targets = restored.predictions.map((e) => e.prediction.targetRound);
+    expect(new Set(targets).size).toBe(targets.length); // all target rounds unique
+    const pendingEntries = restored.predictions.filter(
+      (e) => e.result === StepResult.PENDING && !e.invalidated,
+    );
+    expect(pendingEntries).toHaveLength(1);
+    expect(restored.currentPrediction?.targetRound).toBe(pendingEntries[0].prediction.targetRound);
+  });
+});
+
+// ===========================================================================
+// M5B — SHADOW AUDIT NEVER INFLUENCES THE ACTIVE LOCK
+// ===========================================================================
+describe('session M5B — shadow audit never influences the active lock', () => {
+  const mr = (
+    moduleId: string,
+    signal: AnalysisSignal,
+    strength: number,
+    reliability: number,
+  ): ModuleAnalysis => ({
+    moduleId,
+    signal,
+    strength,
+    reliability,
+    status: ModuleStatus.ACTIVE,
+    reasonCodes: [],
+    riskFlags: [],
+    version: 'TEST',
+  });
+  const baseCtx = (recentPatternBreaks: number): DecisionContext => ({
+    nonTieCount: 15,
+    regimeTransitioning: false,
+    recentPatternBreaks,
+    dataQuality: {
+      warmupMet: true,
+      winnerCompleteness: 1,
+      pairCompleteness: 1,
+      revisions: 0,
+      missingRounds: 0,
+    },
+  });
+
+  it('changing only the SHADOW (volatility) input leaves ACTIVE identical while SHADOW differs', () => {
+    const modules = [
+      mr('streak', AnalysisSignal.PLAYER, 1, 0.5),
+      mr('chop', AnalysisSignal.PLAYER, 1, 0.5),
+    ];
+    const low = decide(modules, baseCtx(0));
+    const high = decide(modules, baseCtx(3));
+    // ACTIVE is unaffected by the SHADOW-only volatility signal
+    expect(high.active.decision).toBe(low.active.decision);
+    expect(high.active.side).toBe(low.active.side);
+    expect(high.active.confidence).toBe(low.active.confidence);
+    expect(high.active.category).toBe(low.active.category);
+    expect(high.active.riskLevel).toBe(low.active.riskLevel);
+    expect(high.active.riskFlags).toEqual(low.active.riskFlags);
+    expect(high.active.riskFlags).not.toContain(DecisionRiskFlag.RECENT_PATTERN_BREAK);
+    // SHADOW records the volatility difference (auditable, never influential)
+    expect(high.shadow.riskFlags).toContain(DecisionRiskFlag.RECENT_PATTERN_BREAK);
+    expect(low.shadow.riskFlags).not.toContain(DecisionRiskFlag.RECENT_PATTERN_BREAK);
   });
 });

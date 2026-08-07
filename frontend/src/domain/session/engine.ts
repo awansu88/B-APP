@@ -23,6 +23,16 @@ import {
 } from './types';
 import type { PredictionCategory } from '../models/enums';
 
+/**
+ * Canonical lock: deep-freezes a prediction object graph so that BOTH freshly
+ * computed locks (`computePrediction`) and reconstructed locks
+ * (`reconstructSession`) share exactly one immutability implementation and can
+ * never diverge. Freezes nested module results, risk-flag/reason arrays, and the
+ * shadow audit record.
+ */
+export const lockPrediction = (prediction: LockedPrediction): LockedPrediction =>
+  deepFreeze(prediction);
+
 export interface ComputeOptions {
   readonly now?: string;
   readonly historyConfirmed?: boolean;
@@ -48,7 +58,7 @@ export function computePrediction(
   const report = runAnalysis(ctx);
   const decision = runDecisionPipeline(ctx, DECISION_CONFIG);
 
-  return deepFreeze<LockedPrediction>({
+  return lockPrediction({
     id: `pred-${shoeId}-r${targetRound}-${now}`,
     shoeId,
     targetRound,
@@ -59,6 +69,23 @@ export function computePrediction(
     category: decision.active.category,
     moduleResults: report.results,
     riskFlags: decision.active.riskFlags,
+    riskScore: decision.active.riskScore,
+    riskLevel: decision.active.riskLevel,
+    reasonCodes: decision.active.reasonCodes,
+    shadow: {
+      decision: decision.shadow.decision,
+      side: decision.shadow.side,
+      confidence: decision.shadow.confidence,
+      category: decision.shadow.category,
+      riskScore: decision.shadow.riskScore,
+      riskLevel: decision.shadow.riskLevel,
+      riskFlags: decision.shadow.riskFlags,
+      reasonCodes: decision.shadow.reasonCodes,
+      differsFromActive:
+        decision.shadow.decision !== decision.active.decision ||
+        decision.shadow.category !== decision.active.category ||
+        decision.shadow.confidence !== decision.active.confidence,
+    },
     playerScore: decision.playerScore,
     bankerScore: decision.bankerScore,
     weightedAgreement: decision.weightedAgreement,

@@ -175,17 +175,29 @@ versioned engine decision.
 
 ## Milestone 5
 
-### 17. Session engine is pure domain (not yet wired to the UI)
+### 17. Session engine is pure domain (not yet wired to the UI) — M5C pending
 `src/domain/session/*` (SESSION-001) implements the live/historical workflow, an
-immutable prediction lock, result evaluation, the three-win tracker, revision
-invalidation, fixed-unit paper tracking, and serialize/restart reconstruction —
-but it is **not yet driven by any screen**. Persistence is exposed as
-`serializeSession` / `reconstructSession` (a thin AsyncStorage/SQLite adapter can
-wrap them); the reducers are transactional (a rejected guard leaves the prior
-state untouched). No advanced statistics or export (Milestone 6).
+immutable prediction lock (with ACTIVE trace + SHADOW audit), result evaluation, the
+three-win tracker (engine vs played), revision invalidation, fixed-unit paper tracking,
+and serialize/restart reconstruction (with a canonical deep-freeze re-applied on
+reconstruction) — but it is **not yet driven by any screen** (Milestone 5C).
 
-**Impact:** none — intended MVP scope. **Action:** Milestone 6 wires the UI +
-analytics/export.
+**Impact:** none — intended MVP scope. **Action:** M5C wires the Active Shoe UI.
+
+### 19. Session/prediction persistence is BLOCKED on DB-002 (M5B)
+The M5 locked-prediction audit cannot be represented by the accepted **DB-001** schema.
+The `predictions` table has no columns for: the active side-trace scores
+(player/banker/weightedAgreement/conflict), active risk flags / risk level / reason codes,
+the SHADOW audit record, the operator PLAYED/NOT_PLAYED action, or the
+voting/confidence/risk/snapshot/feature/decisionConfig versions; its `evaluation` column
+(EvaluationStatus) lacks **INVALIDATED**; and `module_results.signal` (ModuleSignal:
+PLAYER/BANKER/NONE) cannot represent AnalysisSignal NEUTRAL/ABSTAIN. Locks must be stored
+verbatim (never recomputed), so these facts cannot be derived away.
+
+**Impact:** no on-disk session persistence yet; restart is covered only by the pure
+`serializeSession`/`reconstructSession` (JSON) bridge in tests. **Action:** approve the
+proposed **append-only DB-002** migration (DB-001 untouched), then implement the thin
+persistence repository/store. **DB-001 must not be altered.**
 
 ### 18. Financial tracking is fixed-unit paper only
 No martingale, no compensation, no automatic progression — a single flat unit per

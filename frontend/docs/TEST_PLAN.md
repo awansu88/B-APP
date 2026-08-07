@@ -123,9 +123,9 @@ locked versions (VOTE-001/CONF-001/RISK-001/DECISION-001) + determinism, and an
 end-to-end `runDecisionPipeline` integration on a real banker shoe.
 
 ## Milestone 5 additions (Live Workflow & Session Tracker)
-### `src/tests/session.test.ts` (24 — deterministic)
-Evaluation (WIN / LOSS / PUSH / SKIPPED / INVALIDATED); three-win tracker
-(3-win completion, loss-after-two reset, SKIP/PUSH no-op, profile filtering);
+### `src/tests/session.test.ts` (44 — deterministic)
+**M5A core (24):** Evaluation (WIN / LOSS / PUSH / SKIPPED / INVALIDATED); three-win
+tracker (3-win completion, loss-after-two reset, SKIP/PUSH no-op, profile filtering);
 Start Live and Start Historical Test (source tagging, ≥8 non-Tie gate); prediction
 lock immutability (deep-frozen; mutation throws); result submission WIN/LOSS/PUSH;
 engine-vs-played sequence separation; duplicate/out-of-order rejection with atomic
@@ -133,14 +133,30 @@ engine-vs-played sequence separation; duplicate/out-of-order rejection with atom
 invalidation (audit trail preserved, fresh lock); and application-restart
 reconstruction (sequences + current lock rebuilt from persisted state).
 
+**M5B hardening (+20):** BET_PLAYER + BET_BANKER WIN/LOSS on synthetic locks
+(engine-independent, so both directional paths are covered without an all-Banker
+dependency); Tie→PUSH and SKIP→SKIPPED leave the sequence unchanged; exact literals
+**WIN·PUSH·WIN·SKIP·WIN → complete** and **WIN·PUSH·LOSS → reset**; engine-vs-played
+independence + shoe-boundary reset; future-leakage / lock-before-result (a locked
+prediction for target N is identical regardless of N's actual result, and round N is
+never in its own snapshot); reconstructed locks remain **deeply frozen** (canonical
+`lockPrediction`/`deepFreeze` shared by create + reconstruct); restart reconstruction
+A–G (persist→JSON→reconstruct: identical lock; evaluation/sequences/paper; interleaved
+neutrals still complete; PLAYED/NOT_PLAYED + revision invalidation survive; no duplicate
+target-round lock); and a shadow-isolation regression (a SHADOW-only volatility input
+never mutates the ACTIVE lock).
+
 ## Expected result (Milestone 5)
 - typecheck: **pass** · lint: **pass**
-- `npm test`: **10 suites, 179 tests passing**
+- `npm test`: **10 suites, 199 tests passing**
   (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
-  reliability 13 · decision 18 · decision-audit 17 · session 24)
+  reliability 13 · decision 18 · decision-audit 17 · session 44)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
 - `package-lock.json` unchanged; DB-001/thresholds/version-registry/analyzer modes/
   reliability priors/decision pipeline/snapshot+feature/History workflow & UI unchanged.
+- **Persistence NOT covered here (M5B BLOCKED on DB-002):** restart is verified only via
+  the pure `serializeSession`/`reconstructSession` JSON bridge; there is no on-disk
+  session persistence yet.
 
 ## Expected result (Milestone 4)
 - typecheck: **pass** · lint: **pass**

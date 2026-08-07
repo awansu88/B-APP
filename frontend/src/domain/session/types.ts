@@ -6,7 +6,7 @@
  * confidence, category, module outputs, risk flags, config version, and target
  * round can never silently change after locking.
  */
-import type { DecisionRiskFlag, VoteSide } from '../decision';
+import type { DecisionReason, DecisionRiskFlag, RiskLevel, VoteSide } from '../decision';
 import type { ModuleAnalysis } from '../analysis/types';
 import { PredictionCategory, PredictionDecision } from '../models/enums';
 import type { RevisionRecord } from '../models/records';
@@ -71,6 +71,26 @@ export const ALL_PROFILES: readonly SessionProfile[] = Object.freeze([
   SessionProfile.HIGH_ONLY,
 ]);
 
+/**
+ * SHADOW audit snapshot (SHADOW_ONLY analyzers: volatility + derived-road).
+ *
+ * Captured ALONGSIDE the active decision purely for later auditability. Shadow
+ * information NEVER influences the active side / confidence / category / BET-SKIP
+ * / sequence result — it is a read-only "what a volatility-aware evaluation would
+ * have said" record. `differsFromActive` is a convenience flag for reviewers.
+ */
+export interface ShadowAudit {
+  readonly decision: PredictionDecision;
+  readonly side: VoteSide | null;
+  readonly confidence: number;
+  readonly category: PredictionCategory;
+  readonly riskScore: number;
+  readonly riskLevel: RiskLevel;
+  readonly riskFlags: readonly DecisionRiskFlag[];
+  readonly reasonCodes: readonly DecisionReason[];
+  readonly differsFromActive: boolean;
+}
+
 /** An immutable, locked prediction captured BEFORE its result is known. */
 export interface LockedPrediction {
   readonly id: string;
@@ -83,6 +103,12 @@ export interface LockedPrediction {
   readonly category: PredictionCategory;
   readonly moduleResults: readonly ModuleAnalysis[];
   readonly riskFlags: readonly DecisionRiskFlag[];
+  /** ACTIVE decision-trace completeness (never affected by shadow inputs). */
+  readonly riskScore: number;
+  readonly riskLevel: RiskLevel;
+  readonly reasonCodes: readonly DecisionReason[];
+  /** SHADOW audit record (auditable only; never influences the active fields). */
+  readonly shadow: ShadowAudit;
   readonly playerScore: number;
   readonly bankerScore: number;
   readonly weightedAgreement: number;

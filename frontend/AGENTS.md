@@ -2,7 +2,7 @@
 
 **Project:** B-APP Baccarat Engine
 **Repository root:** `/app/frontend`
-**Status:** Milestone 5 (Live Workflow & Session Tracker) — COMPLETE. Do **not** begin Milestone 6 (advanced statistics / export) unless explicitly instructed.
+**Status:** Milestone 5 (Live Workflow & Session Tracker) — **IN PROGRESS**. M5A (domain core) COMPLETE; M5B domain hardening COMPLETE with **persistence BLOCKED pending DB-002 approval**; M5C (live workflow/UI) NOT STARTED. Do **not** begin Milestone 6, and do not implement DB-002 until it is approved.
 
 This file is LOCKED guidance. Read it fully before touching anything.
 

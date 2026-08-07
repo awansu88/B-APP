@@ -19,6 +19,7 @@ import {
   computePrediction,
   evaluatePrediction,
   initialProfileSequences,
+  lockPrediction,
   type ComputeOptions,
 } from './engine';
 import {
@@ -277,9 +278,16 @@ export function serializeSession(session: SessionState): PersistedSession {
  * replayed from the stored, resolved entries.
  */
 export function reconstructSession(persisted: PersistedSession): SessionState {
-  const { sequences, paper } = rebuild(persisted.predictions);
+  // Re-lock (deep-freeze) every restored prediction so a reconstructed lock has
+  // the SAME immutability guarantee as a freshly computed one (a JSON round-trip
+  // otherwise yields plain, mutable objects).
+  const predictions: readonly PredictionEntry[] = persisted.predictions.map((e) => ({
+    ...e,
+    prediction: lockPrediction(e.prediction),
+  }));
+  const { sequences, paper } = rebuild(predictions);
   const current =
-    persisted.predictions.find((e) => e.result === StepResult.PENDING && !e.invalidated)?.prediction ??
+    predictions.find((e) => e.result === StepResult.PENDING && !e.invalidated)?.prediction ??
     null;
   return {
     version: persisted.version,
@@ -288,7 +296,7 @@ export function reconstructSession(persisted: PersistedSession): SessionState {
     shoeId: persisted.shoeId,
     rounds: persisted.rounds,
     currentPrediction: current,
-    predictions: persisted.predictions,
+    predictions,
     sequences,
     revisions: persisted.revisions,
     paper,
