@@ -1,10 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useHistorySession, useLiveSession } from "@/src/workflows";
 import { buildRoadmap } from "@/src/domain/roadmap/engine";
 import { OperatorAction } from "@/src/domain/session";
-import { resolvePairState, computeStatistics } from "@/src/domain/history";
+import { resolvePairState, computeStatistics, DuplicateInputGuard } from "@/src/domain/history";
 import { Winner } from "@/src/domain/models/outcome";
 import {
   CheckpointBanner,
@@ -30,6 +30,8 @@ export default function ActiveShoeScreen() {
   const [showReview, setShowReview] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
   const [operatorAction, setOperatorAction] = useState<OperatorAction>(OperatorAction.NOT_PLAYED);
+  // Accidental rapid double-tap protection for the single P/T/B result button.
+  const resultInputGuard = useRef(new DuplicateInputGuard()).current;
 
   const liveActive = live.active;
   const liveMode = liveActive && live.state != null;
@@ -69,6 +71,9 @@ export default function ActiveShoeScreen() {
   const boardsRoadmap = liveMode && liveRoadmap ? liveRoadmap : session.roadmap;
 
   const onSelectWinner = (winner: Winner) => {
+    // Reject the tail of an accidental physical double-tap: a second tap within
+    // the short re-arm window must not silently create the next round.
+    if (!resultInputGuard.tryAccept()) return;
     if (liveActive) {
       if (!canLiveSubmit) return; // never fall back to a history append in a forward session
       live.submit(winner, operatorAction, {
@@ -188,6 +193,7 @@ export default function ActiveShoeScreen() {
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           setConfirm(null);
+          resultInputGuard.reset();
           session.newShoe();
         }}
       />
