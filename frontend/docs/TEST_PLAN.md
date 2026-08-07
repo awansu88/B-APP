@@ -122,6 +122,26 @@ unaffected), confidence ≤ 0.75, risk filter never reverses the winning side,
 locked versions (VOTE-001/CONF-001/RISK-001/DECISION-001) + determinism, and an
 end-to-end `runDecisionPipeline` integration on a real banker shoe.
 
+## Milestone 5 additions (Live Workflow & Session Tracker)
+### `src/tests/session.test.ts` (24 — deterministic)
+Evaluation (WIN / LOSS / PUSH / SKIPPED / INVALIDATED); three-win tracker
+(3-win completion, loss-after-two reset, SKIP/PUSH no-op, profile filtering);
+Start Live and Start Historical Test (source tagging, ≥8 non-Tie gate); prediction
+lock immutability (deep-frozen; mutation throws); result submission WIN/LOSS/PUSH;
+engine-vs-played sequence separation; duplicate/out-of-order rejection with atomic
+(unchanged) state; disabled input rejection; New-Shoe reset; history-revision
+invalidation (audit trail preserved, fresh lock); and application-restart
+reconstruction (sequences + current lock rebuilt from persisted state).
+
+## Expected result (Milestone 5)
+- typecheck: **pass** · lint: **pass**
+- `npm test`: **10 suites, 179 tests passing**
+  (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
+  reliability 13 · decision 18 · decision-audit 17 · session 24)
+- `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
+- `package-lock.json` unchanged; DB-001/thresholds/version-registry/analyzer modes/
+  reliability priors/decision pipeline/snapshot+feature/History workflow & UI unchanged.
+
 ## Expected result (Milestone 4)
 - typecheck: **pass** · lint: **pass**
 - `npm test`: **9 suites, 155 tests passing**

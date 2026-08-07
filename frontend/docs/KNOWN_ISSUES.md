@@ -173,5 +173,25 @@ conservative placeholders, not calibrated statistics.
 **Impact:** low (deterministic, versioned). **Action:** calibrate in a future
 versioned engine decision.
 
+## Milestone 5
+
+### 17. Session engine is pure domain (not yet wired to the UI)
+`src/domain/session/*` (SESSION-001) implements the live/historical workflow, an
+immutable prediction lock, result evaluation, the three-win tracker, revision
+invalidation, fixed-unit paper tracking, and serialize/restart reconstruction —
+but it is **not yet driven by any screen**. Persistence is exposed as
+`serializeSession` / `reconstructSession` (a thin AsyncStorage/SQLite adapter can
+wrap them); the reducers are transactional (a rejected guard leaves the prior
+state untouched). No advanced statistics or export (Milestone 6).
+
+**Impact:** none — intended MVP scope. **Action:** Milestone 6 wires the UI +
+analytics/export.
+
+### 18. Financial tracking is fixed-unit paper only
+No martingale, no compensation, no automatic progression — a single flat unit per
+PLAYED step, net units for paper P/L. Uncalibrated MVP.
+
+**Impact:** none. **Action:** revisit if real staking models are ever required.
+
 ## No functional defects
 All verification gates pass (see `docs/TEST_PLAN.md` and `docs/CURRENT_STATE.md`).

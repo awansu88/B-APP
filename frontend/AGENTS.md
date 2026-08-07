@@ -2,7 +2,7 @@
 
 **Project:** B-APP Baccarat Engine
 **Repository root:** `/app/frontend`
-**Status:** Milestone 4 (Decision Pipeline) — COMPLETE. Do **not** begin Milestone 5 (prediction locking / result evaluation) unless explicitly instructed.
+**Status:** Milestone 5 (Live Workflow & Session Tracker) — COMPLETE. Do **not** begin Milestone 6 (advanced statistics / export) unless explicitly instructed.
 
 This file is LOCKED guidance. Read it fully before touching anything.
 

@@ -1,16 +1,18 @@
 # Current State
 
-**Completed milestone:** 4 — Decision Pipeline. **Status: COMPLETE.**
-**Milestone 5: NOT STARTED** — Prediction locking, result submission/evaluation,
-live workflow, and sequence/three-win tracking (none built yet).
-**Milestone 4 built the Decision Pipeline ONLY** (in-memory Prediction **Draft** +
-trace): Data Quality Gate → Weighted Voting → Family Correlation Cap → Conflict
-Detection → Confidence Engine → Risk Filter → Active/Shadow decision. **NO
-persistence, NO prediction locking, NO result submission/evaluation.**
+**Completed milestone:** 5 — Live Workflow & Session Tracker. **Status: COMPLETE.**
+**Milestone 6: NOT STARTED** — advanced statistics & export (none built yet).
+**Milestone 5 built the live/historical session engine** (pure domain): manual
+one-result-at-a-time workflow, prediction **locking** (immutable), result
+evaluation (WIN/LOSS/PUSH/SKIPPED/INVALIDATED), three-win tracker (engine +
+played, 3 profiles), history-revision invalidation, fixed-unit paper tracking, and
+serialize/restart reconstruction. Predictions are locked BEFORE their result
+(Principle #5). **No automated replay; no advanced statistics/export.**
 **Database schema version:** DB-001 (unchanged)
 **App:** 0.1.0 · **Engine:** ENGINE-001 · **Config:** CFG-001 · **Roadmap:** ROADMAP-001
 · **Snapshot:** SNAPSHOT-001 · **Feature:** FEATURE-001 · **Voting:** VOTE-001 ·
-**Confidence:** CONF-001 · **Risk:** RISK-001 · **Decision config:** DECISION-001
+**Confidence:** CONF-001 · **Risk:** RISK-001 · **Decision config:** DECISION-001 ·
+**Session:** SESSION-001
 
 ## Repository facts
 - **Git repository root: `/app`.** Expo app root: **`/app/frontend`** (run all
@@ -105,7 +107,54 @@ persistence, NO prediction locking, NO result submission/evaluation.**
   `docs/ENGINE_RULES.md`. Data Quality Guard stays ACTIVE/non-directional;
   Volatility & Derived Road stay SHADOW_ONLY; Historical Matcher stays DISABLED.
 
-## Milestone 4 (new — Decision Pipeline, pure domain)
+## Milestone 5 (new — Live Workflow & Session Tracker, pure domain)
+- **`src/domain/session/*`** (deterministic, no IO/persistence coupling): `types.ts`
+  (SESSION-001; WorkflowState, SessionProfile, OperatorAction, StepResult, LockedPrediction,
+  SessionState, PersistedSession), `engine.ts` (`computePrediction` → immutable
+  deep-frozen lock, `evaluatePrediction`, three-win `advanceSequence`/`advanceProfileMap`),
+  `live-session.ts` (`startSession`, `submitResult`, `editHistory`, `newShoe`,
+  `serializeSession`, `reconstructSession`).
+- **Environments:** LIVE_FORWARD and HISTORICAL_TEST share the same manual,
+  one-result-at-a-time workflow (no automated replay).
+- **Workflow states:** HISTORY_INPUT · READY_TO_START · COMPUTING_PREDICTION ·
+  WAITING_FOR_RESULT · EDITING_HISTORY · SHOE_CLOSED · ERROR_RECOVERY.
+- **Prediction lock (immutable):** recommendation, confidence, category, module
+  outputs, risk flags, all engine/config versions, and target round are captured
+  and **deep-frozen** before the result; they can never silently change.
+- **Result submission (transactional):** validate target round → save actual →
+  evaluate locked prediction → update sequences/paper → build & lock the next
+  prediction. Duplicate/out-of-order input is rejected without partial application.
+- **Evaluation:** correct P/B → WIN; incorrect → LOSS; Tie → PUSH; official SKIP →
+  SKIPPED; revision-affected → INVALIDATED.
+- **Three-win tracker:** 3 consecutive valid wins within one shoe; SKIP/PUSH are
+  no-ops; LOSS resets; New Shoe ends an unfinished sequence. Tracked separately for
+  **engine** vs **played** across profiles EXPERIMENTAL_PLUS / QUALIFIED_PLUS / HIGH_ONLY.
+- **Editing live history:** creates a revision, invalidates affected predictions
+  (target round ≥ edited round), rebuilds sequences from survivors, and re-locks a
+  fresh prediction — the old audit trail is never deleted.
+- **Financial MVP:** fixed unit, paper tracking only (no martingale / compensation /
+  progression). **Restart reconstruction:** `serializeSession`/`reconstructSession`
+  rebuild sequences + current locked prediction deterministically.
+- No future result may enter a snapshot (predictions are computed only from
+  completed rounds before the target). No advanced statistics/export (Milestone 6).
+
+## Verification (this milestone)
+- `npm run typecheck` → pass · `npm run lint` → pass
+- `npm test` → **10 suites, 179 tests** (adds `session.test.ts` ×24: evaluation
+  WIN/LOSS/PUSH/SKIPPED/INVALIDATED, three-win completion / loss-after-two /
+  SKIP·PUSH no-op / profile filtering, Start Live, Start Historical Test, lock
+  immutability, WIN/LOSS/PUSH submission, engine-vs-played separation, duplicate
+  rejection + atomic transaction, disabled input, New-Shoe reset, history-revision
+  invalidation, restart reconstruction). Per-file: smoke 6 · engine 10 · roadmap 26
+  · database 15 · history 22 · analysis 28 · reliability 13 · decision 18 ·
+  decision-audit 17 · session 24.
+- `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
+- `package-lock.json` unchanged; roadmap engine, DB-001, thresholds, version
+  registry, analyzer modes, reliability priors, decision pipeline, snapshot/feature
+  layers, and History workflow/UI all UNCHANGED (only new `src/domain/session/*`
+  files + additive `index.ts` re-exports + `src/tests/session.test.ts`).
+
+## Milestone 4 (Decision Pipeline, pure domain)
 - **`src/domain/decision/*`** (deterministic, no React/RN/Expo/IO, no persistence,
   no locking): `config.ts` (DECISION-001 baseline), `types.ts`, `families.ts`
   (Trend/Alternation/Context/Structure/Risk/Historical), `data-quality.ts`
@@ -136,7 +185,7 @@ persistence, NO prediction locking, NO result submission/evaluation.**
   score/level/flags, active & shadow decisions, reason codes, and engine/config
   versions (VOTE-001, CONF-001, RISK-001, ENGINE-001, CFG-001, DECISION-001).
 
-## Verification (this milestone)
+## Verification (Milestone 4)
 - `npm run typecheck` → pass · `npm run lint` → pass
 - `npm test` → **9 suites, 155 tests** (Milestone-4 build adds `decision.test.ts` ×18;
   the final acceptance audit adds `decision-audit.test.ts` ×17: family-cap

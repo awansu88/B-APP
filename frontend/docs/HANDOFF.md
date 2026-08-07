@@ -5,25 +5,22 @@
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
 ## Status
-- Milestone 4 (Decision Pipeline) is **complete**. **Milestone 5 has NOT started.**
-- Database schema version: **DB-001** (unchanged). No persistence/locking added.
-- **Decision Pipeline (`src/domain/decision/*`, pure, in-memory only):** Data
-  Quality Gate → Weighted Voting → Family Correlation Cap → Conflict Detection →
-  Confidence Engine → Risk Filter → Prediction **Draft**, with independent ACTIVE
-  and SHADOW (volatility) records and a full decision trace. Entry points:
-  `decide(moduleResults, context, config?)` (fixed-vector) and
-  `runDecisionPipeline(ctx)` (over an AnalysisContext). Versions VOTE-001 /
-  CONF-001 / RISK-001 and config DECISION-001.
-- Weighted agreement is a consensus ratio (NOT a win probability). Confidence is
-  evidence-depth based, gated by agreement ≥ 58% + ≥ 2 directional modules, clamped
-  to 0.75. Risk Filter never reverses the side, raises a category, or increases
-  confidence. Historical Matcher DISABLED; Volatility & Derived Road SHADOW_ONLY.
-- **Milestone-3 reliability correction (`RELPRIOR-001`)** remains in force (analyzer
-  `reliability` is an uncalibrated versioned prior; see `docs/ENGINE_RULES.md`).
-- **NOT built (Milestone 5+):** prediction DB writes, prediction locking, result
-  submission/evaluation, live workflow, and sequence/three-win tracking. The M0
-  placeholders `categorizeConfidence` / `evaluateStep` / `evaluateThreeWinSequence`
-  still throw (untouched).
+- Milestone 5 (Live Workflow & Session Tracker) is **complete**. **Milestone 6
+  (advanced statistics & export) has NOT started.**
+- Database schema version: **DB-001** (unchanged).
+- **Session engine (`src/domain/session/*`, pure, SESSION-001):** manual
+  one-result-at-a-time workflow shared by LIVE_FORWARD and HISTORICAL_TEST;
+  `startSession` / `submitResult` / `editHistory` / `newShoe` reducers plus
+  `serializeSession` / `reconstructSession`. Predictions are **locked** (deep-frozen)
+  before their result; result evaluation → WIN/LOSS/PUSH/SKIPPED/INVALIDATED; a
+  three-win tracker runs separately for engine vs played across three profiles;
+  history edits create revisions and invalidate affected predictions without
+  deleting the audit trail; fixed-unit paper tracking only.
+- Prior milestones (M1–M4 + RELPRIOR-001) remain in force and unchanged.
+- **NOT built (Milestone 6+):** advanced statistics, export, and any UI wiring of
+  the session engine (the engine is pure-domain and not yet driven by a screen).
+  The M0 placeholders `evaluateStep` / `evaluateThreeWinSequence` /
+  `categorizeConfidence` remain (superseded by the session/decision modules).
 - Accepted this milestone (pure domain engine, no UI/DB writes):
   - `src/domain/snapshot/shoe-snapshot.ts` — immutable `ShoeStateSnapshot`
     (`SNAPSHOT-001`) with future-leakage prevention.
@@ -42,7 +39,7 @@ commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
    Metro was already running, so it rebuilds its graph against the fresh install).
 3. Confirm the gate is green:
    `npm run typecheck && npm run lint && npm test && npm run test:roadmap && npm run test:engine && npx expo-doctor`.
-   Expected: **8 suites / 138 tests**, roadmap 26, engine 10, doctor 18/18.
+   Expected: **10 suites / 179 tests**, roadmap 26, engine 10, doctor 18/18.
 
 ## Key building blocks (Milestone 4)
 - Decision entrypoints: `decide(moduleResults, context, config?)` (fixed-vector)
@@ -85,7 +82,7 @@ regression test added first, the smallest possible fix, and all accepted tests
 still passing.
 
 ## Do NOT
-- Begin Milestone 5 unless explicitly instructed.
+- Do NOT begin Milestone 6 unless explicitly instructed.
 - Perform prediction database writes, **prediction locking**, result submission,
   result evaluation, live workflow, or sequence/three-win tracking.
 - Activate the Historical Matcher or let SHADOW_ONLY modules influence the ACTIVE decision.
@@ -94,12 +91,11 @@ still passing.
 - Introduce randomness, ML, network, balances, or target-sequence inputs.
 
 ## Next milestone scope (for the next agent)
-**Milestone 5 = Prediction locking + evaluation.** Persist a locked prediction
-BEFORE its result (Principle #5), submit/evaluate actual results, run the live
-forward / historical-test workflow, and track the three-win sequence. This will
-consume the Milestone-4 Prediction **Draft** and the decision trace. Implement the
-still-placeholder `evaluateStep` / `evaluateThreeWinSequence` (and wire confidence
-categorisation) as part of that milestone.
+**Milestone 6 = advanced statistics & export.** Aggregate session/sequence
+analytics, per-profile hit-rate reporting, and data export — consuming the
+Milestone-5 session audit trail (locked predictions + evaluations). Optionally
+wire the session engine into the Active Shoe UI (locked recommendation panel +
+result submission), which Milestone 5 intentionally left as pure domain.
 
 ## After your milestone
 Update `docs/CURRENT_STATE.md`, this file, `docs/KNOWN_ISSUES.md`,
