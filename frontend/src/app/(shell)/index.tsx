@@ -1,7 +1,11 @@
-import { useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { useHistorySession } from "@/src/workflows";
+import { useHistorySession, useLiveSession } from "@/src/workflows";
+import { buildRoadmap } from "@/src/domain/roadmap/engine";
+import { OperatorAction } from "@/src/domain/session";
+import { resolvePairState } from "@/src/domain/history";
+import { Winner } from "@/src/domain/models/outcome";
 import {
   CheckpointBanner,
   ConfirmDialog,
@@ -9,8 +13,9 @@ import {
   ReviewDataSheet,
   ShoeInfoPanel,
 } from "@/src/ui/history";
+import { LiveSessionPanel } from "@/src/ui/live";
 import { RoadmapBoards } from "@/src/ui/roadmap";
-import { colors, spacing } from "@/src/ui/theme";
+import { colors, radius, spacing } from "@/src/ui/theme";
 
 type ConfirmKind = "clear" | "new" | null;
 
@@ -21,8 +26,16 @@ type ConfirmKind = "clear" | "new" | null;
  */
 export default function ActiveShoeScreen() {
   const session = useHistorySession();
+  const live = useLiveSession(session.shoe ?? null, session.rounds);
   const [showReview, setShowReview] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
+  const [operatorAction, setOperatorAction] = useState<OperatorAction>(OperatorAction.NOT_PLAYED);
+
+  const liveMode = live.active && live.state != null;
+  const liveRoadmap = useMemo(
+    () => (live.state ? buildRoadmap(live.state.rounds.slice()) : null),
+    [live.state],
+  );
 
   if (!session.ready) {
     return (
@@ -33,7 +46,20 @@ export default function ActiveShoeScreen() {
     );
   }
 
-  const disabled = session.busy;
+  const canLiveSubmit = liveMode && !live.busy && live.state?.currentPrediction != null;
+  const disabled = liveMode ? !canLiveSubmit : session.busy;
+  const boardsRoadmap = liveMode && liveRoadmap ? liveRoadmap : session.roadmap;
+
+  const onSelectWinner = (winner: Winner) => {
+    if (liveMode) {
+      live.submit(winner, operatorAction, {
+        playerPair: resolvePairState(session.draft.playerPairSelected, session.draft.pairMode),
+        bankerPair: resolvePairState(session.draft.bankerPairSelected, session.draft.pairMode),
+      });
+      return;
+    }
+    session.addResult(winner);
+  };
 
   return (
     <View style={styles.screen} testID="screen-active-shoe">
@@ -47,6 +73,26 @@ export default function ActiveShoeScreen() {
         />
 
         <View style={styles.center}>
+          {live.active && live.error ? (
+            <View style={styles.liveError} testID="live-error">
+              <Text style={styles.liveErrorText}>Live lock/persist error: {live.error}</Text>
+              <Pressable onPress={live.retry} style={styles.retryBtn} testID="live-retry">
+                <Text style={styles.retryText}>Retry</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {liveMode && live.state ? (
+            <LiveSessionPanel
+              state={live.state}
+              lastResolved={live.lastResolved}
+              operatorAction={operatorAction}
+              onSetOperatorAction={setOperatorAction}
+              busy={live.busy}
+              storeKind={live.storeKind}
+            />
+          ) : null}
+
           {session.checkpointDue ? (
             <CheckpointBanner
               totalRounds={session.statistics.totalRounds}
@@ -68,7 +114,7 @@ export default function ActiveShoeScreen() {
             contentContainerStyle={styles.boardsContent}
             showsVerticalScrollIndicator={false}
           >
-            <RoadmapBoards roadmap={session.roadmap} />
+            <RoadmapBoards roadmap={boardsRoadmap} />
           </ScrollView>
         </View>
       </View>
@@ -78,7 +124,7 @@ export default function ActiveShoeScreen() {
         disabled={disabled}
         canUndo={session.rounds.length > 0}
         canStart={session.canStartForwardModes}
-        onSelectWinner={session.addResult}
+        onSelectWinner={onSelectWinner}
         onTogglePlayerPair={session.togglePlayerPair}
         onToggleBankerPair={session.toggleBankerPair}
         onSetPairMode={session.setPairMode}
@@ -133,6 +179,24 @@ const styles = StyleSheet.create({
   loadingText: { color: colors.textSecondary, fontSize: 14 },
   body: { flex: 1, flexDirection: "row", padding: spacing.md, gap: spacing.md },
   center: { flex: 1, gap: spacing.sm },
+  liveError: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.surfaceRaised,
+    borderColor: colors.banker,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  liveErrorText: { color: colors.banker, fontSize: 13, flex: 1 },
+  retryBtn: {
+    backgroundColor: colors.railActiveSurface,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  retryText: { color: colors.accent, fontSize: 13, fontWeight: "700" },
   boardsScroll: { flex: 1 },
   boardsContent: { paddingBottom: spacing.md },
 });

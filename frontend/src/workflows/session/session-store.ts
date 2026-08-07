@@ -62,6 +62,12 @@ export interface SubmitOptions {
 }
 
 /** Persistence contract shared by the native (SQLite/DB-002) and web adapters. */
+export type SessionStoreKind = 'sqlite' | 'memory';
+export interface CreatedSessionStore {
+  readonly store: SessionStore;
+  readonly kind: SessionStoreKind;
+}
+
 export interface SessionStore {
   startLive(
     shoeId: string,
