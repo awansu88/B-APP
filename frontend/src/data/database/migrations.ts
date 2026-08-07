@@ -1,4 +1,5 @@
 import { DB_001_STATEMENTS } from './schema';
+import { DB_002_STATEMENTS } from './schema-db002';
 import { SqlDatabase } from './sql-database';
 
 /** An ordered, append-only database migration. Accepted migrations are immutable. */
@@ -10,10 +11,11 @@ export interface DbMigration {
 /** The migration ledger. Never edit an accepted migration — append a new one. */
 export const MIGRATIONS: readonly DbMigration[] = Object.freeze([
   { version: 'DB-001', statements: DB_001_STATEMENTS },
+  { version: 'DB-002', statements: DB_002_STATEMENTS },
 ] as const);
 
 /** The current (latest) database schema version. */
-export const CURRENT_DB_VERSION = 'DB-001';
+export const CURRENT_DB_VERSION = 'DB-002';
 
 interface MigrationRow {
   version: string;

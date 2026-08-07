@@ -66,14 +66,22 @@ describe('database — DB-001 migrations & repositories', () => {
       'export_history',
       'diagnostic_events',
       'schema_migrations',
+      'session_state',
+      'locked_prediction_entries',
     ]) {
       expect(names).toContain(table);
     }
-    const applied = await db.getFirstAsync<{ version: string }>(
+    // DB-001 remains recorded; DB-002 is applied additively and is now current.
+    const db001 = await db.getFirstAsync<{ version: string }>(
+      'SELECT version FROM schema_migrations WHERE version = ?;',
+      ['DB-001'],
+    );
+    expect(db001?.version).toBe('DB-001');
+    const current = await db.getFirstAsync<{ version: string }>(
       'SELECT version FROM schema_migrations WHERE version = ?;',
       [CURRENT_DB_VERSION],
     );
-    expect(applied?.version).toBe('DB-001');
+    expect(current?.version).toBe('DB-002');
   });
 
   it('migrations are idempotent (running twice is a no-op)', async () => {
@@ -82,7 +90,7 @@ describe('database — DB-001 migrations & repositories', () => {
     const count = await db.getFirstAsync<{ n: number }>(
       'SELECT COUNT(*) AS n FROM schema_migrations;',
     );
-    expect(count?.n).toBe(1);
+    expect(count?.n).toBe(2); // DB-001 + DB-002, each recorded exactly once
   });
 
   it('shoe insert and retrieval', async () => {

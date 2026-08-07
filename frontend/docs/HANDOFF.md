@@ -1,34 +1,38 @@
 # Handoff
 
-**From:** Milestone 5A/5B (session domain core + hardening). **To:** Next agent
-(Milestone 5B persistence continuation, then 5C live workflow/UI).
+**From:** Milestone 5A/5B (session domain core + hardening + DB-002 persistence).
+**To:** Next agent (Milestone 5C live workflow/UI).
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
 ## Status
 - Milestone 5 (Live Workflow & Session Tracker) is **IN PROGRESS**:
   - **M5A (domain core): COMPLETE.**
-  - **M5B (domain hardening + persistence): PARTIAL.** Domain hardening COMPLETE;
-    **persistence BLOCKED** — DB-001 cannot represent the M5 locked-prediction audit,
-    so a forward migration **DB-002** is proposed and awaiting approval. DB-001 is
-    NOT altered. Until DB-002 is approved, `serializeSession`/`reconstructSession`
-    (pure JSON) are the restart bridge (fully unit-tested).
+  - **M5B (domain hardening + persistence): COMPLETE.** Domain hardening +
+    **DB-002 persistence** are done. **Database is DB-002 (current)**; DB-001 is a
+    historical accepted migration and is **unchanged**.
   - **M5C (live workflow/UI): NOT STARTED.**
   - **Milestone 6 (advanced statistics & export): NOT started.**
-- Database schema version: **DB-001** (unchanged; DB-002 proposed, not applied).
+- Database schema version: **DB-002** (additive, forward-only migration registered
+  through `schema_migrations`). DB-001 migration definition is untouched.
+- **Persistence (`src/data/database/schema-db002.ts`, `src/data/repositories/
+  locked-prediction-repository.ts`, `src/workflows/session/*`):** `session_state`
+  (per-shoe workflow/cursor + paper cache) + `locked_prediction_entries` (immutable
+  lock JSON payload + queryable lifecycle columns; partial-unique index enforces one
+  valid lock per shoe+target). `SqliteSessionStore` (native, authoritative) and
+  `MemorySessionStore` (web AsyncStorage fallback) share one `SessionStore` contract
+  and contain NO business logic. Lock-before-result + transactional result submission
+  are enforced; sequences + paper are DERIVED on reconstruct; a missing pending lock is
+  deterministically regenerated during recovery.
 - **Session engine (`src/domain/session/*`, pure, SESSION-001):** manual
-  one-result-at-a-time workflow shared by LIVE_FORWARD and HISTORICAL_TEST;
-  `startSession` / `submitResult` / `editHistory` / `newShoe` reducers plus
-  `serializeSession` / `reconstructSession` and the canonical `lockPrediction`
-  (deep-freeze). Predictions are **locked** (deep-frozen) before their result and
-  now carry the ACTIVE decision trace + a SHADOW audit record; result evaluation →
-  WIN/LOSS/PUSH/SKIPPED/INVALIDATED; a three-win tracker runs separately for engine
-  vs played across three profiles; history edits create revisions and invalidate
-  affected predictions without deleting the audit trail; fixed-unit paper tracking only.
+  one-result-at-a-time workflow; `startSession` / `submitResult` / `editHistory` /
+  `newShoe` / `serializeSession` / `reconstructSession` + canonical `lockPrediction`
+  (deep-freeze). Locked predictions carry the ACTIVE trace + SHADOW audit; result
+  evaluation → WIN/LOSS/PUSH/SKIPPED/INVALIDATED; engine-vs-played three-win tracker;
+  revision invalidation preserves the audit trail; fixed-unit paper only.
 - Prior milestones (M1–M4 + RELPRIOR-001) remain in force and unchanged.
-- **NOT built:** persistence adapter/repository (M5B, blocked on DB-002), any UI
-  wiring of the session engine (M5C), and advanced statistics/export (M6).
-  The M0 placeholders `evaluateStep` / `evaluateThreeWinSequence` /
+- **NOT built:** any UI wiring of the session engine (M5C) and advanced statistics/
+  export (M6). The M0 placeholders `evaluateStep` / `evaluateThreeWinSequence` /
   `categorizeConfidence` remain (superseded by the session/decision modules).
 
 ## Before you start
@@ -94,20 +98,13 @@ still passing.
 - Introduce randomness, ML, network, balances, or target-sequence inputs.
 
 ## Next milestone scope (for the next agent)
-**Immediate (M5B continuation) = persistence, once DB-002 is approved.** Implement the
-thinnest repository/store over the new DB-002 tables to persist + reconstruct the session
-(shoe/session identity, workflow state, locked target-round prediction with active+shadow
-audit, actual result/evaluation, PLAYED/NOT_PLAYED, engine+played sequences, fixed paper
-units, revision-invalidation state, and all engine/config/snapshot/feature/analyzer/
-reliability/vote/confidence/risk/decision versions). Raw rounds + revisions (DB-001) remain
-the source of truth; roadmaps are never persisted as authoritative state. Enforce
-lock-before-result (persist the lock for target N before accepting actual N) and a
-transactional result submission with deterministic recovery (never leave an actual with a
-missing lock, a duplicate target-round lock, duplicate evaluations, or a sequence count
-inconsistent with the surviving evaluation history).
-**Then M5C = live workflow / UI** (Active Shoe → Start Live/Historical, display locked
-recommendation + confidence/category + SKIP, submit actual result, engine/played progress,
-PLAYED control, reload persistence).
+**Immediate = M5C (live workflow / UI)** on top of the finished domain + DB-002
+persistence. Wire the Active Shoe → Start Live / Start Historical Test flow; display
+the locked recommendation + confidence/category + SKIP; submit an actual live result
+(the store enforces lock-before-result + transactional persistence); show engine vs
+played sequence progress and the PLAYED / NOT_PLAYED control; and reload/reconstruct
+via `createSessionStore(...)` (native SQLite/DB-002, web AsyncStorage). Do NOT add
+Martingale/bet-sizing; keep fixed-unit paper only.
 **Then Milestone 6 = advanced statistics & export.**
 
 ## After your milestone

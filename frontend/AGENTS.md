@@ -2,7 +2,7 @@
 
 **Project:** B-APP Baccarat Engine
 **Repository root:** `/app/frontend`
-**Status:** Milestone 5 (Live Workflow & Session Tracker) — **IN PROGRESS**. M5A (domain core) COMPLETE; M5B domain hardening COMPLETE with **persistence BLOCKED pending DB-002 approval**; M5C (live workflow/UI) NOT STARTED. Do **not** begin Milestone 6, and do not implement DB-002 until it is approved.
+**Status:** Milestone 5 (Live Workflow & Session Tracker) — **IN PROGRESS**. M5A (domain core) COMPLETE; M5B (domain hardening + persistence) COMPLETE — DB-002 persistent locked session implemented; M5C (live workflow/UI) NOT STARTED. **Database: DB-002 current** (DB-001 is a historical accepted migration, unchanged). Do **not** begin Milestone 6, and do **not** modify the DB-001 migration.
 
 This file is LOCKED guidance. Read it fully before touching anything.
 

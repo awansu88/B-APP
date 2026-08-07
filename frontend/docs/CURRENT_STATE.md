@@ -2,8 +2,9 @@
 
 **Current milestone:** 5 — Live Workflow & Session Tracker. **Status: IN PROGRESS.**
 - **M5A (domain core): COMPLETE** — pure session engine (locking, evaluation, three-win tracker, revision invalidation, serialize/reconstruct).
-- **M5B (domain hardening + persistence): PARTIAL** — domain hardening COMPLETE (PLAYER+BANKER evaluation coverage, exact sequence literals, future-leakage/lock-before-result, canonical deep-freeze on reconstruction, active+shadow audit stored in the lock). **Persistence BLOCKED** — DB-001 cannot represent the M5 locked-prediction audit; a forward migration **DB-002** is proposed and awaiting approval (DB-001 is NOT altered).
+- **M5B (domain hardening + persistence): COMPLETE** — domain hardening (PLAYER+BANKER coverage, exact sequence literals, future-leakage/lock-before-result, canonical deep-freeze on reconstruction, active+shadow audit) **plus DB-002 persistence**: a `session_state` cursor table + a `locked_prediction_entries` table storing the immutable lock payload with queryable lifecycle columns, a DB partial-unique index (one valid lock per shoe+target), revision linkage, lock-before-result + transactional result submission, and native (SQLite/DB-002) + web (AsyncStorage) session stores.
 - **M5C (live workflow / UI): NOT STARTED.**
+- **Database:** **DB-002 current** (additive, forward-only). **DB-001** is a historical accepted migration, **unchanged**.
 **Milestone 6: NOT STARTED** — advanced statistics & export (none built yet).
 **Milestone 5 built the live/historical session engine** (pure domain): manual
 one-result-at-a-time workflow, prediction **locking** (immutable), result
@@ -148,31 +149,23 @@ serialize/restart reconstruction. Predictions are locked BEFORE their result
 
 ## Verification (this milestone)
 - `npm run typecheck` → pass · `npm run lint` → pass
-- `npm test` → **10 suites, 199 tests** (`session.test.ts` grew 24 → **44** with the
-  M5B hardening: BET_PLAYER + BET_BANKER WIN/LOSS on synthetic locks (engine-independent),
-  Tie/SKIP sequence-neutral, exact literals WIN·PUSH·WIN·SKIP·WIN → complete and
-  WIN·PUSH·LOSS → reset, engine-vs-played independence + shoe-boundary reset,
-  future-leakage / lock-before-result (a locked prediction for target N is identical
-  regardless of N's actual result), reconstructed locks remain **deeply frozen**
-  (canonical `lockPrediction`/`deepFreeze` shared by create + reconstruct), restart
-  reconstruction A–G (persist→JSON→reconstruct: identical lock, evaluation/sequences/
-  paper, interleaved neutrals still complete, PLAYED/NOT_PLAYED + revision invalidation
-  survive, no duplicate target-round lock), and a shadow-isolation regression proving a
-  SHADOW-only (volatility) input never mutates the ACTIVE lock). Per-file: smoke 6 ·
-  engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13 ·
-  decision 18 · decision-audit 17 · session 44.
+- `npm test` → **11 suites, 216 tests** (adds `session-persistence.test.ts` ×17:
+  DB-002 migration fresh + on top of an existing DB-001 DB, idempotency, FK
+  enforcement, rollback leaves no half-migrated schema, DB-enforced duplicate-lock
+  rejection, lock-before-result failure (lock persist + result persist), transactional
+  recovery of a missing pending lock, revision linkage with coexisting old/new locks,
+  restart A–G, and web-fallback parity). `session.test.ts` = 44 (M5B hardening).
+  Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
+  reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 17.
 - `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
-- The locked prediction now stores the ACTIVE decision trace (riskScore/riskLevel/
-  reasonCodes) **and** a SHADOW audit record (shadow decision/side/confidence/category/
-  risk + `differsFromActive`); shadow is auditable only and never influences the active
-  fields, BET/SKIP, or the sequence result.
-- **Persistence is NOT yet implemented (M5B BLOCKED):** DB-001 cannot represent the M5
-  locked-prediction audit (no columns for side-trace scores, active/shadow risk flags,
-  operator PLAYED/NOT_PLAYED, INVALIDATED evaluation, or the voting/confidence/risk/
-  snapshot/feature/decisionConfig versions). A forward migration **DB-002** (append-only;
-  DB-001 untouched) is proposed and awaiting approval. Pure `serializeSession` /
-  `reconstructSession` (JSON) are the current restart bridge and are fully tested.
-- `package-lock.json` unchanged; roadmap engine, DB-001, thresholds, version
+- **Persistence (DB-002):** `session_state` (per-shoe workflow/cursor + paper cache)
+  and `locked_prediction_entries` (immutable lock payload + queryable lifecycle
+  columns; partial-unique `WHERE invalidated = 0`). Authority: raw rounds + revisions
+  (DB-001) = baccarat history; locked entries = engine-decision audit; sequences +
+  paper = DERIVED (rebuilt on reconstruct); `session_state` = cursor metadata only.
+  Stores: `SqliteSessionStore` (native, authoritative) + `MemorySessionStore` (web
+  AsyncStorage fallback) share one contract; no business logic in the adapters.
+- `package-lock.json` unchanged; **DB-001 migration unchanged**; roadmap engine, thresholds, version
   registry, analyzer modes, reliability priors, decision pipeline, snapshot/feature
   layers, and History workflow/UI all UNCHANGED (only new `src/domain/session/*`
   files + additive `index.ts` re-exports + `src/tests/session.test.ts`).

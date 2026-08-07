@@ -184,20 +184,18 @@ reconstruction) — but it is **not yet driven by any screen** (Milestone 5C).
 
 **Impact:** none — intended MVP scope. **Action:** M5C wires the Active Shoe UI.
 
-### 19. Session/prediction persistence is BLOCKED on DB-002 (M5B)
-The M5 locked-prediction audit cannot be represented by the accepted **DB-001** schema.
-The `predictions` table has no columns for: the active side-trace scores
-(player/banker/weightedAgreement/conflict), active risk flags / risk level / reason codes,
-the SHADOW audit record, the operator PLAYED/NOT_PLAYED action, or the
-voting/confidence/risk/snapshot/feature/decisionConfig versions; its `evaluation` column
-(EvaluationStatus) lacks **INVALIDATED**; and `module_results.signal` (ModuleSignal:
-PLAYER/BANKER/NONE) cannot represent AnalysisSignal NEUTRAL/ABSTAIN. Locks must be stored
-verbatim (never recomputed), so these facts cannot be derived away.
+### 19. Session/prediction persistence — RESOLVED via DB-002 (M5B)
+DB-001 could not represent the M5 locked-prediction audit, so an **additive, forward-only
+DB-002** migration was added (DB-001 unchanged): `session_state` (per-shoe workflow/cursor
++ paper cache) and `locked_prediction_entries` (immutable lock JSON payload +
+directly-queryable lifecycle columns; partial-unique index `WHERE invalidated = 0` enforces
+one valid lock per shoe+target). The `SqliteSessionStore` (native, authoritative) and
+`MemorySessionStore` (web AsyncStorage fallback) enforce lock-before-result + transactional
+result submission + deterministic recovery, with 17 DB-backed tests.
 
-**Impact:** no on-disk session persistence yet; restart is covered only by the pure
-`serializeSession`/`reconstructSession` (JSON) bridge in tests. **Action:** approve the
-proposed **append-only DB-002** migration (DB-001 untouched), then implement the thin
-persistence repository/store. **DB-001 must not be altered.**
+**Impact:** none — session state now persists on disk and reconstructs safely after restart.
+**Note:** the older DB-001 `predictions` / `module_results` / `sequences` scaffolding is
+**legacy / non-authoritative** for the M5 runtime (kept, never dropped).
 
 ### 18. Financial tracking is fixed-unit paper only
 No martingale, no compensation, no automatic progression — a single flat unit per

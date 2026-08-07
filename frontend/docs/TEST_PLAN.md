@@ -146,17 +146,28 @@ neutrals still complete; PLAYED/NOT_PLAYED + revision invalidation survive; no d
 target-round lock); and a shadow-isolation regression (a SHADOW-only volatility input
 never mutates the ACTIVE lock).
 
+### `src/tests/session-persistence.test.ts` (17 — DB-backed, sql.js)
+DB-002 migration (fresh DB-001+DB-002; upgrade on top of an existing DB-001 database
+preserving shoes/rounds/revisions; idempotent; FK enforcement; rollback leaves no
+half-migrated schema); DB-enforced duplicate-lock rejection (partial-unique
+`WHERE invalidated = 0`); lock-before-result failure (lock persist fails → nothing
+accepted; result persist fails → pending lock untouched); transactional recovery of a
+missing pending lock; revision linkage (invalidated + `invalidated_by_revision_id` +
+coexisting old/new locks for one target); restart reconstruction A–G (identical frozen
+lock; WIN evaluation/sequences/paper; interleaved neutrals still complete;
+PLAYED/NOT_PLAYED survives; revision invalidation survives; valid locks unique per
+target); and `MemorySessionStore` web-fallback parity.
+
 ## Expected result (Milestone 5)
 - typecheck: **pass** · lint: **pass**
-- `npm test`: **10 suites, 199 tests passing**
+- `npm test`: **11 suites, 216 tests passing**
   (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
-  reliability 13 · decision 18 · decision-audit 17 · session 44)
+  reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 17)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
-- `package-lock.json` unchanged; DB-001/thresholds/version-registry/analyzer modes/
-  reliability priors/decision pipeline/snapshot+feature/History workflow & UI unchanged.
-- **Persistence NOT covered here (M5B BLOCKED on DB-002):** restart is verified only via
-  the pure `serializeSession`/`reconstructSession` JSON bridge; there is no on-disk
-  session persistence yet.
+- `package-lock.json` unchanged; **DB-001 migration unchanged**; **Database = DB-002
+  (current)**; thresholds/version-registry (except `databaseSchema` → DB-002)/analyzer
+  modes/reliability priors/decision pipeline/snapshot+feature/History workflow & UI
+  unchanged.
 
 ## Expected result (Milestone 4)
 - typecheck: **pass** · lint: **pass**

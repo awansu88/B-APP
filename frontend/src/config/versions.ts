@@ -13,7 +13,7 @@ export const VERSION_REGISTRY = Object.freeze({
   /** Prediction configuration version (immutable during a test batch). */
   config: 'CFG-001',
   /** Local database schema version. */
-  databaseSchema: 'DB-001',
+  databaseSchema: 'DB-002',
   /** Roadmap reconstruction version. */
   roadmap: 'ROADMAP-001',
   /** Feature extraction version. */
