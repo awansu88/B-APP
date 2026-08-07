@@ -143,5 +143,28 @@ awaiting calibration and were not optimized against test data.
 Milestone-4 double-counting risk. **Action:** calibrate priors (and add
 `context`/`risk`) in a future versioned decision.
 
+## Milestone 4
+
+### 15. Decision Pipeline is in-memory only (no persistence / no locking)
+`src/domain/decision/*` computes a Prediction **Draft** + decision trace (ACTIVE
+and SHADOW records) but writes nothing: no prediction records, no locking, no
+result submission/evaluation, no live workflow, and no sequence tracking. Those
+are Milestone 5+. The M0 placeholders `evaluateStep` / `evaluateThreeWinSequence`
+still throw, and `categorizeConfidence` (M0) remains a placeholder — the pipeline
+uses its own `categoryFromConfidence` (locked 55/60/70/75 bands).
+
+**Impact:** none — intended scope. **Action:** Milestone 5 consumes the draft/trace.
+
+### 16. Confidence and priors are UNCALIBRATED MVP heuristics
+Weighted agreement is a consensus ratio and is explicitly **not** a win
+probability. Confidence is an evidence-depth heuristic (winner score → band),
+gated by agreement ≥ 58% and ≥ 2 directional modules, clamped to 0.75. The family
+correlation discount (0.5), CONTEXT (regime) weight (0.5), evidence-scale
+constants, and risk thresholds in `DECISION_CONFIG` (`DECISION-001`) are
+conservative placeholders, not calibrated statistics.
+
+**Impact:** low (deterministic, versioned). **Action:** calibrate in a future
+versioned engine decision.
+
 ## No functional defects
 All verification gates pass (see `docs/TEST_PLAN.md` and `docs/CURRENT_STATE.md`).

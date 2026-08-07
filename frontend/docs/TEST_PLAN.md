@@ -108,3 +108,25 @@ Quality Guard stays non-directional with `strength` = data quality and
   (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
 - `package-lock.json` unchanged; engine/DB-001/thresholds/version-registry unchanged.
+
+## Milestone 4 additions (Decision Pipeline)
+### `src/tests/decision.test.ts` (18 — deterministic fixed-vector tests)
+Fixed vectors of module results + context fed to `decide(...)`:
+Experimental Player, Experimental Banker, Qualified Player, Qualified Banker, High
+recommendation, low-agreement SKIP (< 58%), strong-opposition SKIP (conflict ≥
+40%), multiple-soft-risks SKIP (≥ 3 flags), data-quality BLOCK → SKIP, category
+downgrade (HIGH → QUALIFIED on 2 soft risks, confidence capped to 0.69),
+family-correlation cap (3 correlated Trend modules → 0.875, not 1.5),
+active-vs-shadow volatility (shadow downgrades via RECENT_PATTERN_BREAK; active
+unaffected), confidence ≤ 0.75, risk filter never reverses the winning side,
+locked versions (VOTE-001/CONF-001/RISK-001/DECISION-001) + determinism, and an
+end-to-end `runDecisionPipeline` integration on a real banker shoe.
+
+## Expected result (Milestone 4)
+- typecheck: **pass** · lint: **pass**
+- `npm test`: **8 suites, 138 tests passing**
+  (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
+  reliability 13 · decision 18)
+- `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
+- `package-lock.json` unchanged; engine/DB-001/thresholds/version-registry/analyzer
+  modes/History workflow & UI unchanged.

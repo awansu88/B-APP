@@ -4,11 +4,12 @@
   "mobileProjectRoot": "/app/frontend",
   "backendInRepository": false,
   "trackedBackendFiles": [],
-  "completedMilestone": 3,
-  "milestoneName": "Snapshots, Features, and Analysis Modules",
+  "completedMilestone": 4,
+  "milestoneName": "Decision Pipeline",
   "status": "COMPLETE",
   "milestone2Started": true,
   "milestone3Started": true,
+  "milestone4Started": true,
   "databaseSchemaVersion": "DB-001",
   "acceptedImplementation": {
     "domainModels": true,
@@ -130,7 +131,7 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 7, "tests": 120, "status": "pass" },
+    "test": { "suites": 8, "tests": 138, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
@@ -154,7 +155,7 @@
       ]
     },
     "databasePersistenceTests": "5 new tests in database.test.ts (update, replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, round-id stability); file total 15 (was 10)",
-    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "total": 120 },
+    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "total": 138 },
     "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite path implemented + covered by in-memory sql.js tests; not yet run on a physical Android device/build with restart.",
     "interactionValidation": "42/42 cases (A-H) PASS via frontend testing agent; no console errors.",
     "uiVerifiedInPreview": [
@@ -165,7 +166,24 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 4 — Decision Pipeline ONLY (NOT STARTED; do not begin unless explicitly instructed). M4 scope: Data Quality Gate, Weighted Voting, Family Correlation Cap, Conflict Detection, Confidence Engine, Risk Filter, Active & Shadow Decision, Prediction Draft + decision trace. M4 must NOT include prediction database writes, prediction locking, result submission, result evaluation, live workflow, or sequence tracking. Prediction LOCKING belongs to Milestone 5.",
+  "nextMilestone": "Milestone 5 — Prediction locking + evaluation (NOT STARTED; do not begin unless explicitly instructed). M5 scope: persist a locked prediction BEFORE its result, submit/evaluate actual results, live forward / historical-test workflow, and three-win sequence tracking; consumes the Milestone-4 Prediction Draft + decision trace and implements evaluateStep / evaluateThreeWinSequence.",
+  "milestone4": {
+    "path": "src/domain/decision/*",
+    "decisionConfigVersion": "DECISION-001",
+    "versions": { "voting": "VOTE-001", "confidence": "CONF-001", "risk": "RISK-001" },
+    "entrypoints": ["decide(moduleResults, context, config?)", "runDecisionPipeline(ctx, config?)"],
+    "pipeline": ["Data Quality Gate", "Weighted Voting", "Family Correlation Cap", "Conflict Detection", "Confidence Engine", "Risk Filter", "Prediction Draft"],
+    "families": { "Trend": ["streak", "run-length", "distribution"], "Alternation": ["chop"], "Context": ["regime-transition"], "Structure": ["derived-road (SHADOW_ONLY)"], "Risk": ["volatility (SHADOW_ONLY)"], "Historical": ["historical-matcher (DISABLED)"] },
+    "baseline": { "minNonTieHistory": 8, "minDirectionalModules": 2, "minWeightedAgreement": 0.58, "maxConfidence": 0.75, "bands": "Experimental 0.55-0.59, Qualified 0.60-0.69, High 0.70-0.75", "correlationDiscount": 0.5, "contextFamilyWeight": 0.5, "historicalMatcher": "OFF", "volatility": "SHADOW_ONLY" },
+    "riskFlags": ["LOW_MODULE_COUNT", "SINGLE_FAMILY_SUPPORT", "MODERATE_CONFLICT", "STRONG_OPPOSITION", "REGIME_TRANSITION", "MEDIUM_DATA_QUALITY", "RECENT_PATTERN_BREAK", "LOW_SAMPLE_RELIABILITY", "CONFIDENCE_NEAR_THRESHOLD"],
+    "riskFilterInvariants": ["never reverses side", "never raises category", "never increases confidence", "may retain/downgrade/turn BET into SKIP"],
+    "dataQuality": { "PASS": "normal", "LIMIT": "confidence capped / category downgraded", "BLOCK": "final decision SKIP" },
+    "volatilityShadow": "Active record ignores volatility; separate Shadow record re-evaluates whether volatility would downgrade/SKIP. Shadow is never the official recommendation.",
+    "agreementIsNotProbability": true,
+    "persistence": "NONE (in-memory draft + trace only)",
+    "notImplemented": ["prediction DB writes", "prediction locking", "result submission", "result evaluation", "live workflow", "sequence / three-win tracking"],
+    "tests": "src/tests/decision.test.ts (18 deterministic fixed-vector cases)"
+  },
   "milestone4Scope": {
     "includes": [
       "Data Quality Gate",

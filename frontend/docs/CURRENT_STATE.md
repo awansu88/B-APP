@@ -1,12 +1,16 @@
 # Current State
 
-**Completed milestone:** 3 — Snapshots, Features, and Analysis Modules. **Status: COMPLETE.**
-**Milestone 4: NOT STARTED** — Decision Pipeline only (voting → confidence → risk →
-Active/Shadow decision → Prediction **Draft** + trace; NO persistence, NO locking).
-**Prediction locking is Milestone 5.**
+**Completed milestone:** 4 — Decision Pipeline. **Status: COMPLETE.**
+**Milestone 5: NOT STARTED** — Prediction locking, result submission/evaluation,
+live workflow, and sequence/three-win tracking (none built yet).
+**Milestone 4 built the Decision Pipeline ONLY** (in-memory Prediction **Draft** +
+trace): Data Quality Gate → Weighted Voting → Family Correlation Cap → Conflict
+Detection → Confidence Engine → Risk Filter → Active/Shadow decision. **NO
+persistence, NO prediction locking, NO result submission/evaluation.**
 **Database schema version:** DB-001 (unchanged)
 **App:** 0.1.0 · **Engine:** ENGINE-001 · **Config:** CFG-001 · **Roadmap:** ROADMAP-001
-· **Snapshot:** SNAPSHOT-001 · **Feature:** FEATURE-001
+· **Snapshot:** SNAPSHOT-001 · **Feature:** FEATURE-001 · **Voting:** VOTE-001 ·
+**Confidence:** CONF-001 · **Risk:** RISK-001 · **Decision config:** DECISION-001
 
 ## Repository facts
 - **Git repository root: `/app`.** Expo app root: **`/app/frontend`** (run all
@@ -101,19 +105,50 @@ Active/Shadow decision → Prediction **Draft** + trace; NO persistence, NO lock
   `docs/ENGINE_RULES.md`. Data Quality Guard stays ACTIVE/non-directional;
   Volatility & Derived Road stay SHADOW_ONLY; Historical Matcher stays DISABLED.
 
+## Milestone 4 (new — Decision Pipeline, pure domain)
+- **`src/domain/decision/*`** (deterministic, no React/RN/Expo/IO, no persistence,
+  no locking): `config.ts` (DECISION-001 baseline), `types.ts`, `families.ts`
+  (Trend/Alternation/Context/Structure/Risk/Historical), `data-quality.ts`
+  (PASS/LIMIT/BLOCK gate), `voting.ts` (independent Player/Banker weighted voting
+  + family correlation cap + conflict detection), `confidence.ts` (evidence-depth
+  confidence engine + locked 55/60/70/75 bands), `risk.ts` (risk flags + filter),
+  `pipeline.ts` (`decide(...)` fixed-vector entrypoint + `runDecisionPipeline(ctx)`).
+- **Pipeline:** Module Results → Data Quality Gate → Weighted Voting → Family
+  Correlation Cap → Conflict Detection → Confidence Engine → Risk Filter →
+  Prediction **Draft**, producing independent **ACTIVE** and **SHADOW** records.
+- **Weighted agreement is a consensus ratio, NOT a win probability.** Confidence
+  is driven by evidence depth (winner score), gated by agreement ≥ 58% and ≥ 2
+  directional modules; clamped to 0.75.
+- **Family correlation cap:** within-family discounted sum (w0 + 0.5·w1 + 0.25·w2…);
+  CONTEXT (regime) family is multiplied by 0.5 so regime modifies context without
+  blindly duplicating trend evidence.
+- **Risk Filter** may retain / downgrade one category / turn BET→SKIP; it **never**
+  reverses the side, raises a category, or increases confidence. Flags:
+  LOW_MODULE_COUNT, SINGLE_FAMILY_SUPPORT, MODERATE_CONFLICT, STRONG_OPPOSITION,
+  REGIME_TRANSITION, MEDIUM_DATA_QUALITY, RECENT_PATTERN_BREAK,
+  LOW_SAMPLE_RELIABILITY, CONFIDENCE_NEAR_THRESHOLD.
+- **Volatility SHADOW:** ACTIVE record ignores volatility; a separate SHADOW record
+  re-evaluates whether volatility would downgrade/SKIP. Shadow is never the official
+  recommendation. Historical Matcher stays DISABLED; Volatility & Derived Road stay
+  SHADOW_ONLY (never vote).
+- **Output/trace stores:** player & banker scores, weighted agreement, conflict
+  score, family contributions, raw & final confidence, raw & final category, risk
+  score/level/flags, active & shadow decisions, reason codes, and engine/config
+  versions (VOTE-001, CONF-001, RISK-001, ENGINE-001, CFG-001, DECISION-001).
+
 ## Verification (this milestone)
 - `npm run typecheck` → pass · `npm run lint` → pass
-- `npm test` → **7 suites, 120 tests** (adds `reliability.test.ts` ×13 for the
-  reliability-semantics correction: prior is decoupled from non-Tie count /
-  stability / volatility, strength still responds to features, ABSTAIN below
-  warm-up, `[0,1]` bounds, determinism, Historical Matcher DISABLED, shadow
-  modules SHADOW_ONLY, Data Quality Guard non-directional). Per-file: smoke 6 ·
-  engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13.
+- `npm test` → **8 suites, 138 tests** (adds `decision.test.ts` ×18: Experimental
+  Player/Banker, Qualified Player/Banker, High recommendation, low-agreement SKIP,
+  strong-opposition SKIP, multiple-soft-risks SKIP, data-quality BLOCK, category
+  downgrade, family correlation cap, active-vs-shadow volatility, confidence ≤ 75%,
+  risk filter never reverses side, versions + determinism, end-to-end pipeline).
+  Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28
+  · reliability 13 · decision 18.
 - `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
-- `package-lock.json` unchanged; roadmap engine, DB-001, engine thresholds, and the
-  version registry all UNCHANGED (only `src/domain/analysis/modules.ts`,
-  `src/domain/analysis/types.ts`, and the new `src/tests/reliability.test.ts`
-  changed for the reliability correction).
+- `package-lock.json` unchanged; roadmap engine, DB-001, engine thresholds, version
+  registry, analyzer modes, and History workflow/UI all UNCHANGED (only the new
+  `src/domain/decision/*` and `src/tests/decision.test.ts` added).
 
 ## Native persistence status
 - **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (Milestone 2; unchanged this milestone).

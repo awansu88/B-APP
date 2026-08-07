@@ -111,3 +111,43 @@ Changing a prior is a versioned engine decision (bump `RELIABILITY_PRIOR_VERSION
 ## No self-learning
 No automatic global self-learning in the MVP (Principle #6). Configuration is
 immutable during a test batch (Principle #4).
+
+## Decision Pipeline (Milestone 4, LOCKED — DECISION-001)
+Pure, deterministic, in-memory only (NO persistence, NO prediction locking, NO
+result submission/evaluation — those are Milestone 5+). Implemented in
+`src/domain/decision/*`. Order:
+
+Module Results → **Data Quality Gate** → **Weighted Voting** → **Family
+Correlation Cap** → **Conflict Detection** → **Confidence Engine** → **Risk
+Filter** → **Prediction Draft** (with independent ACTIVE and SHADOW records).
+
+- **Module families:** Trend {streak, run-length, distribution}, Alternation
+  {chop}, Context {regime-transition}, Structure {derived-road, SHADOW_ONLY},
+  Risk {volatility, SHADOW_ONLY}, Historical {historical-matcher, DISABLED}.
+- **Weighted voting:** Player and Banker support are computed **independently**
+  from ACTIVE directional modules; vote weight = `strength × reliability`.
+- **Family correlation cap:** correlated evidence within a family is capped via a
+  discounted sum (`w0 + 0.5·w1 + 0.25·w2 …`). The CONTEXT (regime) family is
+  multiplied by 0.5 — regime may **modify context** but must not blindly duplicate
+  trend evidence.
+- **Weighted agreement** = `max(P,B) / (P+B)`. It is a consensus ratio and is
+  **NOT** a win probability. **Conflict** = `min(P,B) / (P+B)`.
+- **Confidence Engine:** confidence is driven by evidence depth (winner score),
+  gated by agreement ≥ **0.58** and ≥ **2** directional modules; clamped to
+  **0.75**. Bands: Experimental 0.55–0.59, Qualified 0.60–0.69, High 0.70–0.75.
+- **Data Quality Gate:** PASS (normal), LIMIT (confidence may be capped / category
+  downgraded), BLOCK (final decision MUST be SKIP).
+- **Risk Filter:** MAY retain, downgrade one category, or turn BET→SKIP. MAY NEVER
+  reverse the side, raise a category, or increase confidence. Flags:
+  LOW_MODULE_COUNT, SINGLE_FAMILY_SUPPORT, MODERATE_CONFLICT, STRONG_OPPOSITION,
+  REGIME_TRANSITION, MEDIUM_DATA_QUALITY, RECENT_PATTERN_BREAK,
+  LOW_SAMPLE_RELIABILITY, CONFIDENCE_NEAR_THRESHOLD.
+- **Volatility SHADOW:** the ACTIVE record ignores volatility; a separate SHADOW
+  record re-evaluates whether volatility would reduce confidence / downgrade /
+  SKIP. Shadow is never the official recommendation.
+- **Versions:** voting VOTE-001, confidence CONF-001, risk RISK-001, config
+  DECISION-001 (plus engine ENGINE-001, config CFG-001).
+
+The Milestone-0 placeholders `categorizeConfidence`, `evaluateStep`, and
+`evaluateThreeWinSequence` remain unimplemented (they throw); the pipeline uses
+its own `categoryFromConfidence`. Locking/evaluation are Milestone 5.
