@@ -13,7 +13,7 @@ evaluation (WIN/LOSS/PUSH/SKIPPED/INVALIDATED), three-win tracker (engine +
 played, 3 profiles), history-revision invalidation, fixed-unit paper tracking, and
 serialize/restart reconstruction. Predictions are locked BEFORE their result
 (Principle #5). **No automated replay; no advanced statistics/export.**
-**Database schema version:** DB-001 (unchanged)
+**Database schema version:** DB-002 (current) — DB-001 remains the accepted historical/base migration, unchanged
 **App:** 0.1.0 · **Engine:** ENGINE-001 · **Config:** CFG-001 · **Roadmap:** ROADMAP-001
 · **Snapshot:** SNAPSHOT-001 · **Feature:** FEATURE-001 · **Voting:** VOTE-001 ·
 **Confidence:** CONF-001 · **Risk:** RISK-001 · **Decision config:** DECISION-001 ·

@@ -17,7 +17,7 @@
 
 ## Suites (52 tests total)
 ### `src/tests/smoke.test.ts` (6)
-Version registry (incl. `databaseSchema = DB-001`), thresholds, UI order P/T/B,
+Version registry (incl. `databaseSchema = DB-002`), thresholds, UI order P/T/B,
 session environments, prediction decisions, diagnostics snapshot.
 
 ### `src/tests/engine.test.ts` (10)

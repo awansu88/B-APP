@@ -71,7 +71,7 @@
     "app": "0.1.0",
     "engine": "ENGINE-001",
     "config": "CFG-001",
-    "databaseSchema": "DB-001",
+    "databaseSchema": "DB-002",
     "roadmap": "ROADMAP-001",
     "feature": "FEATURE-001",
     "voting": "VOTE-001",
@@ -79,7 +79,8 @@
     "risk": "RISK-001"
   },
   "database": {
-    "migration": "DB-001",
+    "migration": "DB-002",
+    "baseMigration": "DB-001",
     "unchangedThisMilestone": true,
     "tables": [
       "shoes",
