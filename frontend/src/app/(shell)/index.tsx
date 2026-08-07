@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useHistorySession, useLiveSession } from "@/src/workflows";
 import { buildRoadmap } from "@/src/domain/roadmap/engine";
 import { OperatorAction } from "@/src/domain/session";
-import { resolvePairState } from "@/src/domain/history";
+import { resolvePairState, computeStatistics } from "@/src/domain/history";
 import { Winner } from "@/src/domain/models/outcome";
 import {
   CheckpointBanner,
@@ -31,10 +31,20 @@ export default function ActiveShoeScreen() {
   const [confirm, setConfirm] = useState<ConfirmKind>(null);
   const [operatorAction, setOperatorAction] = useState<OperatorAction>(OperatorAction.NOT_PLAYED);
 
-  const liveMode = live.active && live.state != null;
+  const liveActive = live.active;
+  const liveMode = liveActive && live.state != null;
+  const liveRounds = live.state?.rounds ?? null;
   const liveRoadmap = useMemo(
-    () => (live.state ? buildRoadmap(live.state.rounds.slice()) : null),
-    [live.state],
+    () => (liveRounds ? buildRoadmap(liveRounds.slice()) : null),
+    [liveRounds],
+  );
+  // In a forward session the authoritative raw rounds live in the persisted
+  // live session — derive the Review list + statistics from THOSE (single
+  // source of truth), so an edit/delete refreshes every view consistently.
+  const activeRounds = liveMode && liveRounds ? liveRounds : session.rounds;
+  const activeStatistics = useMemo(
+    () => (liveMode && liveRounds ? computeStatistics(liveRounds) : session.statistics),
+    [liveMode, liveRounds, session.statistics],
   );
 
   if (!session.ready) {
@@ -46,16 +56,26 @@ export default function ActiveShoeScreen() {
     );
   }
 
-  const canLiveSubmit = liveMode && !live.busy && live.state?.currentPrediction != null;
-  const disabled = liveMode ? !canLiveSubmit : session.busy;
+  // Actual-result input is allowed ONLY on a healthy, initialized persisted
+  // session with a valid current lock and no in-flight write (UI safety).
+  const canLiveSubmit =
+    liveActive &&
+    !live.busy &&
+    live.error == null &&
+    live.storeKind != null &&
+    live.state?.currentPrediction != null;
+  const resultDisabled = liveActive ? !canLiveSubmit : session.busy;
+  const generalDisabled = liveActive ? live.busy : session.busy;
   const boardsRoadmap = liveMode && liveRoadmap ? liveRoadmap : session.roadmap;
 
   const onSelectWinner = (winner: Winner) => {
-    if (liveMode) {
+    if (liveActive) {
+      if (!canLiveSubmit) return; // never fall back to a history append in a forward session
       live.submit(winner, operatorAction, {
         playerPair: resolvePairState(session.draft.playerPairSelected, session.draft.pairMode),
         bankerPair: resolvePairState(session.draft.bankerPairSelected, session.draft.pairMode),
       });
+      session.resetPairSelections(); // PP/BP auto-reset after a submitted live round
       return;
     }
     session.addResult(winner);
@@ -66,10 +86,10 @@ export default function ActiveShoeScreen() {
       <View style={styles.body}>
         <ShoeInfoPanel
           shoe={session.shoe}
-          statistics={session.statistics}
+          statistics={activeStatistics}
           canStart={session.canStartForwardModes}
           nonTieRemaining={session.nonTieRemaining}
-          historyConfirmed={session.historyConfirmed}
+          historyConfirmed={liveActive ? true : session.historyConfirmed}
         />
 
         <View style={styles.center}>
@@ -121,8 +141,10 @@ export default function ActiveShoeScreen() {
 
       <ControlBar
         draft={session.draft}
-        disabled={disabled}
-        canUndo={session.rounds.length > 0}
+        disabled={generalDisabled}
+        resultDisabled={resultDisabled}
+        canUndo={liveActive ? false : session.rounds.length > 0}
+        canReview={activeRounds.length > 0}
         canStart={session.canStartForwardModes}
         onSelectWinner={onSelectWinner}
         onTogglePlayerPair={session.togglePlayerPair}
@@ -139,10 +161,10 @@ export default function ActiveShoeScreen() {
 
       <ReviewDataSheet
         visible={showReview}
-        rounds={session.rounds}
+        rounds={activeRounds}
         onClose={() => setShowReview(false)}
-        onEdit={session.editRound}
-        onDelete={session.deleteRound}
+        onEdit={liveMode ? live.editHistory : session.editRound}
+        onDelete={liveMode ? live.deleteHistoryRound : session.deleteRound}
       />
 
       <ConfirmDialog

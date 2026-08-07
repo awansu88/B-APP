@@ -9,10 +9,9 @@
  * SKIP uses a deterministic synthetic fixture (the current engine bets on a
  * one-sided shoe), per the milestone's guidance.
  */
-import { PredictionCategory, PredictionDecision } from '@/src/domain/models/enums';
+import { PredictionCategory, PredictionDecision, RoundSource } from '@/src/domain/models/enums';
 import { Winner } from '@/src/domain/models/outcome';
 import { PairState } from '@/src/domain/models/pair';
-import { RoundSource } from '@/src/domain/models/enums';
 import type { RoundRecord } from '@/src/domain/models/round';
 import {
   OperatorAction,
@@ -20,6 +19,7 @@ import {
   SessionProfile,
   StepResult,
 } from '@/src/domain/session';
+import { PairInputMode, resolvePairState, resetDraft, emptyDraft, TransactionGuard } from '@/src/domain/history';
 import { MemorySessionStore, type KvStore } from '@/src/workflows/session/session-store';
 
 const NOW = '2026-01-01T00:00:00.000Z';
@@ -248,5 +248,185 @@ describe('M5C workflow matrix', () => {
 
     const s1 = await new MemorySessionStore(kv).reconstruct('s1');
     expect(s1?.sequences.engine[EXP].consecutiveWins).toBe(2); // previous shoe preserved
+  });
+});
+
+const LIVE = SessionEnvironment.LIVE_FORWARD;
+
+describe('M5C live revision + pair-mode matrix', () => {
+  it('P. edit before a locked target => revision created, affected entries INVALIDATED, payload immutable', async () => {
+    const store = freshStore();
+    await store.startLive('s1', banker(12), LIVE, { now: NOW });
+    await store.submitResult('s1', Winner.BANKER, play); // resolve 13, lock 14
+    const win = await store.submitResult('s1', Winner.BANKER, play); // resolve 14, lock 15
+    const locked13 = win.predictions.find((e) => e.prediction.targetRound === 13)!.prediction;
+
+    const edited = await store.editHistory(
+      's1',
+      10,
+      { winner: Winner.PLAYER, playerPair: PairState.NO, bankerPair: PairState.NO },
+      { now: '2026-01-02T00:00:00.000Z' },
+    );
+    // Every entry whose target is at/after the edited round is invalidated.
+    for (const t of [13, 14]) {
+      const inv = edited.predictions.find((e) => e.prediction.targetRound === t && e.invalidated);
+      expect(inv?.result).toBe(StepResult.INVALIDATED);
+    }
+    expect(edited.revisions.length).toBeGreaterThanOrEqual(1);
+    // Historical LockedPrediction payload is NEVER rewritten.
+    const stillThere = edited.predictions.find(
+      (e) => e.prediction.targetRound === 13 && e.invalidated,
+    );
+    expect(stillThere?.prediction).toEqual(locked13);
+    // A fresh valid pending lock exists for the revised history.
+    expect(edited.currentPrediction).not.toBeNull();
+  });
+
+  it('Q. delete a historical round => renumber/rebuild, affected invalidated, current valid lock recovered', async () => {
+    const store = freshStore();
+    await store.startLive('s1', banker(12), LIVE, { now: NOW });
+    await store.submitResult('s1', Winner.BANKER, play); // rounds 13, lock 14
+    const before = await store.submitResult('s1', Winner.BANKER, play); // rounds 14, lock 15
+    expect(before.rounds).toHaveLength(14);
+
+    const deleted = await store.deleteHistory('s1', 13, { now: '2026-01-03T00:00:00.000Z' });
+    expect(deleted.rounds).toHaveLength(13); // one round removed + renumbered
+    // rounds are contiguously renumbered 1..13
+    expect(deleted.rounds.map((r) => r.roundNumber)).toEqual(
+      Array.from({ length: 13 }, (_, i) => i + 1),
+    );
+    // exactly one valid (non-invalidated) pending lock, recovered for the revised history
+    const valid = deleted.predictions.filter((e) => !e.invalidated);
+    const validTargets = valid.map((e) => e.prediction.targetRound);
+    expect(new Set(validTargets).size).toBe(validTargets.length);
+    expect(deleted.currentPrediction?.targetRound).toBe(14);
+    expect(deleted.revisions.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('R. after live revision, engine sequence reconstructs from VALID entries only', async () => {
+    const kv = new MemKv();
+    const store = new MemorySessionStore(kv);
+    await store.startLive('s1', banker(12), LIVE, { now: NOW });
+    await store.submitResult('s1', Winner.BANKER, watch); // target13 WIN, NOT_PLAYED
+    await store.submitResult('s1', Winner.BANKER, play); // target14 WIN, PLAYED
+    // Edit round 14 -> invalidates target>=14; target13 (valid) survives.
+    await store.editHistory(
+      's1',
+      14,
+      { winner: Winner.PLAYER, playerPair: PairState.NO, bankerPair: PairState.NO },
+      { now: '2026-01-02T00:00:00.000Z' },
+    );
+    const restored = await new MemorySessionStore(kv).reconstruct('s1');
+    // engine counts the surviving valid WIN (target13) only.
+    expect(restored?.sequences.engine[EXP].consecutiveWins).toBe(1);
+  });
+
+  it('S. after live revision, played sequence reconstructs from VALID PLAYED entries only', async () => {
+    const kv = new MemKv();
+    const store = new MemorySessionStore(kv);
+    await store.startLive('s1', banker(12), LIVE, { now: NOW });
+    await store.submitResult('s1', Winner.BANKER, watch); // target13 WIN, NOT_PLAYED
+    await store.submitResult('s1', Winner.BANKER, play); // target14 WIN, PLAYED
+    await store.editHistory(
+      's1',
+      14,
+      { winner: Winner.PLAYER, playerPair: PairState.NO, bankerPair: PairState.NO },
+      { now: '2026-01-02T00:00:00.000Z' },
+    );
+    const restored = await new MemorySessionStore(kv).reconstruct('s1');
+    // The only surviving valid win (target13) was NOT_PLAYED => played chain is 0.
+    expect(restored?.sequences.played[EXP].consecutiveWins).toBe(0);
+    expect(restored?.paper.wins).toBe(0);
+  });
+
+  it('T. revision state survives persistence + reconstruction', async () => {
+    const kv = new MemKv();
+    await new MemorySessionStore(kv).startLive('s1', banker(12), LIVE, { now: NOW });
+    await new MemorySessionStore(kv).submitResult('s1', Winner.BANKER, play);
+    await new MemorySessionStore(kv).editHistory(
+      's1',
+      13,
+      { winner: Winner.PLAYER, playerPair: PairState.NO, bankerPair: PairState.NO },
+      { now: '2026-01-02T00:00:00.000Z' },
+    );
+    const restored = await new MemorySessionStore(kv).reconstruct('s1');
+    const invalidated = restored!.predictions.filter((e) => e.invalidated);
+    expect(invalidated.length).toBeGreaterThanOrEqual(1);
+    expect(invalidated.every((e) => e.result === StepResult.INVALIDATED)).toBe(true);
+    expect(restored?.revisions.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('U. live edit does not produce duplicate valid locks', async () => {
+    const store = freshStore();
+    await store.startLive('s1', banker(12), LIVE, { now: NOW });
+    await store.submitResult('s1', Winner.BANKER, play);
+    const edited = await store.editHistory(
+      's1',
+      13,
+      { winner: Winner.PLAYER, playerPair: PairState.NO, bankerPair: PairState.NO },
+      { now: '2026-01-02T00:00:00.000Z' },
+    );
+    const validTargets = edited.predictions
+      .filter((e) => !e.invalidated)
+      .map((e) => e.prediction.targetRound);
+    expect(new Set(validTargets).size).toBe(validTargets.length);
+  });
+
+  it('G. TransactionGuard rejects a rapid duplicate edit/delete while a write is in flight', async () => {
+    const guard = new TransactionGuard();
+    let secondRan = false;
+    const inFlight = guard.run(() => new Promise<void>((resolve) => setTimeout(resolve, 15)));
+    // A concurrent second attempt is rejected (no duplicate revision/prediction write).
+    await expect(
+      guard.run(async () => {
+        secondRan = true;
+      }),
+    ).rejects.toThrow();
+    await inFlight;
+    expect(secondRan).toBe(false);
+    // Once idle, the guard runs again normally.
+    let ran = false;
+    await guard.run(async () => {
+      ran = true;
+    });
+    expect(ran).toBe(true);
+  });
+
+  it('H. PARTIAL pair mode stores UNKNOWN when a pair is unselected on a live round', async () => {
+    const store = freshStore();
+    await store.startLive('s1', banker(12), LIVE, { now: NOW });
+    const pp = resolvePairState(false, PairInputMode.PARTIAL);
+    const bp = resolvePairState(false, PairInputMode.PARTIAL);
+    const next = await store.submitResult('s1', Winner.BANKER, {
+      ...play,
+      playerPair: pp,
+      bankerPair: bp,
+    });
+    const r13 = next.rounds.find((r) => r.roundNumber === 13);
+    expect(r13?.playerPair).toBe(PairState.UNKNOWN);
+    expect(r13?.bankerPair).toBe(PairState.UNKNOWN);
+  });
+
+  it('I. COMPLETE pair mode stores NO when unselected and YES when selected on a live round', async () => {
+    const store = freshStore();
+    await store.startLive('s1', banker(12), LIVE, { now: NOW });
+    const pp = resolvePairState(true, PairInputMode.COMPLETE); // selected -> YES
+    const bp = resolvePairState(false, PairInputMode.COMPLETE); // unselected -> NO
+    const next = await store.submitResult('s1', Winner.BANKER, {
+      ...play,
+      playerPair: pp,
+      bankerPair: bp,
+    });
+    const r13 = next.rounds.find((r) => r.roundNumber === 13);
+    expect(r13?.playerPair).toBe(PairState.YES);
+    expect(r13?.bankerPair).toBe(PairState.NO);
+  });
+
+  it('J. PP/BP selection auto-resets after a round while the pair mode is preserved', () => {
+    const draft = { ...emptyDraft(PairInputMode.COMPLETE), playerPairSelected: true, bankerPairSelected: true };
+    const cleared = resetDraft(draft);
+    expect(cleared.playerPairSelected).toBe(false);
+    expect(cleared.bankerPairSelected).toBe(false);
+    expect(cleared.pairMode).toBe(PairInputMode.COMPLETE); // mode is sticky across rounds
   });
 });

@@ -85,6 +85,7 @@ export interface HistorySessionActions {
   setPairMode(mode: PairInputMode): void;
   togglePlayerPair(): void;
   toggleBankerPair(): void;
+  resetPairSelections(): void;
   confirmHistory(): void;
   dismissCheckpoint(): void;
 }
@@ -287,6 +288,7 @@ export function useHistorySession(): HistorySessionState & HistorySessionActions
   }, []);
   const togglePP = useCallback(() => setDraft((d) => togglePlayerPair(d)), []);
   const toggleBP = useCallback(() => setDraft((d) => toggleBankerPair(d)), []);
+  const resetPairSelections = useCallback(() => setDraft((d) => resetDraft(d)), []);
   const confirmHistory = useCallback(() => setHistoryConfirmed(true), []);
   const dismissCheckpoint = useCallback(
     () => setDismissedCheckpoint(rounds.length),
@@ -317,6 +319,7 @@ export function useHistorySession(): HistorySessionState & HistorySessionActions
     setPairMode,
     togglePlayerPair: togglePP,
     toggleBankerPair: toggleBP,
+    resetPairSelections,
     confirmHistory,
     dismissCheckpoint,
   };

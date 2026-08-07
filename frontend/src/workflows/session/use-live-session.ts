@@ -17,6 +17,7 @@ import { PairState } from '@/src/domain/models/pair';
 import type { ShoeRecord } from '@/src/domain/models/records';
 import type { RoundRecord } from '@/src/domain/models/round';
 import { TransactionGuard } from '@/src/domain/history';
+import type { RoundEdit } from '@/src/domain/history';
 import {
   OperatorAction,
   StepResult,
@@ -46,6 +47,8 @@ export interface LiveSessionView {
 
 export interface LiveSessionActions {
   submit(winner: Winner, action: OperatorAction, pairs?: LiveSubmitPairs): void;
+  editHistory(roundNumber: number, edit: RoundEdit): void;
+  deleteHistoryRound(roundNumber: number): void;
   retry(): void;
 }
 
@@ -150,6 +153,48 @@ export function useLiveSession(
 
   const retry = useCallback(() => setAttempt((a) => a + 1), []);
 
+  /**
+   * Revision orchestration ONLY: routes an edit/delete through the live
+   * SessionStore (which owns the accepted invalidation/renumber/rebuild
+   * semantics) and refreshes state from the returned authoritative session.
+   * The TransactionGuard prevents a rapid duplicate edit/delete from producing
+   * duplicate revision/prediction state.
+   */
+  const runRevision = useCallback(
+    (op: (store: SessionStore, shoeId: string) => Promise<SessionState>) => {
+      const store = storeRef.current;
+      const current = state;
+      if (!store || !current || busy || guardRef.current.isBusy) return;
+      (async () => {
+        try {
+          await guardRef.current.run(async () => {
+            setBusy(true);
+            const next = await op(store, current.shoeId);
+            setState(next);
+            setError(null);
+          });
+        } catch (e) {
+          setError(e instanceof Error ? e.message : 'Failed to revise history.');
+        } finally {
+          setBusy(false);
+        }
+      })();
+    },
+    [state, busy],
+  );
+
+  const editHistory = useCallback(
+    (roundNumber: number, edit: RoundEdit) =>
+      runRevision((store, shoeId) => store.editHistory(shoeId, roundNumber, edit)),
+    [runRevision],
+  );
+
+  const deleteHistoryRound = useCallback(
+    (roundNumber: number) =>
+      runRevision((store, shoeId) => store.deleteHistory(shoeId, roundNumber)),
+    [runRevision],
+  );
+
   return {
     active: forward,
     ready,
@@ -159,6 +204,8 @@ export function useLiveSession(
     error,
     storeKind: kind,
     submit,
+    editHistory,
+    deleteHistoryRound,
     retry,
   };
 }

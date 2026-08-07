@@ -7,7 +7,7 @@
  * the caller's previous state untouched). No DB writes here — persistence is a
  * thin adapter over `serializeSession` / `reconstructSession`.
  */
-import { editRound as editRoundPure } from '../history';
+import { editRound as editRoundPure, deleteRound as deleteRoundPure } from '../history';
 import type { RoundEdit } from '../history';
 import { PairState } from '../models/pair';
 import { RoundSource } from '../models/enums';
@@ -219,6 +219,45 @@ export function editHistory(
   const now = opts.now ?? new Date().toISOString();
   const res = editRoundPure(session.rounds, roundNumber, edit, { now, newRoundId: '' });
   if (!res) throw new Error(`Cannot edit: round ${roundNumber} not found.`);
+
+  const invalidated: PredictionEntry[] = session.predictions.map((e) =>
+    e.prediction.targetRound >= roundNumber && !e.invalidated
+      ? { ...e, invalidated: true, result: StepResult.INVALIDATED }
+      : e,
+  );
+  const { sequences, paper } = rebuild(invalidated);
+  const nextPrediction = computePrediction(res.rounds, session.environment, session.shoeId, opts);
+
+  return {
+    ...session,
+    workflow: WorkflowState.WAITING_FOR_RESULT,
+    rounds: res.rounds,
+    revisions: [...session.revisions, res.revision],
+    predictions: [...invalidated, pending(nextPrediction)],
+    currentPrediction: nextPrediction,
+    sequences,
+    paper,
+    error: null,
+  };
+}
+
+/**
+ * DELETING LIVE HISTORY: like `editHistory`, but removes round `roundNumber`
+ * and deterministically renumbers the survivors (via the accepted pure
+ * `deleteRound`). Every prediction whose target is at or after the deleted
+ * round is invalidated (renumbering shifts them), the surviving audit is
+ * preserved, sequences/paper are rebuilt from survivors, and a fresh lock is
+ * computed from the revised rounds. The historical LockedPrediction payloads
+ * are never rewritten.
+ */
+export function deleteHistory(
+  session: SessionState,
+  roundNumber: number,
+  opts: ComputeOptions = {},
+): SessionState {
+  const now = opts.now ?? new Date().toISOString();
+  const res = deleteRoundPure(session.rounds, roundNumber, { now, newRoundId: '' });
+  if (!res) throw new Error(`Cannot delete: round ${roundNumber} not found.`);
 
   const invalidated: PredictionEntry[] = session.predictions.map((e) =>
     e.prediction.targetRound >= roundNumber && !e.invalidated

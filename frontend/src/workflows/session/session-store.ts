@@ -30,6 +30,7 @@ import {
   WorkflowState,
   computePrediction,
   editHistory as editHistoryPure,
+  deleteHistory as deleteHistoryPure,
   reconstructSession,
   startSession as startSessionPure,
   submitResult as submitResultPure,
@@ -68,6 +69,19 @@ export interface CreatedSessionStore {
   readonly kind: SessionStoreKind;
 }
 
+/**
+ * Raised when durable Milestone-5 persistence (SQLite/DB-002) cannot be
+ * initialized on a NATIVE device. The live workflow must NOT silently continue
+ * on a volatile store — the caller surfaces a retryable error and disables
+ * actual-result submission instead.
+ */
+export class SessionPersistenceUnavailableError extends Error {
+  constructor(readonly cause?: unknown) {
+    super('Live session persistence (SQLite/DB-002) is unavailable on this device.');
+    this.name = 'SessionPersistenceUnavailableError';
+  }
+}
+
 export interface SessionStore {
   startLive(
     shoeId: string,
@@ -80,6 +94,11 @@ export interface SessionStore {
     shoeId: string,
     roundNumber: number,
     edit: RoundEdit,
+    opts?: StartLiveOptions,
+  ): Promise<SessionState>;
+  deleteHistory(
+    shoeId: string,
+    roundNumber: number,
     opts?: StartLiveOptions,
   ): Promise<SessionState>;
   reconstruct(shoeId: string): Promise<SessionState | null>;
@@ -147,6 +166,24 @@ export class SqliteSessionStore implements SessionStore {
     const current = await this.reconstruct(shoeId);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     const next = editHistoryPure(current, roundNumber, edit, { ...opts, now });
+    const revisionId = latestRevisionId(current.revisions, next.revisions);
+    await this.db.withTransactionAsync(async () => {
+      await this.replaceRoundsTx(shoeId, next.rounds, next.revisions[next.revisions.length - 1], now);
+      await this.persistEntries(next, now, { revisionId, roundNumber });
+      await this.persistCursor(next, now);
+    });
+    return next;
+  }
+
+  async deleteHistory(
+    shoeId: string,
+    roundNumber: number,
+    opts: StartLiveOptions = {},
+  ): Promise<SessionState> {
+    const now = opts.now ?? new Date().toISOString();
+    const current = await this.reconstruct(shoeId);
+    if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
+    const next = deleteHistoryPure(current, roundNumber, { ...opts, now });
     const revisionId = latestRevisionId(current.revisions, next.revisions);
     await this.db.withTransactionAsync(async () => {
       await this.replaceRoundsTx(shoeId, next.rounds, next.revisions[next.revisions.length - 1], now);
@@ -346,6 +383,18 @@ export class MemorySessionStore implements SessionStore {
     const current = await this.reconstruct(shoeId);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     const next = editHistoryPure(current, roundNumber, edit, opts);
+    await this.write(shoeId, next);
+    return next;
+  }
+
+  async deleteHistory(
+    shoeId: string,
+    roundNumber: number,
+    opts: StartLiveOptions = {},
+  ): Promise<SessionState> {
+    const current = await this.reconstruct(shoeId);
+    if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
+    const next = deleteHistoryPure(current, roundNumber, opts);
     await this.write(shoeId, next);
     return next;
   }

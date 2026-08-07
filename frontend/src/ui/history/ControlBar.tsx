@@ -7,7 +7,11 @@ import { colors, radius, spacing } from '../theme';
 interface ControlBarProps {
   readonly draft: InputDraft;
   readonly disabled: boolean;
+  /** Gates the actual-result P/T/B + pair controls. Defaults to `disabled`. */
+  readonly resultDisabled?: boolean;
   readonly canUndo: boolean;
+  /** Gates Edit/Delete Round (opens Review Data). Defaults to `canUndo`. */
+  readonly canReview?: boolean;
   readonly canStart: boolean;
   readonly onSelectWinner: (winner: Winner) => void;
   readonly onTogglePlayerPair: () => void;
@@ -135,6 +139,8 @@ function SecondaryButton({
 
 export function ControlBar(props: ControlBarProps) {
   const { draft, disabled } = props;
+  const resultDisabled = props.resultDisabled ?? disabled;
+  const canReview = props.canReview ?? props.canUndo;
   const isComplete = draft.pairMode === PairInputMode.COMPLETE;
 
   return (
@@ -146,21 +152,21 @@ export function ControlBar(props: ControlBarProps) {
           label="PLAYER"
           color={colors.player}
           onPress={() => props.onSelectWinner(Winner.PLAYER)}
-          disabled={disabled}
+          disabled={resultDisabled}
         />
         <ResultButton
           testID="btn-tie"
           label="TIE"
           color={colors.tie}
           onPress={() => props.onSelectWinner(Winner.TIE)}
-          disabled={disabled}
+          disabled={resultDisabled}
         />
         <ResultButton
           testID="btn-banker"
           label="BANKER"
           color={colors.banker}
           onPress={() => props.onSelectWinner(Winner.BANKER)}
-          disabled={disabled}
+          disabled={resultDisabled}
         />
 
         <View style={styles.pairGroup}>
@@ -170,7 +176,7 @@ export function ControlBar(props: ControlBarProps) {
             active={draft.playerPairSelected}
             color={colors.player}
             onPress={props.onTogglePlayerPair}
-            disabled={disabled}
+            disabled={resultDisabled}
           />
           <Toggle
             testID="toggle-bp"
@@ -178,7 +184,7 @@ export function ControlBar(props: ControlBarProps) {
             active={draft.bankerPairSelected}
             color={colors.banker}
             onPress={props.onToggleBankerPair}
-            disabled={disabled}
+            disabled={resultDisabled}
           />
         </View>
 
@@ -188,7 +194,7 @@ export function ControlBar(props: ControlBarProps) {
             <Pressable
               testID="mode-partial"
               onPress={() => props.onSetPairMode(PairInputMode.PARTIAL)}
-              disabled={disabled}
+              disabled={resultDisabled}
               style={[styles.modeOption, !isComplete ? styles.modeOptionActive : null]}
             >
               <Text style={[styles.modeText, !isComplete ? styles.modeTextActive : null]}>Partial</Text>
@@ -196,7 +202,7 @@ export function ControlBar(props: ControlBarProps) {
             <Pressable
               testID="mode-complete"
               onPress={() => props.onSetPairMode(PairInputMode.COMPLETE)}
-              disabled={disabled}
+              disabled={resultDisabled}
               style={[styles.modeOption, isComplete ? styles.modeOptionActive : null]}
             >
               <Text style={[styles.modeText, isComplete ? styles.modeTextActive : null]}>Complete</Text>
@@ -207,8 +213,8 @@ export function ControlBar(props: ControlBarProps) {
 
       <View style={styles.secondaryRow}>
         <SecondaryButton testID="btn-undo" label="Undo" onPress={props.onUndo} disabled={disabled || !props.canUndo} />
-        <SecondaryButton testID="btn-edit" label="Edit Round" onPress={props.onEditRound} disabled={disabled || !props.canUndo} />
-        <SecondaryButton testID="btn-delete" label="Delete Round" onPress={props.onDeleteRound} disabled={disabled || !props.canUndo} />
+        <SecondaryButton testID="btn-edit" label="Edit Round" onPress={props.onEditRound} disabled={disabled || !canReview} />
+        <SecondaryButton testID="btn-delete" label="Delete Round" onPress={props.onDeleteRound} disabled={disabled || !canReview} />
         <SecondaryButton testID="btn-new-shoe" label="New Shoe" onPress={props.onNewShoe} disabled={disabled} />
         <SecondaryButton testID="btn-clear-shoe" label="Clear Shoe" tone="danger" onPress={props.onClearShoe} disabled={disabled || !props.canUndo} />
         <SecondaryButton testID="btn-start-live" label="Start Live" tone="primary" onPress={props.onStartLive} disabled={disabled || !props.canStart} />

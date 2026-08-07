@@ -339,6 +339,44 @@ describe('DB-002 session store — revision linkage', () => {
     expect(t14.filter((r) => r.invalidated === 0)).toHaveLength(1);
     expect(t14.filter((r) => r.invalidated === 1).length).toBeGreaterThanOrEqual(1);
   });
+
+  it('deleting history renumbers rounds, invalidates affected locks, and recovers a valid lock (DB-002)', async () => {
+    const { db, rounds } = await seededDb(12);
+    const store = new SqliteSessionStore(db);
+    await store.startLive(SHOE, rounds, SessionEnvironment.LIVE_FORWARD, { now: NOW });
+    await store.submitResult(SHOE, Winner.BANKER, {
+      now: NOW,
+      operatorAction: OperatorAction.PLAYED,
+    }); // round 13, lock 14
+    const before = await store.submitResult(SHOE, Winner.BANKER, {
+      now: NOW,
+      operatorAction: OperatorAction.PLAYED,
+    }); // round 14, lock 15
+    expect(before.rounds).toHaveLength(14);
+
+    const deleted = await store.deleteHistory(SHOE, 13, { now: '2026-01-03T00:00:00.000Z' });
+    expect(deleted.rounds).toHaveLength(13);
+
+    // Persisted raw rounds are contiguously renumbered 1..13 (single source of truth).
+    const persistedRounds = await db.getAllAsync<{ round_number: number }>(
+      'SELECT round_number FROM rounds WHERE shoe_id = ? ORDER BY round_number ASC;',
+      [SHOE],
+    );
+    expect(persistedRounds.map((r) => r.round_number)).toEqual(
+      Array.from({ length: 13 }, (_, i) => i + 1),
+    );
+
+    // Restart: exactly one valid lock recovered; invalidations persisted with INVALIDATED result.
+    const restored = await new SqliteSessionStore(db).reconstruct(SHOE);
+    const validTargets = restored!.predictions
+      .filter((e) => !e.invalidated)
+      .map((e) => e.prediction.targetRound);
+    expect(new Set(validTargets).size).toBe(validTargets.length);
+    expect(restored?.currentPrediction?.targetRound).toBe(14);
+    const invalidated = restored!.predictions.filter((e) => e.invalidated);
+    expect(invalidated.length).toBeGreaterThanOrEqual(1);
+    expect(invalidated.every((e) => e.result === StepResult.INVALIDATED)).toBe(true);
+  });
 });
 
 // ===========================================================================
