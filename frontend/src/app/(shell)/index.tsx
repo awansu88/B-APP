@@ -71,11 +71,14 @@ export default function ActiveShoeScreen() {
   const boardsRoadmap = liveMode && liveRoadmap ? liveRoadmap : session.roadmap;
 
   const onSelectWinner = (winner: Winner) => {
-    // Reject the tail of an accidental physical double-tap: a second tap within
-    // the short re-arm window must not silently create the next round.
-    if (!resultInputGuard.tryAccept()) return;
     if (liveActive) {
       if (!canLiveSubmit) return; // never fall back to a history append in a forward session
+      // Reject the tail of an accidental physical double-tap: in a live session
+      // results are entered one-at-a-time (observe outcome -> PLAYED/NOT_PLAYED ->
+      // tap), so a second tap within the short re-arm window must not silently
+      // create the next round. (History-input bulk transcription is NOT guarded
+      // here so fast manual entry is never throttled.)
+      if (!resultInputGuard.tryAccept()) return;
       live.submit(winner, operatorAction, {
         playerPair: resolvePairState(session.draft.playerPairSelected, session.draft.pairMode),
         bankerPair: resolvePairState(session.draft.bankerPairSelected, session.draft.pairMode),
