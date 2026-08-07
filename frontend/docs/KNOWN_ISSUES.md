@@ -63,6 +63,13 @@ the only source of truth.
 **Impact:** none on native devices (real SQLite is used); web is a preview-only
 convenience. **Action:** none required; revisit if web SQLite becomes reliable.
 
+*Note (M4 audit §9):* On the AsyncStorage web shim (IndexedDB), `loadActive()`
+resolves in ~0.28 s and the Active Shoe UI renders fully (verified by the frontend
+testing agent: round entry, roadmap updates, and reload persistence all work, zero
+console errors). A transient "Loading shoe…" that persists **only** inside the raw
+headless-screenshot tool is an IndexedDB-timing artifact of that sandbox, not a
+regression and not stale persisted data.
+
 ### 8. Edit/Delete persist via full renumbered replacement
 To keep both persistence backends consistent and avoid touching DB-001, an
 arbitrary edit uses `RoundRepository.update` and a middle-round delete / shoe

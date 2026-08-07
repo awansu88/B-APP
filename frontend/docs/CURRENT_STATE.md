@@ -138,17 +138,25 @@ persistence, NO prediction locking, NO result submission/evaluation.**
 
 ## Verification (this milestone)
 - `npm run typecheck` → pass · `npm run lint` → pass
-- `npm test` → **8 suites, 138 tests** (adds `decision.test.ts` ×18: Experimental
-  Player/Banker, Qualified Player/Banker, High recommendation, low-agreement SKIP,
-  strong-opposition SKIP, multiple-soft-risks SKIP, data-quality BLOCK, category
-  downgrade, family correlation cap, active-vs-shadow volatility, confidence ≤ 75%,
-  risk filter never reverses side, versions + determinism, end-to-end pipeline).
-  Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28
-  · reliability 13 · decision 18.
+- `npm test` → **9 suites, 155 tests** (Milestone-4 build adds `decision.test.ts` ×18;
+  the final acceptance audit adds `decision-audit.test.ts` ×17: family-cap
+  permutation invariance (all 24 perms), ACTIVE/SHADOW isolation, DQG-vs-Risk
+  ownership PASS/LIMIT/BLOCK (no double penalty), literal confidence boundaries
+  0.55/0.60/0.70/0.75 + clamp, risk invariants (never flips side / raises category
+  / raises confidence; ≤1-step downgrade; strong-opposition SKIP), and 4
+  hand-calculated golden vectors). Per-file: smoke 6 · engine 10 · roadmap 26 ·
+  database 15 · history 22 · analysis 28 · reliability 13 · decision 18 ·
+  decision-audit 17.
 - `test:roadmap` → 26 · `test:engine` → 10 · `expo-doctor` → 18/18
+- **Active Shoe UI regression (frontend testing agent):** `loadActive()` resolves
+  in ~0.28s; full UI renders (nav rail, roadmaps, P/T/B controls); round entry +
+  roadmap update + reload persistence all work; zero console errors. The
+  transient "Loading shoe…" seen in the raw screenshot sandbox is an IndexedDB
+  timing artifact of that headless tool, not a regression.
 - `package-lock.json` unchanged; roadmap engine, DB-001, engine thresholds, version
-  registry, analyzer modes, and History workflow/UI all UNCHANGED (only the new
-  `src/domain/decision/*` and `src/tests/decision.test.ts` added).
+  registry, analyzer modes, reliability priors, and History workflow/UI all
+  UNCHANGED (the audit added only `src/tests/decision-audit.test.ts`; no production
+  code changed).
 
 ## Native persistence status
 - **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (Milestone 2; unchanged this milestone).

@@ -131,7 +131,7 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass",
-    "test": { "suites": 8, "tests": 138, "status": "pass" },
+    "test": { "suites": 9, "tests": 155, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
@@ -155,7 +155,7 @@
       ]
     },
     "databasePersistenceTests": "5 new tests in database.test.ts (update, replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, round-id stability); file total 15 (was 10)",
-    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "total": 138 },
+    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "total": 155 },
     "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite path implemented + covered by in-memory sql.js tests; not yet run on a physical Android device/build with restart.",
     "interactionValidation": "42/42 cases (A-H) PASS via frontend testing agent; no console errors.",
     "uiVerifiedInPreview": [

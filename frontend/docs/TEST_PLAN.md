@@ -124,9 +124,20 @@ end-to-end `runDecisionPipeline` integration on a real banker shoe.
 
 ## Expected result (Milestone 4)
 - typecheck: **pass** · lint: **pass**
-- `npm test`: **8 suites, 138 tests passing**
+- `npm test`: **9 suites, 155 tests passing**
   (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
-  reliability 13 · decision 18)
+  reliability 13 · decision 18 · decision-audit 17)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
 - `package-lock.json` unchanged; engine/DB-001/thresholds/version-registry/analyzer
-  modes/History workflow & UI unchanged.
+  modes/reliability priors/History workflow & UI unchanged.
+
+### `src/tests/decision-audit.test.ts` (17 — final acceptance audit)
+Permutation invariance of the family cap (all 24 permutations of a Trend+Alternation
+vector yield identical scores/agreement/conflict/confidence/category/side/decision;
+ties order-independent), ACTIVE/SHADOW isolation (SHADOW_ONLY + DISABLED never vote;
+volatility only affects the shadow record), DQG-vs-Risk ownership (PASS/LIMIT/BLOCK;
+LIMIT caps once with no second downgrade), literal confidence boundaries
+(0.5499/0.55/0.5999/0.60/0.6999/0.70/0.75 + clamp), risk invariants (never flips
+side / raises category / raises confidence; ≤ 1-step downgrade; strong-opposition
+→ SKIP), and four hand-calculated golden vectors (PLAYER, BANKER, family-cap,
+conflict/SKIP) whose expected values are written literally.
