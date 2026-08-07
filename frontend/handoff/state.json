@@ -4,16 +4,17 @@
   "mobileProjectRoot": "/app/frontend",
   "backendInRepository": false,
   "trackedBackendFiles": [],
-  "completedMilestone": 4,
+  "completedMilestone": 5,
   "currentMilestone": 5,
   "milestoneName": "Live Workflow & Session Tracker",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE",
   "milestone5SubStatus": {
     "M5A_domainCore": "COMPLETE",
     "M5B_domainHardening": "COMPLETE",
     "M5B_persistence": "COMPLETE",
-    "M5C_liveWorkflowUi": "IMPLEMENTED"
+    "M5C_liveWorkflowUi": "COMPLETE"
   },
+  "milestone6Started": false,
   "milestone2Started": true,
   "milestone3Started": true,
   "milestone4Started": true,
@@ -144,7 +145,7 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass (0 errors, 0 warnings)",
-    "test": { "suites": 13, "tests": 242, "status": "pass" },
+    "test": { "suites": 14, "tests": 248, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
@@ -168,9 +169,9 @@
       ]
     },
     "databasePersistenceTests": "5 new tests in database.test.ts (update, replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, round-id stability); file total 15 (was 10)",
-    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 44, "session-persistence": 18, "session-workflow": 22, "session-factory": 3, "total": 242 },
+    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 44, "session-persistence": 18, "session-workflow": 22, "session-factory": 3, "input-safety": 6, "total": 248 },
     "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite/DB-002 path implemented + covered by in-memory sql.js tests (incl. delete-history renumber/invalidation) and the native fail-safe factory test; not yet run on a physical Android device/build with restart.",
-    "interactionValidation": "M5C web-preview (MemorySessionStore) interaction validation PASS at 1280x800: Start Live -> LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual P/T/B evaluation; Tie -> PUSH (verified on a BET decision, not SKIPPED); engine/played progress + paper; reload restores the EXACT pending target; Review Data edit + delete during live rebuild roadmaps/stats; New Shoe fully resets to History Input; zero console errors / rejections / React key warnings (expected AsyncStorage web diagnostic only). Native SQLite runtime NOT verified from browser.",
+    "interactionValidation": "M5C web-preview (MemorySessionStore) interaction validation PASS at 1280x800, then a FINAL-ACCEPTANCE re-test PASS: Start Live -> LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual P/T/B evaluation; Tie -> PUSH (on a BET decision); engine/played progress + paper; reload restores the EXACT pending target; Review Data edit + delete during live rebuild roadmaps/stats; New Shoe fully resets to History Input; zero console errors/rejections/React-key warnings (expected AsyncStorage web diagnostic only). SECTION-12 accidental double-tap guard verified: rapid live double-tap and a 4-tap burst each add exactly ONE round; a deliberate tap after the ~400ms re-arm submits the next round; History-Input bulk entry at ~200ms intervals is NOT throttled (12/12 register). Native SQLite runtime NOT verified from a browser.",
     "uiVerifiedInPreview": [
       "result entry + statistics",
       "roadmap rendering (bead plate, big road, derived roads)",
@@ -179,7 +180,7 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 5 FINAL ACCEPTANCE AUDIT. M5A/M5B COMPLETE + M5C IMPLEMENTED (live workflow/UI wired, revision routing, native fail-safe persistence). Remaining before marking Milestone 5 COMPLETE: (1) native SQLite/DB-002 runtime verification on a physical Android build with app restart (currently IMPLEMENTED_NOT_RUNTIME_VERIFIED); (2) optional surfacing of the invalidated historical prediction audit in the live UI (currently persisted in DB-002 but not rendered in the minimal panel); (3) full acceptance audit sign-off. Milestone 6 (advanced statistics & export) remains NOT started. Fixed-unit paper only; no Martingale/bet-sizing; do NOT alter DB-001/DB-002 migrations.",
+  "nextMilestone": "Milestone 6 (advanced statistics & export) — NOT STARTED. Milestone 5 (Live Workflow & Session Tracker) is COMPLETE and accepted (M5A/M5B/M5C, DB-002). Only remaining M5 item is an environmental verification, not a code gap: native SQLite/DB-002 runtime confirmation on a physical Android build+restart (status A = IMPLEMENTED_NOT_RUNTIME_VERIFIED; web preview uses the AsyncStorage MemorySessionStore only). Do NOT alter DB-001/DB-002 migrations, M1-M4 decision mathematics, RELPRIOR-001/VOTE-001/CONF-001/RISK-001/DECISION-001; keep Historical Matcher DISABLED and Derived Road + Volatility SHADOW_ONLY; fixed-unit paper only (no Martingale/bet-sizing).",
   "db002": {
     "status": "IMPLEMENTED",
     "appendOnly": true,

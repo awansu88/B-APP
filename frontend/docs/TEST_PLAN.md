@@ -175,25 +175,31 @@ factory success returns the durable SQLite adapter (`kind=sqlite`); native SQLit
 failure throws `SessionPersistenceUnavailableError` and **never** returns a volatile
 memory store for a live persisted session.
 
+### `src/tests/input-safety.test.ts` (6 — accidental double-tap guard, Section 12)
+`DuplicateInputGuard` with an injected clock: first tap accepted immediately; an
+accidental rapid second tap and a rapid burst are rejected (exactly one accept);
+a deliberate tap after the ~400ms re-arm window is accepted; `reset()` re-arms; and
+seconds-apart manual entry is never blocked.
+
 ## Expected result (Milestone 5)
 - typecheck: **pass** · lint: **pass (0 errors / 0 warnings)**
-- `npm test`: **13 suites, 242 tests passing**
+- `npm test`: **14 suites, 248 tests passing**
   (smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 ·
   reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 18 ·
-  session-workflow 22 · session-factory 3)
+  session-workflow 22 · session-factory 3 · input-safety 6)
 - `test:roadmap`: **26** · `test:engine`: **10** · expo-doctor: **18/18**
-- `package-lock.json` unchanged; **DB-001 + DB-002 schema unchanged** (M5C added no
+- `package-lock.json` unchanged; **DB-001 + DB-002 schema unchanged** (final audit added no
   migration); thresholds/version-registry/analyzer modes/reliability priors/decision
-  pipeline/snapshot+feature unchanged. M5C added only the live workflow/UI seam
-  (`use-live-session.ts`, `LiveSessionPanel.tsx`), additive `SessionStore.deleteHistory`
-  + `deleteHistory` domain fn, the native fail-safe factory, additive `ControlBar`
-  props, and `useHistorySession.resetPairSelections`.
-- **M5C interaction validation (web preview / MemorySessionStore, 1280×800):** Start
-  Live → LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual P/T/B
-  evaluation; Tie→PUSH (on a BET decision); engine/played progress + paper; reload
+  pipeline/snapshot+feature unchanged. The final acceptance audit added only the
+  live-only `DuplicateInputGuard` input-safety utility + its wiring + tests.
+- **M5 final-acceptance interaction validation (web preview / MemorySessionStore, 1280×800):**
+  Start Live → LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual
+  P/T/B evaluation; Tie→PUSH (on a BET decision); engine/played progress + paper; reload
   restores the exact pending target; Review Data edit + delete during live rebuild
-  roadmaps/stats; New Shoe fully resets; zero console errors/rejections/key warnings
-  (expected AsyncStorage web diagnostic only). Native SQLite runtime NOT verified from a browser.
+  roadmaps/stats; New Shoe fully resets; live accidental double-tap + 4-tap burst each add
+  exactly ONE round while History-Input bulk entry (~200ms) registers 12/12; zero console
+  errors/rejections/key warnings (expected AsyncStorage web diagnostic only). Native SQLite
+  runtime NOT verified from a browser (status A).
 
 ## Expected result (Milestone 4)
 - typecheck: **pass** · lint: **pass**

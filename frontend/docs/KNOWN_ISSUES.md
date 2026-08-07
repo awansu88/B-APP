@@ -206,14 +206,31 @@ valid lock + last result; it does not yet list the invalidated historical audit.
 **Impact:** cosmetic (audit is fully persisted and queryable). **Action:** optional
 UI surfacing in a later milestone.
 
-### 17c. A rapid double-tap that fully completes yields two DISTINCT rounds (by design)
-The `TransactionGuard` rejects a *concurrent* second submission while a write is in
-flight (no duplicate/partial state, no duplicate valid lock per target — verified).
-Two taps spaced far enough apart that the first transaction fully commits are two
-legitimate distinct rounds against successive targets (N then N+1), not a duplicate.
-There is intentionally no time-debounce (each result is a real round).
+### 17c. Accidental rapid double-tap in LIVE mode is now guarded (Section 12)
+A live session enters results one-at-a-time (observe outcome → pick PLAYED/NOT_PLAYED →
+tap), so an accidental physical double-tap could previously let the tail tap silently
+become the actual result for the *next* round. A `DuplicateInputGuard` (~400ms re-arm,
+`src/domain/history/duplicate-input-guard.ts`) now gates the **live** result button:
+the first tap is accepted immediately; a second tap within the window is rejected; a
+deliberate tap after the window submits the next round normally. The concurrent-case
+`TransactionGuard` still protects an in-flight submission. **Protection semantics:**
+first-tap-immediate, then reject-within-400ms, then re-arm. The guard is **scoped to
+LIVE mode only** — History-Input bulk transcription is NOT throttled (fast ~200ms manual
+entry registers every round). Verified end-to-end (live double-tap and 4-tap burst each
+add exactly one round; History-Input 12/12 at ~200ms).
 
-**Impact:** none (safety contract intact). **Action:** none.
+**Impact:** none (data-integrity improvement). **Action:** none.
+
+### 17d. Native SQLite/DB-002 persistence is IMPLEMENTED_NOT_RUNTIME_VERIFIED
+The native SQLite/DB-002 session store is implemented and covered by sql.js-backed
+persistence tests + the fail-safe factory test, but has NOT been executed on a physical
+Android device/runtime across a real app restart. The web preview uses the
+AsyncStorage-compatible `MemorySessionStore` (browser evidence does NOT prove the native
+SQLite runtime). Native init failure is fail-safe (throws `SessionPersistenceUnavailableError`;
+never a silent volatile downgrade).
+
+**Impact:** recorded known limitation; not a Milestone-5 code blocker. **Action:** verify
+on an Android build + restart before relying on native durability in production.
 
 ### 19. Session/prediction persistence — RESOLVED via DB-002 (M5B)
 DB-001 could not represent the M5 locked-prediction audit, so an **additive, forward-only

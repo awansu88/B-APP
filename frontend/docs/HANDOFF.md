@@ -1,27 +1,28 @@
 # Handoff
 
-**From:** Milestone 5C (live workflow/UI + revision routing + fail-safe persistence).
-**To:** Next agent (Milestone 5 FINAL ACCEPTANCE AUDIT).
+**From:** Milestone 5 FINAL ACCEPTANCE AUDIT (accepted — M5 COMPLETE).
+**To:** Next agent (Milestone 6 — advanced statistics & export).
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
 ## Status
-- Milestone 5 (Live Workflow & Session Tracker) is **IN PROGRESS — READY FOR FINAL ACCEPTANCE AUDIT**:
+- Milestone 5 (Live Workflow & Session Tracker) is **COMPLETE** (final acceptance audit accepted):
   - **M5A (domain core): COMPLETE.**
   - **M5B (domain hardening + persistence): COMPLETE.** Database is **DB-002 (current)**; DB-001 unchanged.
-  - **M5C (live workflow/UI): IMPLEMENTED.** Active Shoe wired to the persisted session
-    via `src/workflows/session/use-live-session.ts` (orchestration only) + `src/ui/live/
-    LiveSessionPanel.tsx` (pure renderer). Start Live / Start Historical Test, LOCKED
-    prediction display, PLAYED/NOT_PLAYED, actual P/T/B routed to the store (lock-before-
-    result gated; no history append in a forward session), engine/played progress + paper,
-    and **live-mode Review Data edit/delete routed through `SessionStore.editHistory`/
-    `deleteHistory`** (invalidation + renumber + rebuild; raw-round views sourced from the
-    authoritative live session). Native fail-safe: `createSessionStore` throws
-    `SessionPersistenceUnavailableError` on SQLite/DB-002 init failure (never a silent
-    volatile downgrade); actual input disabled unless a healthy store + valid lock exist.
-    **Native SQLite runtime not yet device-verified.**
+  - **M5C (live workflow/UI): COMPLETE.** Active Shoe wired to the persisted session
+    (`use-live-session.ts` + `LiveSessionPanel.tsx`); Start Live / Start Historical Test;
+    persisted LOCKED prediction; PLAYED/NOT_PLAYED; actual P/T/B routed to the store
+    (lock-before-result gated; no history append in a forward session); engine/played
+    progress + paper; **live-mode Review Data edit/delete via `SessionStore.editHistory`/
+    `deleteHistory`** (invalidate + renumber + rebuild; raw-round views from the
+    authoritative live session); **native fail-safe** `createSessionStore`
+    (`SessionPersistenceUnavailableError`, no silent volatile downgrade); and a
+    **live-only accidental double-tap guard** (`DuplicateInputGuard`, ~400ms re-arm) that
+    never throttles History-Input bulk entry.
+  - **Native persistence status: A. IMPLEMENTED_NOT_RUNTIME_VERIFIED** — recorded known
+    limitation (needs a physical Android build + restart); NOT a code blocker.
   - **Milestone 6 (advanced statistics & export): NOT started.**
-- Database schema version: **DB-002** (M5C added NO migration; DB-001 + DB-002 unchanged this task).
+- Database schema version: **DB-002** (final audit added NO migration; DB-001 + DB-002 unchanged).
 - **Persistence (`src/data/database/schema-db002.ts`, `src/data/repositories/
   locked-prediction-repository.ts`, `src/workflows/session/*`):** `session_state`
   (per-shoe workflow/cursor + paper cache) + `locked_prediction_entries` (immutable
@@ -49,7 +50,7 @@ commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
    Metro was already running, so it rebuilds its graph against the fresh install).
 3. Confirm the gate is green:
    `npm run typecheck && npm run lint && npm test && npm run test:roadmap && npm run test:engine && npx expo-doctor`.
-   Expected: **13 suites / 242 tests**, roadmap 26, engine 10, doctor 18/18.
+   Expected: **14 suites / 248 tests**, roadmap 26, engine 10, doctor 18/18.
 
 ## Key building blocks (Milestone 4)
 - Decision entrypoints: `decide(moduleResults, context, config?)` (fixed-vector)
@@ -105,19 +106,14 @@ still passing.
 - Introduce randomness, ML, network, balances, or target-sequence inputs.
 
 ## Next milestone scope (for the next agent)
-**Immediate = Milestone 5 FINAL ACCEPTANCE AUDIT.** M5A/M5B COMPLETE and M5C
-IMPLEMENTED (live workflow/UI wired, live-mode revision routing, native fail-safe
-persistence). Remaining before marking Milestone 5 **COMPLETE**:
-1. **Native SQLite/DB-002 runtime verification** on a physical Android build with an
-   app restart (currently `IMPLEMENTED_NOT_RUNTIME_VERIFIED`; browser preview uses the
-   AsyncStorage `MemorySessionStore` only).
-2. Optional: surface the **invalidated historical prediction audit** in the live UI
-   (persisted in DB-002 today, not rendered in the minimal panel).
-3. Full acceptance-audit sign-off (safety contract, immutability, sequences, paper).
-Keep fixed-unit paper only (no Martingale/bet-sizing); do NOT alter DB-001/DB-002
-migrations; do NOT activate the Historical Matcher or let SHADOW_ONLY modules influence
-the ACTIVE decision.
-**Then Milestone 6 = advanced statistics & export.**
+**Immediate = Milestone 6 (advanced statistics & export).** Milestone 5 is COMPLETE
+and accepted (M5A/M5B/M5C, DB-002). The only outstanding M5 item is environmental, not
+a code gap: **native SQLite/DB-002 runtime verification** on a physical Android build
+with an app restart (status A = `IMPLEMENTED_NOT_RUNTIME_VERIFIED`; the browser preview
+uses the AsyncStorage `MemorySessionStore` only). When building Milestone 6 keep
+fixed-unit paper only (no Martingale/bet-sizing); do NOT alter DB-001/DB-002 migrations
+or the M1–M4 decision mathematics; keep the Historical Matcher DISABLED and Derived Road
++ Volatility SHADOW_ONLY.
 
 ## After your milestone
 Update `docs/CURRENT_STATE.md`, this file, `docs/KNOWN_ISSUES.md`,
