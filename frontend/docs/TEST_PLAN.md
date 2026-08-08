@@ -1,5 +1,27 @@
 # Test Plan
 
+## Milestone 6 suites (Statistics / Export-Import-Merge / Backup-Restore)
+- `src/tests/statistics.test.ts` (**9**) — pure `computeFullStatistics` with literal expected
+  values: empty data; winner counts across raw rounds; decision + WIN/LOSS/PUSH/SKIPPED
+  classification with invalidated exclusion; confidence-category buckets (Experimental/Qualified/
+  High); BET_PLAYER vs BET_BANKER; engine-vs-played (played filter + hypothetical vs actual paper);
+  three-win completion; per-shoe reset (never crosses shoe boundary); chain-breaking-loss failed
+  count; revision counts by action. Denominators asserted (WIN/(WIN+LOSS); PUSH/SKIPPED/INVALIDATED
+  excluded).
+- `src/tests/backup-export.test.ts` (**17**) — export FULL/HISTORY/ANALYSIS shape + metadata +
+  counts; validate accepts well-formed FULL_BACKUP; rejects malformed / unsupported version /
+  bad enum / orphan FK / duplicate valid lock; merge planning duplicate-skip / conflict / independent
+  import / valid-lock collision; sql.js: validate causes ZERO DB writes, safe merge applies, unsafe
+  plan rejected, failing apply rolls back (no partial dataset).
+- `src/tests/backup-restore.test.ts` (**3**) — sql.js: full backup → empty DB → restore → compare
+  authoritative records (shoes/rounds/revisions/locked-prediction audit + invalidation + verbatim
+  payloads); roadmap + sequence + paper reconstruct identically after restore (no prediction
+  regenerated); failing restore rolls back leaving prior data intact.
+
+**Totals after Milestone 6:** 17 suites / **277 tests** (was 14 / 248; +3 suites / +29 tests).
+All prior 248 remain green. `test:roadmap` 26, `test:engine` 10, `expo-doctor` 18/18, lint 0/0,
+typecheck PASS, package-lock + DB-001/DB-002 schema unchanged.
+
 ## Tooling
 - **Jest** with **ts-jest** (node environment) — pure TypeScript.
 - Database tests run against an in-memory **sql.js** driver

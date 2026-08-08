@@ -1,9 +1,18 @@
 # Handoff
 
-**From:** Milestone 5 FINAL ACCEPTANCE AUDIT (accepted — M5 COMPLETE).
-**To:** Next agent (Milestone 6 — advanced statistics & export).
+**From:** Milestone 6 implementation (IMPLEMENTED — READY FOR FINAL ACCEPTANCE AUDIT).
+**To:** Auditor for Milestone 6 final acceptance, then Milestone 7 (final redesign/build & visual polish — NOT STARTED).
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
+
+## Milestone 6 (this handoff)
+- **Scope:** Statistics + Export/Import/Merge + Backup/Restore + Recovery/Diagnostics. Local-first; no cloud sync; **no prediction-engine changes**.
+- **DB decision:** **DB-002 sufficient — NO DB-003.** Everything is derived/serialized from existing authoritative records (raw rounds + revisions = DB-001; locked_prediction_entries + session_state = DB-002). Only visibility change: `applyPaper` is now `export` in `live-session.ts` (behaviour unchanged).
+- **Web policy (approved b):** Statistics/Export/Validate/Merge-preview/Diagnostics enabled on web preview (validate + preview ZERO writes); actual Merge/Restore **writes** are native-SQLite only (`WriteUnavailableError` → UI "Available on native SQLite runtime").
+- **Files:** `src/domain/statistics/*`, `src/domain/backup/*`, `src/domain/diagnostics/*`, `src/data/backup/*`, `src/workflows/backup/*`, `src/app/(shell)/{statistics,export,diagnostics}.tsx`, `src/ui/stats/StatsView.tsx`, `src/ui/data/cards.tsx`.
+- **Tests added:** `statistics` (9), `backup-export` (17), `backup-restore` (3). Gate: typecheck PASS, lint 0/0, **17 suites / 277 tests**, roadmap 26, engine 10, expo-doctor 18/18, package-lock + DB-001/DB-002 schema UNCHANGED.
+- **Frontend validation:** web-preview interaction validation PASS at 1280x800 (Statistics empty+populated; Export summaries/counts; Validate PASS/FAIL; Merge report; Restore confirm; web write-gating disabled + labelled; Diagnostics read-only; regression Active Shoe/History/Live OK; zero console errors).
+- **Remaining for final acceptance:** native SQLite/DB-002 transactional Merge/Restore verification on a physical Android build+restart (status A); optional native file save/share + document-picker import (MVP uses in-app JSON + paste).
 
 ## Status
 - Milestone 5 (Live Workflow & Session Tracker) is **COMPLETE** (final acceptance audit accepted):

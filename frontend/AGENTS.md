@@ -6,6 +6,21 @@
 
 This file is LOCKED guidance. Read it fully before touching anything.
 
+## Milestone 6 status (IMPLEMENTED — READY FOR FINAL ACCEPTANCE AUDIT)
+Milestone 6 (**Statistics + Export/Import/Merge + Backup/Restore + Diagnostics**)
+is **IMPLEMENTED** and awaiting final acceptance audit — **not yet final COMPLETE**.
+Local-first, no cloud sync, **no prediction-engine changes**. **DB-002 is sufficient —
+NO DB-003 was created.** The only visibility change to accepted code was making
+`applyPaper` `export` in `src/domain/session/live-session.ts` (behaviour UNCHANGED)
+so statistics reuse the accepted M5 fixed-paper rule; three-win reuses
+`advanceSequence` (per-shoe reset — never crosses shoe boundaries). New code lives in
+`src/domain/statistics/*`, `src/domain/backup/*`, `src/domain/diagnostics/*`,
+`src/data/backup/*`, `src/workflows/backup/*`, and the `statistics`/`export`/`diagnostics`
+screens. Web preview is READ-ONLY for destructive writes: Merge/Restore **apply** is
+native-SQLite only (throws `WriteUnavailableError`, UI labels "Available on native SQLite
+runtime"); Validate + Merge-preview are ZERO writes. Diagnostics are read-only (no
+auto-repair). **Milestone 7: NOT STARTED — do not begin it.**
+
 ## Read first, always
 - Read **all** documentation in `docs/` and this file **before modifying any code**.
 - Treat `docs/ENGINE_RULES.md`, `docs/ROADMAP_RULES.md`, and `docs/DATA_MODEL.md` as the source of truth for behaviour.

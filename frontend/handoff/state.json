@@ -5,16 +5,16 @@
   "backendInRepository": false,
   "trackedBackendFiles": [],
   "completedMilestone": 5,
-  "currentMilestone": 5,
-  "milestoneName": "Live Workflow & Session Tracker",
-  "status": "COMPLETE",
+  "currentMilestone": 6,
+  "milestoneName": "Statistics + Export/Import/Merge + Backup/Restore + Diagnostics",
+  "status": "IMPLEMENTED_READY_FOR_FINAL_ACCEPTANCE_AUDIT",
   "milestone5SubStatus": {
     "M5A_domainCore": "COMPLETE",
     "M5B_domainHardening": "COMPLETE",
     "M5B_persistence": "COMPLETE",
     "M5C_liveWorkflowUi": "COMPLETE"
   },
-  "milestone6Started": false,
+  "milestone6Started": true,
   "milestone2Started": true,
   "milestone3Started": true,
   "milestone4Started": true,
@@ -146,7 +146,7 @@
   "verification": {
     "typecheck": "pass",
     "lint": "pass (0 errors, 0 warnings)",
-    "test": { "suites": 14, "tests": 248, "status": "pass" },
+    "test": { "suites": 17, "tests": 277, "status": "pass" },
     "test:roadmap": { "suites": 1, "tests": 26, "status": "pass" },
     "test:engine": { "suites": 1, "tests": 10, "status": "pass" },
     "expoDoctor": { "checks": 18, "passed": 18, "status": "pass" },
@@ -170,7 +170,7 @@
       ]
     },
     "databasePersistenceTests": "5 new tests in database.test.ts (update, replaceShoe-replace, replaceShoe-clear, New-Shoe preservation, round-id stability); file total 15 (was 10)",
-    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 44, "session-persistence": 18, "session-workflow": 22, "session-factory": 3, "input-safety": 6, "total": 248 },
+    "testsPerFile": { "smoke": 6, "engine": 10, "roadmap": 26, "database": 15, "history": 22, "analysis": 28, "reliability": 13, "decision": 18, "decision-audit": 17, "session": 44, "session-persistence": 18, "session-workflow": 22, "session-factory": 3, "input-safety": 6, "statistics": 9, "backup-export": 17, "backup-restore": 3, "total": 277 },
     "nativePersistenceStatus": "A. IMPLEMENTED_NOT_RUNTIME_VERIFIED — SQLite/DB-002 path implemented + covered by in-memory sql.js tests (incl. delete-history renumber/invalidation) and the native fail-safe factory test; not yet run on a physical Android device/build with restart.",
     "interactionValidation": "M5C web-preview (MemorySessionStore) interaction validation PASS at 1280x800, then a FINAL-ACCEPTANCE re-test PASS: Start Live -> LOCKED target + decision/confidence/category; PLAYED/NOT_PLAYED; actual P/T/B evaluation; Tie -> PUSH (on a BET decision); engine/played progress + paper; reload restores the EXACT pending target; Review Data edit + delete during live rebuild roadmaps/stats; New Shoe fully resets to History Input; zero console errors/rejections/React-key warnings (expected AsyncStorage web diagnostic only). SECTION-12 accidental double-tap guard verified: rapid live double-tap and a 4-tap burst each add exactly ONE round; a deliberate tap after the ~400ms re-arm submits the next round; History-Input bulk entry at ~200ms intervals is NOT throttled (12/12 register). Native SQLite runtime NOT verified from a browser.",
     "uiVerifiedInPreview": [
@@ -181,7 +181,41 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 6 (advanced statistics & export) — NOT STARTED. Milestone 5 (Live Workflow & Session Tracker) is COMPLETE and accepted (M5A/M5B/M5C, DB-002). Only remaining M5 item is an environmental verification, not a code gap: native SQLite/DB-002 runtime confirmation on a physical Android build+restart (status A = IMPLEMENTED_NOT_RUNTIME_VERIFIED; web preview uses the AsyncStorage MemorySessionStore only). Do NOT alter DB-001/DB-002 migrations, M1-M4 decision mathematics, RELPRIOR-001/VOTE-001/CONF-001/RISK-001/DECISION-001; keep Historical Matcher DISABLED and Derived Road + Volatility SHADOW_ONLY; fixed-unit paper only (no Martingale/bet-sizing).",
+  "nextMilestone": "Milestone 7 (final redesign/build & visual polish) — NOT STARTED. Milestone 6 is IMPLEMENTED and READY FOR FINAL ACCEPTANCE AUDIT (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics; DB-002 sufficient, NO DB-003). Remaining M6 items are an environmental verification, not code gaps: native SQLite/DB-002 transactional Merge/Restore confirmed only via sql.js Jest + web-preview read-only; not yet run on a physical Android build+restart (status A). Do NOT alter DB-001/DB-002 migrations, M1-M4 decision mathematics, RELPRIOR-001/VOTE-001/CONF-001/RISK-001/DECISION-001; keep Historical Matcher DISABLED and Derived Road + Volatility SHADOW_ONLY; fixed-unit paper only (no Martingale/bet-sizing).",
+  "milestone6": {
+    "status": "IMPLEMENTED_READY_FOR_FINAL_ACCEPTANCE_AUDIT",
+    "localFirst": true,
+    "cloudSync": false,
+    "predictionEngineChanged": false,
+    "databaseDecision": "DB-002 sufficient; NO DB-003 created (all outputs derived/serialized from existing authoritative records; no persistent aggregates).",
+    "visibilityOnlyChange": "src/domain/session/live-session.ts applyPaper made `export` (behavior UNCHANGED) so statistics reuse the accepted M5 fixed-paper rule.",
+    "scope": ["Statistics", "Export", "Import/Merge", "Backup/Restore", "Recovery/Diagnostics"],
+    "pureModules": {
+      "statistics": "src/domain/statistics/* (computeFullStatistics over BappDataset; reuses advanceSequence + applyPaper; per-shoe reset; explicit denominators WIN/(WIN+LOSS); PUSH/SKIPPED/INVALIDATED excluded)",
+      "export": "src/domain/backup/format.ts (BAPP-EXPORT / EXPORT-001; FULL_BACKUP|HISTORY|ANALYSIS; metadata + counts)",
+      "validation": "src/domain/backup/validate.ts (ZERO writes; format/version/collections/ids/FK/enums/round-numbering/one-valid-lock checks)",
+      "merge": "src/domain/backup/merge.ts (planMerge: duplicate-skip / conflict-reject / independent-import; one-valid-lock-per-shoe+target; report + safe flag)",
+      "integrity": "src/domain/diagnostics/integrity.ts (orphan rounds, broken revision links, duplicate valid-lock, round continuity, counts)"
+    },
+    "dataLayer": "src/data/backup/sqlite-gateway.ts (loadDataset read-only; applyMerge + restoreBackup transactional with rollback; verbatim payloads; NEVER regenerates locked predictions)",
+    "dataSourceSeam": {
+      "contract": "src/workflows/backup/data-source.ts (DataSource; RestoreSummary; WriteUnavailableError='Available on native SQLite runtime')",
+      "native": "src/workflows/backup/create-data-source.ts (SQLite/DB-002 read + transactional Merge/Restore apply)",
+      "webPreview": "src/workflows/backup/create-data-source.web.ts (read-only projection of AsyncStorage stores; Merge/Restore writes throw WriteUnavailableError)",
+      "hook": "src/workflows/backup/use-bapp-data.ts"
+    },
+    "webPolicy": "Approved option (b): Statistics/Export/Validate/Merge-preview/Diagnostics enabled on web preview (validate + preview are ZERO writes). Actual Merge/Restore WRITES are native-only (disabled + labelled). Web never fakes a destructive write.",
+    "ui": {
+      "statistics": "src/app/(shell)/statistics.tsx + src/ui/stats/StatsView.tsx",
+      "export": "src/app/(shell)/export.tsx",
+      "diagnostics": "src/app/(shell)/diagnostics.tsx",
+      "shared": "src/ui/data/cards.tsx"
+    },
+    "tests": { "statistics": 9, "backup-export": 17, "backup-restore": 3 },
+    "frontendValidation": "PASS (web preview, 1280x800): Statistics empty+populated cards render (no stuck loading); Export Full/History/Analysis summaries + counts; Validate PASS/FAIL; Merge Preview report; Restore confirm; web Apply-Merge/Restore DISABLED with native-only note; Diagnostics integrity+versions render read-only; regression Active Shoe/History/Live OK; zero console errors/rejections (only expected AsyncStorage web diagnostic).",
+    "nativeStatus": "IMPLEMENTED_NOT_RUNTIME_VERIFIED (transactional Merge/Restore covered by sql.js Jest; not run on a physical Android build+restart).",
+    "constraintsHeld": ["DB-001 unchanged", "DB-002 unchanged", "no DB-003", "M1-M5 behavior unchanged", "Historical Matcher DISABLED", "Derived Road SHADOW_ONLY", "Volatility SHADOW_ONLY", "no Martingale", "no Milestone 7 work", "no deployment/build", "package-lock unchanged"]
+  },
   "db002": {
     "status": "IMPLEMENTED",
     "appendOnly": true,

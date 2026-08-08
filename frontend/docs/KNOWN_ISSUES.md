@@ -1,5 +1,27 @@
 # Known Issues
 
+## Milestone 6
+
+### M6-1. Native SQLite/DB-002 transactional Merge/Restore not runtime-verified
+`applyMerge` and `restoreBackup` (`src/data/backup/sqlite-gateway.ts`) are covered by
+in-memory **sql.js** Jest tests (independent-shoe merge, unsafe-plan rejection, rollback on
+mid-transaction failure, full backup→restore→compare, roadmap/sequence/paper reconstruction,
+restore rollback). They are **not yet run on a physical Android build+restart** (status A —
+IMPLEMENTED_NOT_RUNTIME_VERIFIED). **Impact:** none for web preview; native confirmation is a
+final-acceptance environmental step. **Action:** verify on device during the M6 acceptance audit.
+
+### M6-2. Web preview cannot perform destructive Merge/Restore writes (by design)
+Per the approved web policy (option b), the web-preview data source is READ-ONLY for writes:
+`applyMerge`/`restore` throw `WriteUnavailableError` ("Available on native SQLite runtime") and
+the UI disables + labels those actions. Validate + Merge-preview + Export remain fully enabled and
+perform ZERO writes. **Impact:** intentional; web never fakes a destructive write. **Action:** none.
+
+### M6-3. Export/Import UI is dependency-free (in-app JSON + paste)
+No file-IO deps (`expo-file-system`/`expo-sharing`/`expo-document-picker`/clipboard) were added,
+to keep expo-doctor and the web bundle unchanged. Export shows a serialized JSON preview; import is
+via a paste box. **Impact:** no OS file save/share or file-picker in the MVP. **Action:** optional
+native file save/share + document-picker can be added in a later pass (not required for M6 logic).
+
 ## Milestone 1
 
 ### 1. Git root is `/app`; app root is `/app/frontend`; no backend tracked

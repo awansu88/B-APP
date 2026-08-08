@@ -6,7 +6,28 @@
 - **M5C (live workflow / UI): COMPLETE** — Active Shoe wired to the persisted session via `useLiveSession` + `LiveSessionPanel`: Start Live / Start Historical Test, persisted **LOCKED** prediction display (decision / confidence-score / category / risk), PLAYED–NOT_PLAYED, actual **P/T/B routed to the store** (lock-before-result gated; no history append in a forward session), engine-vs-played progress + fixed-unit paper, **live-mode Review Data edit/delete via `SessionStore.editHistory`/`deleteHistory`** (invalidate + renumber + rebuild; raw-round views sourced from the authoritative live session), **native fail-safe** (`createSessionStore` throws `SessionPersistenceUnavailableError`, never a silent volatile downgrade), and a **live-only accidental double-tap guard** (`DuplicateInputGuard`, ~400ms re-arm) that never throttles History-Input bulk entry.
 - **Native persistence status: A. IMPLEMENTED_NOT_RUNTIME_VERIFIED** — SQLite/DB-002 path implemented + covered by sql.js + fail-safe factory tests; not yet run on a physical Android device/restart (recorded known limitation, not a code blocker).
 - **Database:** **DB-002 current** (additive, forward-only). **DB-001** unchanged. DB-002 schema **unchanged** in the final audit.
-**Milestone 6: NOT STARTED** — advanced statistics & export (none built yet).
+**Milestone 6: IMPLEMENTED — READY FOR FINAL ACCEPTANCE AUDIT** (not yet final COMPLETE).
+Statistics + Export/Import/Merge + Backup/Restore + Diagnostics. Local-first; no cloud
+sync; **no prediction-engine changes**; **DB-002 sufficient — NO DB-003**.
+- **Statistics** (`src/domain/statistics/*`): pure `computeFullStatistics(BappDataset)` →
+  Overall, Predictions, Results, Confidence Categories, Player-vs-Banker, Engine Sequence,
+  Played Sequence, Revisions. Three-win + fixed-paper REUSE accepted M5 `advanceSequence` /
+  `applyPaper` (per-shoe reset; never crosses shoe boundaries). Explicit denominators:
+  win rate = WIN/(WIN+LOSS); PUSH/SKIPPED/INVALIDATED excluded from valid performance.
+- **Export** (`src/domain/backup/format.ts`): self-describing `BAPP-EXPORT` / `EXPORT-001`
+  with metadata + counts; FULL_BACKUP / HISTORY / ANALYSIS. **Validation** (`validate.ts`)
+  is ZERO-write. **Merge** (`merge.ts`): duplicate-skip / conflict-reject / independent-import,
+  one valid lock per shoe+target, with a merge report + `safe` flag.
+- **Backup/Restore + Merge apply** (`src/data/backup/sqlite-gateway.ts`): transactional over
+  SQLite/DB-002 with rollback; payloads copied verbatim (locked predictions never regenerated).
+- **Diagnostics** (`src/domain/diagnostics/integrity.ts`): read-only integrity (orphan rounds,
+  broken revision links, duplicate valid-lock, round continuity, counts, adapter). No auto-repair.
+- **Web policy (approved option b):** Statistics/Export/Validate/Merge-preview/Diagnostics
+  enabled on web preview (validate + preview ZERO writes). Actual Merge/Restore **writes** are
+  native-SQLite only (`WriteUnavailableError`; UI shows "Available on native SQLite runtime").
+- **Native status:** IMPLEMENTED_NOT_RUNTIME_VERIFIED (transactional Merge/Restore covered by
+  sql.js Jest; not run on a physical Android build+restart).
+**Milestone 7: NOT STARTED.**
 **Milestone 5 built the live/historical session engine** (pure domain): manual
 one-result-at-a-time workflow, prediction **locking** (immutable), result
 evaluation (WIN/LOSS/PUSH/SKIPPED/INVALIDATED), three-win tracker (engine +
