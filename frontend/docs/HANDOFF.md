@@ -31,7 +31,7 @@ commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
     never throttles History-Input bulk entry.
   - **Native persistence status: A. IMPLEMENTED_NOT_RUNTIME_VERIFIED** — recorded known
     limitation (needs a physical Android build + restart); NOT a code blocker.
-  - **Milestone 6 (advanced statistics & export): NOT started.**
+  - **Milestone 6 (advanced statistics & export): COMPLETE** — final acceptance audit PASSED (release-candidate tag `m06-data-management-rc1`).
 - Database schema version: **DB-002** (final audit added NO migration; DB-001 + DB-002 unchanged).
 - **Persistence (`src/data/database/schema-db002.ts`, `src/data/repositories/
   locked-prediction-repository.ts`, `src/workflows/session/*`):** `session_state`
@@ -60,7 +60,7 @@ commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
    Metro was already running, so it rebuilds its graph against the fresh install).
 3. Confirm the gate is green:
    `npm run typecheck && npm run lint && npm test && npm run test:roadmap && npm run test:engine && npx expo-doctor`.
-   Expected: **14 suites / 248 tests**, roadmap 26, engine 10, doctor 18/18.
+   Expected: **17 suites / 277 tests**, roadmap 26, engine 10, doctor 18/18.
 
 ## Key building blocks (Milestone 4)
 - Decision entrypoints: `decide(moduleResults, context, config?)` (fixed-vector)
@@ -103,7 +103,7 @@ regression test added first, the smallest possible fix, and all accepted tests
 still passing.
 
 ## Do NOT
-- Do NOT begin Milestone 6 unless explicitly instructed.
+- Do NOT begin Milestone 7 unless explicitly instructed.
 - Do NOT implement the DB-002 migration or any persistence writes until DB-002 is
   approved. Do NOT alter the accepted **DB-001** migration (append a new migration only).
 - Do NOT recompute a locked historical prediction (locks are immutable historical truth;
@@ -116,13 +116,14 @@ still passing.
 - Introduce randomness, ML, network, balances, or target-sequence inputs.
 
 ## Next milestone scope (for the next agent)
-**Immediate = Milestone 6 (advanced statistics & export).** Milestone 5 is COMPLETE
-and accepted (M5A/M5B/M5C, DB-002). The only outstanding M5 item is environmental, not
-a code gap: **native SQLite/DB-002 runtime verification** on a physical Android build
-with an app restart (status A = `IMPLEMENTED_NOT_RUNTIME_VERIFIED`; the browser preview
-uses the AsyncStorage `MemorySessionStore` only). When building Milestone 6 keep
+**Immediate = Milestone 7 (final redesign/build & visual polish) — NOT STARTED.** Milestone 6
+is COMPLETE and accepted (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics; DB-002;
+NO DB-003; release-candidate tag `m06-data-management-rc1`). The only outstanding item is
+environmental, not a code gap: **native SQLite/DB-002 runtime verification** on a physical Android
+build with an app restart (status A = `IMPLEMENTED_NOT_RUNTIME_VERIFIED`; the browser preview
+uses the AsyncStorage `MemorySessionStore` only). When building Milestone 7 keep
 fixed-unit paper only (no Martingale/bet-sizing); do NOT alter DB-001/DB-002 migrations
-or the M1–M4 decision mathematics; keep the Historical Matcher DISABLED and Derived Road
+or the M1–M6 decision mathematics; keep the Historical Matcher DISABLED and Derived Road
 + Volatility SHADOW_ONLY.
 
 ## After your milestone

@@ -27,6 +27,9 @@ sync; **no prediction-engine changes**; **DB-002 sufficient — NO DB-003**.
   native-SQLite only (`WriteUnavailableError`; UI shows "Available on native SQLite runtime").
 - **Native status:** IMPLEMENTED_NOT_RUNTIME_VERIFIED (transactional Merge/Restore covered by
   sql.js Jest; not run on a physical Android build+restart).
+- **Verification (Milestone 6 final acceptance):** typecheck PASS · lint **0 errors / 0 warnings** ·
+  `npm test` → **17 suites / 277 tests** (M6 adds `statistics` 9 · `backup-export` 17 · `backup-restore` 3) ·
+  `test:roadmap` 26 · `test:engine` 10 · `expo-doctor` 18/18 · package-lock + DB-001/DB-002 schema UNCHANGED.
 **Milestone 7: NOT STARTED.**
 **Milestone 5 built the live/historical session engine** (pure domain): manual
 one-result-at-a-time workflow, prediction **locking** (immutable), result
@@ -169,7 +172,7 @@ serialize/restart reconstruction. Predictions are locked BEFORE their result
 - No future result may enter a snapshot (predictions are computed only from
   completed rounds before the target). No advanced statistics/export (Milestone 6).
 
-## Verification (this milestone)
+## Verification (Milestone 5)
 - `npm run typecheck` → pass · `npm run lint` → pass (**0 errors / 0 warnings**)
 - `npm test` → **14 suites, 248 tests**. Final acceptance adds `input-safety.test.ts` **×6** (DuplicateInputGuard: first tap accepted, accidental rapid second/burst rejected, deliberate tap after the re-arm window accepted, `reset()` re-arms, and normal seconds-apart entry never blocked). M5C continuation earlier added: `session-workflow.test.ts` 12→**22**, `session-persistence.test.ts` 17→**18**, `session-factory.test.ts` **×3**.
   Per-file: smoke 6 · engine 10 · roadmap 26 · database 15 · history 22 · analysis 28 · reliability 13 · decision 18 · decision-audit 17 · session 44 · session-persistence 18 · session-workflow 22 · session-factory 3 · input-safety 6.
