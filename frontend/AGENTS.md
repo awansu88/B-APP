@@ -2,7 +2,7 @@
 
 **Project:** B-APP Baccarat Engine
 **Repository root:** `/app/frontend`
-**Status:** Milestone 6 (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics) — **COMPLETE** (final acceptance audit PASSED; release-candidate tag `m06-data-management-rc1`). **Completed milestone: 6.** **Next: Milestone 7 (final redesign/build & visual polish) — NOT STARTED.** **Database: DB-002 current** (DB-001 + DB-002 migrations unchanged; NO DB-003). Known limitation (accepted): native SQLite/DB-002 transactional Merge/Restore = **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (sql.js Jest + web-preview read-only; not run on a physical Android build+restart — do not claim physical Android verification). Do **not** begin Milestone 7, and do **not** modify the DB-001/DB-002 migrations or M1–M6 semantics.
+**Status:** Milestone 6 (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics) — **COMPLETE** (final acceptance audit PASSED; release-candidate tag `m06-data-management-rc1`). **Completed milestone: 6.** **Milestone 7 — M7A IMPLEMENTED (final UI/UX + regression QA + Android build readiness); READY FOR ANDROID BUILD / DEVICE QA. Milestone 7 is NOT COMPLETE — M7B (Android test build + physical-device + native SQLite restart/Merge/Restore verification + final release acceptance) is PENDING explicit authorization.** **Database: DB-002 current** (DB-001 + DB-002 migrations unchanged; NO DB-003). Known limitation (accepted): native SQLite/DB-002 transactional Merge/Restore = **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (sql.js Jest + web-preview read-only; not run on a physical Android build+restart — do not claim physical Android verification). Do **not** begin M7B without authorization, and do **not** modify the DB-001/DB-002 migrations or M1–M6 semantics.
 
 This file is LOCKED guidance. Read it fully before touching anything.
 
@@ -19,7 +19,7 @@ so statistics reuse the accepted M5 fixed-paper rule; three-win reuses
 screens. Web preview is READ-ONLY for destructive writes: Merge/Restore **apply** is
 native-SQLite only (throws `WriteUnavailableError`, UI labels "Available on native SQLite
 runtime"); Validate + Merge-preview are ZERO writes. Diagnostics are read-only (no
-auto-repair). **Milestone 7: NOT STARTED — do not begin it.**
+auto-repair). **Milestone 7 — M7A IMPLEMENTED (final UI/UX + regression QA + Android build readiness; see `docs/CURRENT_STATE.md`); M7B (Android build + physical-device + native SQLite restart/Merge/Restore verification + final release acceptance) NOT started — do not begin it without explicit authorization.**
 
 ## Read first, always
 - Read **all** documentation in `docs/` and this file **before modifying any code**.

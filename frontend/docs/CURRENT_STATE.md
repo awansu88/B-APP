@@ -1,6 +1,6 @@
 # Current State
 
-**Current milestone:** 6 — Statistics + Export/Import/Merge + Backup/Restore + Diagnostics. **Status: COMPLETE (final acceptance audit PASSED; release-candidate tag `m06-data-management-rc1`). Completed milestone: 6. Next: Milestone 7 (final redesign/build & visual polish) — NOT STARTED.**
+**Current milestone:** 7 — Final UI/UX, Release QA & Android build readiness. **M7A: IMPLEMENTED — READY FOR ANDROID BUILD / DEVICE QA.** Milestone 6 remains COMPLETE (release-candidate tag `m06-data-management-rc1`); completed milestone: 6. **Milestone 7 is NOT COMPLETE** — M7B (Android test build / APK, physical-device verification, native SQLite restart/Merge/Restore verification, final release acceptance) is PENDING explicit authorization.
 - **M5A (domain core): COMPLETE** — pure session engine (locking, evaluation, three-win tracker, revision invalidation, serialize/reconstruct).
 - **M5B (domain hardening + persistence): COMPLETE** — domain hardening plus DB-002 persistence (`session_state` cursor + `locked_prediction_entries` immutable lock payload; partial-unique index for one valid lock per shoe+target; revision linkage; lock-before-result + transactional submission; native SQLite/DB-002 + web AsyncStorage stores).
 - **M5C (live workflow / UI): COMPLETE** — Active Shoe wired to the persisted session via `useLiveSession` + `LiveSessionPanel`: Start Live / Start Historical Test, persisted **LOCKED** prediction display (decision / confidence-score / category / risk), PLAYED–NOT_PLAYED, actual **P/T/B routed to the store** (lock-before-result gated; no history append in a forward session), engine-vs-played progress + fixed-unit paper, **live-mode Review Data edit/delete via `SessionStore.editHistory`/`deleteHistory`** (invalidate + renumber + rebuild; raw-round views sourced from the authoritative live session), **native fail-safe** (`createSessionStore` throws `SessionPersistenceUnavailableError`, never a silent volatile downgrade), and a **live-only accidental double-tap guard** (`DuplicateInputGuard`, ~400ms re-arm) that never throttles History-Input bulk entry.
@@ -30,7 +30,33 @@ sync; **no prediction-engine changes**; **DB-002 sufficient — NO DB-003**.
 - **Verification (Milestone 6 final acceptance):** typecheck PASS · lint **0 errors / 0 warnings** ·
   `npm test` → **17 suites / 277 tests** (M6 adds `statistics` 9 · `backup-export` 17 · `backup-restore` 3) ·
   `test:roadmap` 26 · `test:engine` 10 · `expo-doctor` 18/18 · package-lock + DB-001/DB-002 schema UNCHANGED.
-**Milestone 7: NOT STARTED.**
+**Milestone 7 — M7A IMPLEMENTED (final UI/UX + release QA + Android build readiness).**
+- **Two former Milestone-0 placeholder routes are now REAL read-only screens:**
+  - **History** (`src/app/(shell)/history.tsx`): read-only Shoe History / Raw Records browser
+    over the accepted read-only dataset seam (`useBappData`) — shoe list (active shoe flagged),
+    selected shoe's raw rounds in deterministic `roundNumber` order (P/T/B chips + PP/BP tags),
+    empty/loading/error + web-preview banners. NO writes, NO edit/delete, NEVER recomputes
+    predictions (editing/revisions stay in Active Shoe → Review Data).
+  - **Settings** (`src/app/(shell)/settings.tsx`): read-only Settings / About / System Info —
+    Application (version, package, orientation, target device), Data & Persistence (DB-002 +
+    active adapter + offline model), and a SECONDARY Engine/System Status card (locked version
+    registry, analyzer modes with Historical Matcher DISABLED + Derived Road/Volatility
+    SHADOW_ONLY, thresholds). NO configuration controls.
+- **Active Shoe tablet-landscape polish (restrained; no redesign):** boards ScrollView content
+  `flexGrow:1`; `RoadmapBoards` groups Bead Plate + Big Road at the top and anchors the derived
+  roads at the bottom near the controls (single intentional gap, not a detached blank); cell sizes
+  bumped for readability (BEAD 26→30, BIG 24→28, DERIVED 15→18). P/T/B order + large touch targets,
+  roadmap ALGORITHMS/data, the 400ms live-only guard, and unthrottled History Input are ALL UNCHANGED.
+- **Verification:** typecheck PASS · lint 0/0 · **17 suites / 277 tests** (unchanged — UI-only additions;
+  no new tests required) · roadmap 26 · engine 10 · expo-doctor 18/18 · package-lock + DB-001/DB-002
+  UNCHANGED · NO DB-003. Frontend testing agent: M7A interaction matrix ALL PASS at 1280×800 (History/
+  Settings real read-only; Active Shoe + Statistics/Export/Diagnostics regression; zero console errors).
+- **Android config review:** landscape orientation, package `com.bapp.baccaratengine`, empty
+  `android.permissions` (offline app needs none), expo-sqlite plugin present, icons/splash present,
+  native adapter = SQLite/DB-002. **ANDROID_BUILD_READY = YES** (build itself is M7B).
+- **Native SQLite/DB-002 status UNCHANGED: IMPLEMENTED_NOT_RUNTIME_VERIFIED** (no physical Android
+  runtime evidence yet). **M7B NOT STARTED.**
+**Milestone 7: NOT COMPLETE (M7A only).**
 **Milestone 5 built the live/historical session engine** (pure domain): manual
 one-result-at-a-time workflow, prediction **locking** (immutable), result
 evaluation (WIN/LOSS/PUSH/SKIPPED/INVALIDATED), three-win tracker (engine +

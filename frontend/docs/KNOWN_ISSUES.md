@@ -1,5 +1,35 @@
 # Known Issues
 
+## Milestone 7A (IMPLEMENTED — final UI/UX + release QA + Android build readiness)
+
+### M7A-1. Native SQLite/DB-002 transactional Merge/Restore + restart still NOT runtime-verified
+Unchanged from M6: `applyMerge` / `restoreBackup` / session persistence are covered by in-memory
+sql.js Jest tests and web-preview read-only projection, but have NOT been run on a physical Android
+build+restart. Status remains **IMPLEMENTED_NOT_RUNTIME_VERIFIED**. **Action:** the M7B device QA
+checklist (Basic persistence / Revision / Backup-Restore / Merge — see `docs/HANDOFF.md`) must pass
+on a real Samsung Galaxy Tab S7 FE build before this is upgraded and Milestone 7 is marked COMPLETE.
+Do NOT claim physical Android verification without real device evidence.
+
+### M7A-2. History screen is a READ-ONLY browser (by design)
+The History route (`src/app/(shell)/history.tsx`) lists persisted shoes + the selected shoe's raw
+rounds (deterministic order) from the read-only dataset seam (`useBappData`). It intentionally has
+NO edit/delete and never recomputes historical predictions — all editing/revisions remain in
+Active Shoe → Review Data (accepted History Input / revision semantics unchanged). **Impact:** none.
+**Action:** none.
+
+### M7A-3. Settings screen is a READ-ONLY About / System Info (no engine controls)
+The Settings route (`src/app/(shell)/settings.tsx`) shows identity, version registry, DB-002, the
+active persistence adapter, the offline model and a secondary Engine/System Status card. There are
+NO controls to change analyzer modes, reliability, voting, confidence thresholds, risk rules, the
+Historical Matcher / Derived Road / Volatility modes or the database schema (all locked/versioned).
+**Impact:** none. **Action:** none.
+
+### M7A-4. `PlaceholderScreen` component is now orphaned (harmless)
+`src/ui/PlaceholderScreen.tsx` is no longer imported by any route (History and Settings replaced it).
+It is dead code kept in place; it is not bundled into any screen and not linted as an unused import.
+**Impact:** none. **Action:** optional removal in a later pass.
+
+
 ## Milestone 6 (COMPLETE — accepted; tag `m06-data-management-rc1`)
 
 ### M6-1. Native SQLite/DB-002 transactional Merge/Restore not runtime-verified

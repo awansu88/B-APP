@@ -1,5 +1,20 @@
 # Test Plan
 
+## Milestone 7A (Final UI/UX + Release QA + Android build readiness) — IMPLEMENTED
+**No new Jest suites** — M7A adds two READ-ONLY screens (History, Settings) and a restrained Active
+Shoe layout polish only; no accepted domain/engine behavior changed, so the regression baseline is
+UNCHANGED at **17 suites / 277 tests**. Gate re-run after the UI changes: typecheck PASS, lint 0/0,
+`npm test` 17/277, `test:roadmap` 26, `test:engine` 10, `expo-doctor` 18/18, package-lock + DB-001/
+DB-002 schema UNCHANGED, NO DB-003.
+**Frontend interaction matrix (testing agent, 1280×800 landscape) — ALL PASS:** History real read-only
+(empty + populated shoe list w/ ACTIVE badge + rounds in ascending order; no edit/delete; Refresh);
+Settings real read-only (Application / Data & Persistence DB-002 / Engine-System-Status; no config
+controls); Active Shoe regression (P/T/B order + large targets; 5 roadmaps render; PP/BP + pair mode;
+Start Live LOCKED panel + PLAYED/NOT_PLAYED; Review Data edit/delete); Statistics empty+populated;
+Export Full/History/Analysis + Validate + Merge Preview + web write-gating; Diagnostics read-only.
+Console clean (only the expected AsyncStorage web-preview diagnostic). **M7B device QA is pending
+(see `docs/HANDOFF.md`); native SQLite = IMPLEMENTED_NOT_RUNTIME_VERIFIED.**
+
 ## Milestone 6 suites (Statistics / Export-Import-Merge / Backup-Restore)
 **Milestone 6 status: COMPLETE** (final acceptance audit PASSED; tag `m06-data-management-rc1`). Next: Milestone 7 — NOT STARTED.
 - `src/tests/statistics.test.ts` (**9**) — pure `computeFullStatistics` with literal expected

@@ -1,7 +1,9 @@
 # Handoff
 
-**From:** Milestone 6 FINAL ACCEPTANCE AUDIT (PASSED — M6 COMPLETE; release-candidate tag `m06-data-management-rc1`).
-**To:** Next agent — Milestone 7 (final redesign/build & visual polish — NOT STARTED).
+**From:** Milestone 7A (Final UI/UX + Release QA + Android build readiness — IMPLEMENTED).
+**To:** Next agent — Milestone 7B (Android test build / APK, physical-device verification, native
+SQLite restart/Merge/Restore verification, final release acceptance) — NOT STARTED (needs explicit authorization).
+**Milestone 6:** COMPLETE (tag `m06-data-management-rc1`). **Milestone 7 is NOT COMPLETE** (M7A only).
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
@@ -103,7 +105,7 @@ regression test added first, the smallest possible fix, and all accepted tests
 still passing.
 
 ## Do NOT
-- Do NOT begin Milestone 7 unless explicitly instructed.
+- Do NOT begin Milestone 7B (Android build / device QA / final acceptance) unless explicitly instructed.
 - Do NOT implement the DB-002 migration or any persistence writes until DB-002 is
   approved. Do NOT alter the accepted **DB-001** migration (append a new migration only).
 - Do NOT recompute a locked historical prediction (locks are immutable historical truth;
@@ -116,14 +118,36 @@ still passing.
 - Introduce randomness, ML, network, balances, or target-sequence inputs.
 
 ## Next milestone scope (for the next agent)
-**Immediate = Milestone 7 (final redesign/build & visual polish) — NOT STARTED.** Milestone 6
-is COMPLETE and accepted (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics; DB-002;
-NO DB-003; release-candidate tag `m06-data-management-rc1`). The only outstanding item is
-environmental, not a code gap: **native SQLite/DB-002 runtime verification** on a physical Android
-build with an app restart (status A = `IMPLEMENTED_NOT_RUNTIME_VERIFIED`; the browser preview
-uses the AsyncStorage `MemorySessionStore` only). When building Milestone 7 keep
-fixed-unit paper only (no Martingale/bet-sizing); do NOT alter DB-001/DB-002 migrations
-or the M1–M6 decision mathematics; keep the Historical Matcher DISABLED and Derived Road
+**Immediate = Milestone 7B (Android test build + physical-device + native SQLite verification +
+final release acceptance) — NOT STARTED; needs explicit authorization.**
+
+**Milestone 7A is IMPLEMENTED and accepted** (final UI/UX + release QA + Android build readiness):
+- Two former Milestone-0 placeholder routes are now REAL read-only screens — **History**
+  (`src/app/(shell)/history.tsx`, read-only Shoe History / Raw Records browser over `useBappData`)
+  and **Settings** (`src/app/(shell)/settings.tsx`, read-only Settings/About/System Info). No writes,
+  no edit/delete, no config controls; editing/revisions stay in Active Shoe → Review Data.
+- Restrained Active Shoe tablet-landscape polish (`index.tsx` + `src/ui/roadmap/RoadmapBoards.tsx`):
+  better vertical distribution (Bead+Big grouped top, derived roads anchored bottom) + modestly larger
+  roadmap cells. Roadmap algorithms/data, P/T/B order, large touch targets, the 400ms live-only guard,
+  and unthrottled History Input are all UNCHANGED.
+- Gate green: typecheck PASS, lint 0/0, **17 suites / 277 tests** (UI-only; no new tests), roadmap 26,
+  engine 10, expo-doctor 18/18, package-lock + DB-001/DB-002 UNCHANGED, NO DB-003. Frontend testing
+  agent: M7A interaction matrix ALL PASS at 1280×800.
+
+**M7B device QA checklist (run on a physical Samsung Galaxy Tab S7 FE, landscape, from a real Android build):**
+- **A. Basic persistence:** create shoe → enter rounds → create/persist a lock → kill app → reopen →
+  verify the exact shoe/round/lock state restores from on-device SQLite/DB-002.
+- **B. Revision:** edit a round → revision created → affected prediction INVALIDATED → restart →
+  verify the revision + invalidation persist.
+- **C. Backup/Restore:** representative data → Full Backup → Restore through native SQLite → restart →
+  verify rounds/revisions/locks/invalidation, roadmap, engine sequence, played sequence, paper reconstruct.
+- **D. Merge:** prepare an independent compatible dataset → Validate → Merge → restart → verify both
+  datasets present, no orphan records, no duplicate valid locks.
+- Only after this passes on a real device may `IMPLEMENTED_NOT_RUNTIME_VERIFIED` be upgraded and
+  Milestone 7 be marked COMPLETE. Do NOT claim physical Android verification without real device evidence.
+
+When doing M7B keep fixed-unit paper only (no Martingale/bet-sizing); do NOT alter DB-001/DB-002
+migrations or the M1–M6 decision mathematics; keep the Historical Matcher DISABLED and Derived Road
 + Volatility SHADOW_ONLY.
 
 ## After your milestone

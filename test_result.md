@@ -272,15 +272,14 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "M7A History screen (read-only Shoe History / Raw Records browser)"
-    - "M7A Settings screen (read-only Settings / About / System Info)"
-    - "M7A Active Shoe tablet-landscape polish (roadmap vertical distribution)"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
+    -agent: "testing"
+    -message: "M7A UI/UX VALIDATION COMPLETE (1280x800 landscape). ALL PASS. History and Settings are now REAL read-only screens (NO 'Milestone 0 placeholder' badge anywhere). History: header + read-only banner, empty 'No shoes yet', populated shoe list with ACTIVE badge + 10 raw rounds in ascending order, NO edit/delete, Refresh OK. Settings: read-only Application (0.1.0, com.bapp.baccaratengine), Data & Persistence (DB-002 + adapter), Engine/System Status (version registry; Historical Matcher DISABLED; Derived Road + Volatility SHADOW_ONLY; warm-up 8; max confidence 0.75); NO editable controls. Active Shoe polish: P/T/B order + large touch targets preserved, all 5 roadmaps render (Bead+Big top, derived bottom), no clipping/overflow, PP/BP + Partial/Complete OK, Start Live enables after 8 non-Tie, LOCKED live panel + PLAYED/NOT_PLAYED, Review Data edit/delete OK. Statistics/Export/Diagnostics regression PASS (web write-gating: Apply Merge + Restore DISABLED with native-only note). Console: zero errors/rejections/React-key warnings (only expected AsyncStorage web diagnostic). 15 screenshots captured. Production-ready for web preview; native SQLite runtime NOT verified from a browser."
     -agent: "main"
     -message: "MILESTONE 7A UI/UX: Two former Milestone-0 placeholder routes are now REAL read-only screens, plus a restrained Active Shoe tablet-landscape polish. Please run an interaction-level validation at 1280x800 landscape (Samsung Tab S7 FE target). FOCUS: (1) HISTORY (/history): renders header + read-only banner; empty state 'No shoes yet' when no data; after entering rounds in Active Shoe and navigating via the left nav to History, the shoe list shows the shoe (ACTIVE badge) and Raw Round Records shows rounds in ascending #order with P/T/B colored chips; NO edit/delete controls exist here; Refresh works. (2) SETTINGS (/settings): renders Application, Data & Persistence (DB-002, adapter), and a secondary Engine/System Status card (version registry; Historical Matcher DISABLED; Derived Road + Volatility SHADOW_ONLY; warm-up 8; max confidence 0.75); read-only, NO config controls. (3) ACTIVE SHOE regression: enter P/T/B rounds (order Player/Tie/Banker), roadmaps render (Bead Plate + Big Road top, derived roads bottom), latest results visible, no clipping/horizontal collision, buttons still large/tappable; PP/BP + Partial/Complete work; Start Live enables after 8 non-Tie; live LOCKED panel + PLAYED/NOT_PLAYED + TIE=>PUSH; live rapid double-tap adds exactly ONE round (400ms guard) while History-Input rapid entry is NOT throttled; Review Data edit/delete; New Shoe resets. (4) STATISTICS empty + populated; (5) EXPORT Full/History/Analysis + Validate + Merge Preview + web destructive-write gating (Apply Merge / Restore DISABLED with 'Available on native SQLite runtime'); (6) DIAGNOSTICS read-only integrity + versions. Report any console errors / unhandled rejections / React key warnings (the AsyncStorage web-preview diagnostic is expected). This is web-preview (MemorySessionStore); native SQLite runtime is NOT verified from a browser."
     -agent: "main"

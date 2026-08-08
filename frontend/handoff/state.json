@@ -6,8 +6,34 @@
   "trackedBackendFiles": [],
   "completedMilestone": 6,
   "currentMilestone": 7,
-  "milestoneName": "Milestone 7 — Final redesign/build & visual polish",
-  "status": "NOT_STARTED",
+  "milestoneName": "Milestone 7 — Final UI/UX, Release QA & Android build readiness",
+  "status": "M7A_IMPLEMENTED_READY_FOR_ANDROID_BUILD_DEVICE_QA",
+  "milestone7NotComplete": true,
+  "milestone7a": {
+    "status": "IMPLEMENTED",
+    "scope": ["Final UI/UX consistency", "Tablet-landscape polish", "Regression QA", "Android build readiness review", "M7B device QA plan"],
+    "placeholderScreensResolved": {
+      "history": "src/app/(shell)/history.tsx — REAL read-only Shoe History / Raw Records browser over useBappData (shoe list + deterministic raw rounds; no edit/delete; never recomputes predictions; editing stays in Active Shoe → Review Data)",
+      "settings": "src/app/(shell)/settings.tsx — REAL read-only Settings/About/System Info (identity, version registry, DB-002, adapter, offline model, secondary Engine/System Status; NO config controls)"
+    },
+    "activeShoePolish": "src/app/(shell)/index.tsx + src/ui/roadmap/RoadmapBoards.tsx — boards content flexGrow:1; Bead+Big grouped top, derived roads anchored bottom; cell sizes BEAD 26->30 / BIG 24->28 / DERIVED 15->18. Roadmap algorithms/data, P/T/B order, large touch targets, 400ms live-only guard, unthrottled History Input ALL UNCHANGED.",
+    "filesChanged": ["src/app/(shell)/history.tsx", "src/app/(shell)/settings.tsx", "src/app/(shell)/index.tsx", "src/ui/roadmap/RoadmapBoards.tsx"],
+    "newTests": 0,
+    "androidBuildReady": true,
+    "androidConfigReview": "orientation landscape; package com.bapp.baccaratengine; android.permissions [] (offline app needs none); expo-sqlite plugin present; icons/adaptive-icon/splash/favicon present; native adapter = SQLite/DB-002; newArchEnabled true. No blockers.",
+    "frontendMatrix": "testing agent ALL PASS at 1280x800 (History/Settings real read-only; Active Shoe + Statistics/Export/Diagnostics regression; zero console errors)",
+    "nativeSqliteStatus": "IMPLEMENTED_NOT_RUNTIME_VERIFIED (unchanged; no physical Android runtime evidence yet)"
+  },
+  "milestone7b": {
+    "status": "NOT_STARTED",
+    "requiresExplicitAuthorization": true,
+    "deviceQaChecklist": [
+      "A. Basic persistence: create shoe -> enter rounds -> persist lock -> kill app -> reopen -> verify exact shoe/round/lock state",
+      "B. Revision: edit round -> revision created -> prediction invalidated -> restart -> verify persistence",
+      "C. Backup/Restore: Full Backup -> native SQLite Restore -> restart -> verify rounds/revisions/locks/invalidation + roadmap + engine sequence + played sequence + paper reconstruction",
+      "D. Merge: independent compatible dataset -> Validate -> Merge -> restart -> verify both datasets, no orphans, no duplicate valid locks"
+    ]
+  },
   "milestone6Status": "COMPLETE",
   "milestone6AcceptanceTag": "m06-data-management-rc1",
   "milestone5SubStatus": {
@@ -183,7 +209,7 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 7 (final redesign/build & visual polish) — NOT STARTED. Milestone 6 (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics) is COMPLETE and accepted (release-candidate tag m06-data-management-rc1; DB-002; NO DB-003). Known limitation (accepted, not a code gap): native SQLite/DB-002 transactional Merge/Restore = IMPLEMENTED_NOT_RUNTIME_VERIFIED (covered by sql.js Jest + web-preview read-only; not yet run on a physical Android build+restart — do NOT claim physical Android verification). Do NOT alter DB-001/DB-002 migrations, M1-M6 semantics, RELPRIOR-001/VOTE-001/CONF-001/RISK-001/DECISION-001; keep Historical Matcher DISABLED and Derived Road + Volatility SHADOW_ONLY; fixed-unit paper only (no Martingale/bet-sizing).",
+  "nextMilestone": "Milestone 7B (Android test build/APK + physical-device verification + native SQLite restart/Merge/Restore verification + final release acceptance) — NOT STARTED; needs explicit authorization. Milestone 7A (final UI/UX + release QA + Android build readiness) is IMPLEMENTED; Milestone 7 is NOT COMPLETE. Milestone 6 remains COMPLETE (tag m06-data-management-rc1; DB-002; NO DB-003). Known limitation (accepted, not a code gap): native SQLite/DB-002 transactional Merge/Restore + restart = IMPLEMENTED_NOT_RUNTIME_VERIFIED (sql.js Jest + web-preview read-only; not yet run on a physical Android build+restart — do NOT claim physical Android verification). Do NOT alter DB-001/DB-002 migrations, M1-M6 semantics, RELPRIOR-001/VOTE-001/CONF-001/RISK-001/DECISION-001; keep Historical Matcher DISABLED and Derived Road + Volatility SHADOW_ONLY; fixed-unit paper only (no Martingale/bet-sizing).",
   "milestone6": {
     "status": "COMPLETE",
     "acceptanceTag": "m06-data-management-rc1",
