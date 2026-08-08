@@ -229,5 +229,5 @@ const styles = StyleSheet.create({
   },
   retryText: { color: colors.accent, fontSize: 13, fontWeight: "700" },
   boardsScroll: { flex: 1 },
-  boardsContent: { paddingBottom: spacing.md },
+  boardsContent: { flexGrow: 1, paddingBottom: spacing.md },
 });

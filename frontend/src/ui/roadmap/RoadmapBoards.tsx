@@ -12,9 +12,9 @@ import { Winner } from '@/src/domain/models/outcome';
 import { colors, radius, spacing } from '../theme';
 
 const ROWS = 6;
-const BEAD = 26;
-const BIG = 24;
-const DERIVED = 15;
+const BEAD = 30;
+const BIG = 28;
+const DERIVED = 18;
 
 const hexForColor = (c: RoadmapColor): string => {
   switch (c) {
@@ -203,23 +203,29 @@ DerivedBoard.displayName = 'DerivedBoard';
 export const RoadmapBoards = memo(({ roadmap }: { roadmap: RoadmapResult }) => {
   return (
     <View style={styles.container} testID="roadmap-boards">
-      <BeadPlateBoard cells={roadmap.beadPlate} />
-      <BigRoadBoard cells={roadmap.bigRoad} />
-      <View style={styles.derivedRow}>
-        <DerivedBoard title="Big Eye Boy" cells={roadmap.bigEyeBoy} testID="board-big-eye-boy" />
-        <DerivedBoard title="Small Road" cells={roadmap.smallRoad} testID="board-small-road" />
-        <DerivedBoard title="Cockroach Pig" cells={roadmap.cockroachPig} testID="board-cockroach-pig" />
+      <View style={styles.topGroup}>
+        <BeadPlateBoard cells={roadmap.beadPlate} />
+        <BigRoadBoard cells={roadmap.bigRoad} />
       </View>
-      {roadmap.leadingTieCount > 0 ? (
-        <Text style={styles.leadingTie}>Leading ties: {roadmap.leadingTieCount}</Text>
-      ) : null}
+      <View style={styles.bottomGroup}>
+        <View style={styles.derivedRow}>
+          <DerivedBoard title="Big Eye Boy" cells={roadmap.bigEyeBoy} testID="board-big-eye-boy" />
+          <DerivedBoard title="Small Road" cells={roadmap.smallRoad} testID="board-small-road" />
+          <DerivedBoard title="Cockroach Pig" cells={roadmap.cockroachPig} testID="board-cockroach-pig" />
+        </View>
+        {roadmap.leadingTieCount > 0 ? (
+          <Text style={styles.leadingTie}>Leading ties: {roadmap.leadingTieCount}</Text>
+        ) : null}
+      </View>
     </View>
   );
 });
 RoadmapBoards.displayName = 'RoadmapBoards';
 
 const styles = StyleSheet.create({
-  container: { gap: spacing.sm },
+  container: { flex: 1, gap: spacing.sm, justifyContent: 'space-between' },
+  topGroup: { gap: spacing.sm },
+  bottomGroup: { gap: spacing.xs },
   derivedRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   board: {
     backgroundColor: colors.surface,
