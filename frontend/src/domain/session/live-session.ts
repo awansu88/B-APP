@@ -69,8 +69,14 @@ const pending = (prediction: LockedPrediction): PredictionEntry => ({
   invalidated: false,
 });
 
-/** Fixed-unit paper accounting for a single PLAYED, resolved step. */
-function applyPaper(paper: PaperTracking, result: StepResult): PaperTracking {
+/**
+ * Fixed-unit paper accounting for a single PLAYED, resolved step.
+ *
+ * Exported (visibility only — behavior unchanged) so the Milestone-6 statistics
+ * layer can reconstruct fixed-unit paper P/L using the EXACT accepted Milestone-5
+ * rule instead of re-implementing it (Project Principle: single source of truth).
+ */
+export function applyPaper(paper: PaperTracking, result: StepResult): PaperTracking {
   switch (result) {
     case StepResult.WIN:
       return { ...paper, unitsStaked: paper.unitsStaked + 1, netUnits: paper.netUnits + 1, wins: paper.wins + 1 };
