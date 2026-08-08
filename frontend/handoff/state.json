@@ -4,10 +4,12 @@
   "mobileProjectRoot": "/app/frontend",
   "backendInRepository": false,
   "trackedBackendFiles": [],
-  "completedMilestone": 5,
-  "currentMilestone": 6,
-  "milestoneName": "Statistics + Export/Import/Merge + Backup/Restore + Diagnostics",
-  "status": "IMPLEMENTED_READY_FOR_FINAL_ACCEPTANCE_AUDIT",
+  "completedMilestone": 6,
+  "currentMilestone": 7,
+  "milestoneName": "Milestone 7 — Final redesign/build & visual polish",
+  "status": "NOT_STARTED",
+  "milestone6Status": "COMPLETE",
+  "milestone6AcceptanceTag": "m06-data-management-rc1",
   "milestone5SubStatus": {
     "M5A_domainCore": "COMPLETE",
     "M5B_domainHardening": "COMPLETE",
@@ -181,9 +183,11 @@
       "Clear Shoe confirmation dialog"
     ]
   },
-  "nextMilestone": "Milestone 7 (final redesign/build & visual polish) — NOT STARTED. Milestone 6 is IMPLEMENTED and READY FOR FINAL ACCEPTANCE AUDIT (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics; DB-002 sufficient, NO DB-003). Remaining M6 items are an environmental verification, not code gaps: native SQLite/DB-002 transactional Merge/Restore confirmed only via sql.js Jest + web-preview read-only; not yet run on a physical Android build+restart (status A). Do NOT alter DB-001/DB-002 migrations, M1-M4 decision mathematics, RELPRIOR-001/VOTE-001/CONF-001/RISK-001/DECISION-001; keep Historical Matcher DISABLED and Derived Road + Volatility SHADOW_ONLY; fixed-unit paper only (no Martingale/bet-sizing).",
+  "nextMilestone": "Milestone 7 (final redesign/build & visual polish) — NOT STARTED. Milestone 6 (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics) is COMPLETE and accepted (release-candidate tag m06-data-management-rc1; DB-002; NO DB-003). Known limitation (accepted, not a code gap): native SQLite/DB-002 transactional Merge/Restore = IMPLEMENTED_NOT_RUNTIME_VERIFIED (covered by sql.js Jest + web-preview read-only; not yet run on a physical Android build+restart — do NOT claim physical Android verification). Do NOT alter DB-001/DB-002 migrations, M1-M6 semantics, RELPRIOR-001/VOTE-001/CONF-001/RISK-001/DECISION-001; keep Historical Matcher DISABLED and Derived Road + Volatility SHADOW_ONLY; fixed-unit paper only (no Martingale/bet-sizing).",
   "milestone6": {
-    "status": "IMPLEMENTED_READY_FOR_FINAL_ACCEPTANCE_AUDIT",
+    "status": "COMPLETE",
+    "acceptanceTag": "m06-data-management-rc1",
+    "finalAcceptanceAudit": "PASS (engineering): 17 suites / 277 tests, typecheck PASS, lint 0/0, roadmap 26, engine 10, expo-doctor 18/18, package-lock + DB-001/DB-002 schema UNCHANGED, no DB-003.",
     "localFirst": true,
     "cloudSync": false,
     "predictionEngineChanged": false,

@@ -1,11 +1,12 @@
 # Handoff
 
-**From:** Milestone 6 implementation (IMPLEMENTED — READY FOR FINAL ACCEPTANCE AUDIT).
-**To:** Auditor for Milestone 6 final acceptance, then Milestone 7 (final redesign/build & visual polish — NOT STARTED).
+**From:** Milestone 6 FINAL ACCEPTANCE AUDIT (PASSED — M6 COMPLETE; release-candidate tag `m06-data-management-rc1`).
+**To:** Next agent — Milestone 7 (final redesign/build & visual polish — NOT STARTED).
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
 ## Milestone 6 (this handoff)
+- **Status:** **COMPLETE** — final acceptance audit PASSED (release-candidate tag `m06-data-management-rc1`). Completed milestone: **6**. Next: **Milestone 7 — NOT STARTED**.
 - **Scope:** Statistics + Export/Import/Merge + Backup/Restore + Recovery/Diagnostics. Local-first; no cloud sync; **no prediction-engine changes**.
 - **DB decision:** **DB-002 sufficient — NO DB-003.** Everything is derived/serialized from existing authoritative records (raw rounds + revisions = DB-001; locked_prediction_entries + session_state = DB-002). Only visibility change: `applyPaper` is now `export` in `live-session.ts` (behaviour unchanged).
 - **Web policy (approved b):** Statistics/Export/Validate/Merge-preview/Diagnostics enabled on web preview (validate + preview ZERO writes); actual Merge/Restore **writes** are native-SQLite only (`WriteUnavailableError` → UI "Available on native SQLite runtime").

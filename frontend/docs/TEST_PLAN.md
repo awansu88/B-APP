@@ -1,6 +1,7 @@
 # Test Plan
 
 ## Milestone 6 suites (Statistics / Export-Import-Merge / Backup-Restore)
+**Milestone 6 status: COMPLETE** (final acceptance audit PASSED; tag `m06-data-management-rc1`). Next: Milestone 7 — NOT STARTED.
 - `src/tests/statistics.test.ts` (**9**) — pure `computeFullStatistics` with literal expected
   values: empty data; winner counts across raw rounds; decision + WIN/LOSS/PUSH/SKIPPED
   classification with invalidated exclusion; confidence-category buckets (Experimental/Qualified/

@@ -2,13 +2,13 @@
 
 **Project:** B-APP Baccarat Engine
 **Repository root:** `/app/frontend`
-**Status:** Milestone 5 (Live Workflow & Session Tracker) — **COMPLETE** (accepted final acceptance audit). M5A (domain core) COMPLETE; M5B (domain hardening + persistence) COMPLETE — DB-002 persistent locked session; M5C (live workflow/UI) COMPLETE — Active Shoe wired to the persisted session (`use-live-session.ts` + `LiveSessionPanel.tsx`), live-mode Review Data edit/delete routed through `SessionStore.editHistory`/`deleteHistory`, native fail-safe persistence (`SessionPersistenceUnavailableError`; no silent volatile downgrade), and a live-only accidental double-tap guard (`DuplicateInputGuard`). **Next: Milestone 6 (advanced statistics & export) — NOT STARTED.** **Database: DB-002 current** (DB-001 is a historical accepted migration, unchanged; M5 added only the accepted additive DB-002). Only remaining M5 item is environmental: native SQLite/DB-002 runtime verification on a physical Android build (status A). Do **not** begin Milestone 6, and do **not** modify the DB-001/DB-002 migrations.
+**Status:** Milestone 6 (Statistics + Export/Import/Merge + Backup/Restore + Diagnostics) — **COMPLETE** (final acceptance audit PASSED; release-candidate tag `m06-data-management-rc1`). **Completed milestone: 6.** **Next: Milestone 7 (final redesign/build & visual polish) — NOT STARTED.** **Database: DB-002 current** (DB-001 + DB-002 migrations unchanged; NO DB-003). Known limitation (accepted): native SQLite/DB-002 transactional Merge/Restore = **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (sql.js Jest + web-preview read-only; not run on a physical Android build+restart — do not claim physical Android verification). Do **not** begin Milestone 7, and do **not** modify the DB-001/DB-002 migrations or M1–M6 semantics.
 
 This file is LOCKED guidance. Read it fully before touching anything.
 
-## Milestone 6 status (IMPLEMENTED — READY FOR FINAL ACCEPTANCE AUDIT)
+## Milestone 6 status (COMPLETE — final acceptance audit PASSED)
 Milestone 6 (**Statistics + Export/Import/Merge + Backup/Restore + Diagnostics**)
-is **IMPLEMENTED** and awaiting final acceptance audit — **not yet final COMPLETE**.
+is **COMPLETE** and accepted (release-candidate tag `m06-data-management-rc1`).
 Local-first, no cloud sync, **no prediction-engine changes**. **DB-002 is sufficient —
 NO DB-003 was created.** The only visibility change to accepted code was making
 `applyPaper` `export` in `src/domain/session/live-session.ts` (behaviour UNCHANGED)

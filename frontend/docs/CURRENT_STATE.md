@@ -1,12 +1,12 @@
 # Current State
 
-**Current milestone:** 5 — Live Workflow & Session Tracker. **Status: COMPLETE (final acceptance audit accepted). Next: Milestone 6 — NOT STARTED.**
+**Current milestone:** 6 — Statistics + Export/Import/Merge + Backup/Restore + Diagnostics. **Status: COMPLETE (final acceptance audit PASSED; release-candidate tag `m06-data-management-rc1`). Completed milestone: 6. Next: Milestone 7 (final redesign/build & visual polish) — NOT STARTED.**
 - **M5A (domain core): COMPLETE** — pure session engine (locking, evaluation, three-win tracker, revision invalidation, serialize/reconstruct).
 - **M5B (domain hardening + persistence): COMPLETE** — domain hardening plus DB-002 persistence (`session_state` cursor + `locked_prediction_entries` immutable lock payload; partial-unique index for one valid lock per shoe+target; revision linkage; lock-before-result + transactional submission; native SQLite/DB-002 + web AsyncStorage stores).
 - **M5C (live workflow / UI): COMPLETE** — Active Shoe wired to the persisted session via `useLiveSession` + `LiveSessionPanel`: Start Live / Start Historical Test, persisted **LOCKED** prediction display (decision / confidence-score / category / risk), PLAYED–NOT_PLAYED, actual **P/T/B routed to the store** (lock-before-result gated; no history append in a forward session), engine-vs-played progress + fixed-unit paper, **live-mode Review Data edit/delete via `SessionStore.editHistory`/`deleteHistory`** (invalidate + renumber + rebuild; raw-round views sourced from the authoritative live session), **native fail-safe** (`createSessionStore` throws `SessionPersistenceUnavailableError`, never a silent volatile downgrade), and a **live-only accidental double-tap guard** (`DuplicateInputGuard`, ~400ms re-arm) that never throttles History-Input bulk entry.
 - **Native persistence status: A. IMPLEMENTED_NOT_RUNTIME_VERIFIED** — SQLite/DB-002 path implemented + covered by sql.js + fail-safe factory tests; not yet run on a physical Android device/restart (recorded known limitation, not a code blocker).
 - **Database:** **DB-002 current** (additive, forward-only). **DB-001** unchanged. DB-002 schema **unchanged** in the final audit.
-**Milestone 6: IMPLEMENTED — READY FOR FINAL ACCEPTANCE AUDIT** (not yet final COMPLETE).
+**Milestone 6: COMPLETE — final acceptance audit PASSED** (release-candidate tag `m06-data-management-rc1`).
 Statistics + Export/Import/Merge + Backup/Restore + Diagnostics. Local-first; no cloud
 sync; **no prediction-engine changes**; **DB-002 sufficient — NO DB-003**.
 - **Statistics** (`src/domain/statistics/*`): pure `computeFullStatistics(BappDataset)` →

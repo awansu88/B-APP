@@ -1,14 +1,15 @@
 # Known Issues
 
-## Milestone 6
+## Milestone 6 (COMPLETE — accepted; tag `m06-data-management-rc1`)
 
 ### M6-1. Native SQLite/DB-002 transactional Merge/Restore not runtime-verified
 `applyMerge` and `restoreBackup` (`src/data/backup/sqlite-gateway.ts`) are covered by
 in-memory **sql.js** Jest tests (independent-shoe merge, unsafe-plan rejection, rollback on
 mid-transaction failure, full backup→restore→compare, roadmap/sequence/paper reconstruction,
-restore rollback). They are **not yet run on a physical Android build+restart** (status A —
-IMPLEMENTED_NOT_RUNTIME_VERIFIED). **Impact:** none for web preview; native confirmation is a
-final-acceptance environmental step. **Action:** verify on device during the M6 acceptance audit.
+restore rollback). They are **not yet run on a physical Android build+restart** — status
+**IMPLEMENTED_NOT_RUNTIME_VERIFIED** (do NOT claim physical Android verification). **Impact:**
+none for web preview; this is an **accepted known limitation** carried past M6 acceptance.
+**Action:** verify on a physical Android build+restart during Milestone 7 device bring-up.
 
 ### M6-2. Web preview cannot perform destructive Merge/Restore writes (by design)
 Per the approved web policy (option b), the web-preview data source is READ-ONLY for writes:
