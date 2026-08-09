@@ -174,6 +174,14 @@ export interface LockedPrediction {
    * reported as NOT_AVAILABLE. Never regenerated from a later/larger corpus.
    */
   readonly matcherAudit?: MatcherAudit;
+  /**
+   * M7.1 Patch 4 — immutable per-shoe Balanced Threshold-Lab config (BALCFG-001).
+   * Present on EVERY Patch-4 lock regardless of the selected official profile,
+   * so the shoe's Balanced threshold is recoverable even under STRICT. Absent on
+   * pre-Patch-4 payloads (legacy shoes) — never inferred retroactively.
+   */
+  readonly balancedConfigVersion?: string;
+  readonly balancedThreshold?: number;
 }
 
 /** A prediction plus its (eventual) evaluation — the audit trail entry. */

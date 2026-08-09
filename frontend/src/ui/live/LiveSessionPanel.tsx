@@ -157,6 +157,11 @@ export function LiveSessionPanel({
         >
           {prefs.engineMode === 'BALANCED' ? 'BALANCED — EXPERIMENTAL' : 'STRICT'}
         </Text>
+        {prefs.engineMode === 'BALANCED' && typeof prediction.balancedThreshold === 'number' ? (
+          <Text style={styles.thresholdBadge} testID="live-threshold">
+            Threshold {prediction.balancedThreshold.toFixed(2)} LOCKED
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.recommendRow}>
@@ -504,4 +509,14 @@ const styles = StyleSheet.create({
   matcherDetailRow: { flexDirection: 'row', justifyContent: 'space-between' },
   matcherDetailKey: { color: colors.textMuted, fontSize: 11 },
   matcherDetailVal: { color: colors.textPrimary, fontSize: 11, fontWeight: '700' },
+  thresholdBadge: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
 });

@@ -26,16 +26,20 @@ describe('Patch 2 · engine-mode preference (section 17)', () => {
     jest.resetModules();
   });
 
-  it('default profile is STRICT and there is NO numeric-tuning surface', async () => {
+  it('default profile is STRICT; only the bounded Balanced threshold preset is numeric', async () => {
     const prefs = await import('@/src/workflows/preferences');
     expect(prefs.getEngineMode()).toBe('STRICT');
     expect(prefs.DEFAULT_PREFERENCES.engineMode).toBe('STRICT');
-    // Only presentation booleans + the versioned engineMode string — no numbers.
+    // Presentation booleans + versioned engineMode + the M7.1 Patch-4 Balanced
+    // threshold PRESET (bounded 0.55/0.54/0.53/0.52 — not an arbitrary knob).
     expect(Object.keys(prefs.DEFAULT_PREFERENCES).sort()).toEqual(
-      ['engineMode', 'showDecisionComparison', 'showDirectionalLean'].sort(),
+      ['engineMode', 'nextBalancedThreshold', 'showDecisionComparison', 'showDirectionalLean'].sort(),
     );
     expect(typeof prefs.DEFAULT_PREFERENCES.showDirectionalLean).toBe('boolean');
     expect(typeof prefs.DEFAULT_PREFERENCES.showDecisionComparison).toBe('boolean');
+    // The only numeric preference is a fixed preset (default 0.53), never free-form.
+    expect(prefs.DEFAULT_PREFERENCES.nextBalancedThreshold).toBe(0.53);
+    expect([0.55, 0.54, 0.53, 0.52]).toContain(prefs.DEFAULT_PREFERENCES.nextBalancedThreshold);
   });
 
   it('the preference can select BALANCED and persists the write', async () => {
@@ -72,5 +76,36 @@ describe('Patch 2 · engine-mode preference (section 17)', () => {
     const prefs = await import('@/src/workflows/preferences');
     await flush();
     expect(prefs.getEngineMode()).toBe('STRICT');
+  });
+
+  // ---- M7.1 Patch 4 — Next-Shoe Balanced threshold preference ----
+  it('Next-Shoe threshold defaults to 0.53 and persists a bounded preset write', async () => {
+    const prefs = await import('@/src/workflows/preferences');
+    expect(prefs.getNextBalancedThreshold()).toBe(0.53);
+    prefs.setNextBalancedThreshold(0.52);
+    expect(prefs.getNextBalancedThreshold()).toBe(0.52);
+    await flush();
+    expect(mockStore['bapp.pref.nextBalancedThreshold']).toBe(0.52);
+    // it does NOT touch the engine mode (profile selection is independent)
+    expect(prefs.getEngineMode()).toBe('STRICT');
+  });
+
+  it('Next-Shoe threshold rehydrates SEPARATELY from engine mode after reload', async () => {
+    const first = await import('@/src/workflows/preferences');
+    first.setNextBalancedThreshold(0.54);
+    first.setEngineMode('BALANCED');
+    await flush();
+    jest.resetModules();
+    const reloaded = await import('@/src/workflows/preferences');
+    await flush();
+    expect(reloaded.getNextBalancedThreshold()).toBe(0.54);
+    expect(reloaded.getEngineMode()).toBe('BALANCED');
+  });
+
+  it('an invalid persisted Next-Shoe threshold falls back to 0.53', async () => {
+    mockStore['bapp.pref.nextBalancedThreshold'] = 0.4;
+    const prefs = await import('@/src/workflows/preferences');
+    await flush();
+    expect(prefs.getNextBalancedThreshold()).toBe(0.53);
   });
 });

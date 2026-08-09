@@ -8,6 +8,11 @@ import {
   runDecisionPipeline,
   DECISION_CONFIG,
   engineProfile,
+  BALANCED_PROFILE,
+  BALANCED_CONFIG_VERSION,
+  DECISION_004_VERSION,
+  decisionConfigForBalanced,
+  type BalancedDecisionConfig,
   type DecisionResult,
   type EngineProfileId,
 } from '../decision';
@@ -61,6 +66,14 @@ export interface ComputeOptions {
    * injected as one ACTIVE HISTORICAL module into the (unchanged) decision.
    */
   readonly matcherCorpus?: MatcherCorpus;
+  /**
+   * M7.1 Patch 4 — the shoe's immutable Balanced Threshold-Lab config
+   * (BALCFG-001). When provided, the BALANCED snapshot is computed as
+   * DECISION-004 with this threshold as its BET/SKIP floor (regardless of the
+   * selected official profile). When absent, BALANCED stays DECISION-003 @ 0.55
+   * (legacy / backward-compatible).
+   */
+  readonly balancedConfig?: BalancedDecisionConfig;
 }
 
 /** Build an immutable pre-result profile-decision snapshot from a pipeline result. */
@@ -124,11 +137,22 @@ export function computePrediction(
 
   // STRICT is always matcher-free; BALANCED always carries the matcher module
   // (when directional). Both are computed identically regardless of selection.
+  // M7.1 Patch 4 — when a per-shoe BALCFG-001 config is supplied, the BALANCED
+  // snapshot is DECISION-004 with the shoe's threshold as its BET/SKIP floor
+  // (ALWAYS, even when STRICT is official). Absent => DECISION-003 @ 0.55.
+  const balancedConfig = opts.balancedConfig;
+  const balancedProfile = balancedConfig
+    ? { ...BALANCED_PROFILE, decisionVersion: DECISION_004_VERSION }
+    : engineProfile('BALANCED');
+  const balancedDecisionConfigObj = balancedConfig
+    ? decisionConfigForBalanced(balancedConfig)
+    : DECISION_CONFIG;
+
   const strictDecision = runDecisionPipeline(ctx, DECISION_CONFIG, engineProfile('STRICT'));
   const balancedDecision = runDecisionPipeline(
     ctx,
-    DECISION_CONFIG,
-    engineProfile('BALANCED'),
+    balancedDecisionConfigObj,
+    balancedProfile,
     matcherModules,
   );
 
@@ -193,6 +217,9 @@ export function computePrediction(
     locked: true,
     profileComparison,
     ...(matcherAudit ? { matcherAudit } : {}),
+    ...(balancedConfig
+      ? { balancedConfigVersion: BALANCED_CONFIG_VERSION, balancedThreshold: balancedConfig.threshold }
+      : {}),
   });
 }
 

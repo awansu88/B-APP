@@ -41,6 +41,13 @@ export interface DecisionConfig {
   readonly nearThresholdEps: number;
   /** pairCompleteness below this makes data quality LIMIT. */
   readonly limitPairCompleteness: number;
+  /**
+   * M7.1 Patch 4 (DECISION-004 / BALCFG-001) — BET/SKIP confidence FLOOR. When
+   * absent the accepted 0.55 floor is used (DECISION-001/003 behavior). Only the
+   * BALANCED Threshold-Lab config lowers this to 0.54/0.53/0.52; it changes the
+   * BET/SKIP floor ONLY — never the confidence formula or any other gate.
+   */
+  readonly betThreshold?: number;
 }
 
 export const DECISION_CONFIG: DecisionConfig = Object.freeze({

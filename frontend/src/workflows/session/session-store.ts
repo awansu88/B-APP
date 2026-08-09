@@ -39,7 +39,12 @@ import {
   type SessionState,
 } from '@/src/domain/session';
 import { SessionEnvironment } from '@/src/domain/session';
-import type { EngineProfileId } from '@/src/domain/decision';
+import {
+  balancedDecisionConfig,
+  resolveShoeThresholdFromLocks,
+  type BalancedDecisionConfig,
+  type EngineProfileId,
+} from '@/src/domain/decision';
 import type { MatcherCorpus } from '@/src/domain/matcher';
 import type { RoundEdit } from '@/src/domain/history';
 
@@ -56,6 +61,8 @@ export interface StartLiveOptions {
   readonly profile?: EngineProfileId;
   /** M7.1 Patch 3 Stage B1 — pre-result Historical Matcher corpus (DB-002 archived history). */
   readonly matcherCorpus?: MatcherCorpus;
+  /** M7.1 Patch 4 — immutable per-shoe Balanced Threshold-Lab config (BALCFG-001). */
+  readonly balancedConfig?: BalancedDecisionConfig;
 }
 
 export interface SubmitOptions {
@@ -70,6 +77,8 @@ export interface SubmitOptions {
   readonly profile?: EngineProfileId;
   /** M7.1 Patch 3 Stage B1 — pre-result Historical Matcher corpus (DB-002 archived history). */
   readonly matcherCorpus?: MatcherCorpus;
+  /** M7.1 Patch 4 — immutable per-shoe Balanced Threshold-Lab config (BALCFG-001). */
+  readonly balancedConfig?: BalancedDecisionConfig;
 }
 
 /** Persistence contract shared by the native (SQLite/DB-002) and web adapters. */
@@ -227,9 +236,18 @@ export class SqliteSessionStore implements SessionStore {
       !pendingEntry(state)
     ) {
       const now = new Date().toISOString();
+      // M7.1 Patch 4 — the recovery-regenerated pending lock MUST carry the
+      // shoe's immutable BALCFG-001 threshold (recovered from existing valid
+      // locks) so it never becomes a contradictory lock. Legacy shoes (no
+      // BALCFG lock) regenerate without a Balanced config (DECISION-003).
+      const validLocks = state.predictions
+        .filter((e) => !e.invalidated)
+        .map((e) => e.prediction);
+      const shoeThreshold = resolveShoeThresholdFromLocks(validLocks);
       const regenerated = computePrediction(state.rounds, state.environment, shoeId, {
         now,
         historyConfirmed: true,
+        ...(shoeThreshold != null ? { balancedConfig: balancedDecisionConfig(shoeThreshold) } : {}),
       });
       const entries = [
         ...state.predictions,

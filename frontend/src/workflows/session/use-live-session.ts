@@ -26,8 +26,13 @@ import {
 } from '@/src/domain/session';
 import { createSessionStore } from './create-session-store';
 import type { SessionStore, SessionStoreKind } from './session-store';
-import { getEngineMode } from '@/src/workflows/preferences';
+import { getEngineMode, getNextBalancedThreshold } from '@/src/workflows/preferences';
 import type { MatcherCorpus } from '@/src/domain/matcher';
+import {
+  balancedDecisionConfig,
+  resolveShoeThresholdFromLocks,
+  type BalancedDecisionConfig,
+} from '@/src/domain/decision';
 import { useMatcherCorpus } from '@/src/workflows/matcher';
 
 const isForward = (env: SessionEnvironment | undefined): boolean =>
@@ -83,6 +88,13 @@ export function useLiveSession(
   const corpusRef = useRef<MatcherCorpus | undefined>(undefined);
   corpusRef.current = matcherCorpus;
 
+  // M7.1 Patch 4 — the shoe's IMMUTABLE Balanced Threshold-Lab config (BALCFG-001).
+  // Recovered from the shoe's own valid locks (so it holds even under STRICT).
+  // Fresh shoes (no locks) adopt the Next-Shoe preference at Start Live; legacy
+  // pre-Patch-4 shoes (valid locks without BALCFG-001) stay DECISION-003
+  // (undefined). Contradictory thresholds surface as an invariant error.
+  const balancedConfigRef = useRef<BalancedDecisionConfig | undefined>(undefined);
+
   const [state, setState] = useState<SessionState | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -93,6 +105,26 @@ export function useLiveSession(
   const forward = isForward(shoe?.environment);
   const shoeId = shoe?.id ?? null;
   const environment = shoe?.environment ?? null;
+
+  // Keep the shoe's immutable Balanced config in sync with the persisted locks.
+  useEffect(() => {
+    if (!state) {
+      balancedConfigRef.current = undefined;
+      return;
+    }
+    const validLocks = state.predictions.filter((e) => !e.invalidated).map((e) => e.prediction);
+    if (validLocks.length === 0) {
+      balancedConfigRef.current = undefined;
+      return;
+    }
+    try {
+      const t = resolveShoeThresholdFromLocks(validLocks);
+      balancedConfigRef.current = t != null ? balancedDecisionConfig(t) : undefined;
+    } catch (e) {
+      balancedConfigRef.current = undefined;
+      setError(e instanceof Error ? e.message : 'Balanced threshold invariant violation.');
+    }
+  }, [state]);
 
   useEffect(() => {
     if (!forward || !shoeId || !environment) {
@@ -120,6 +152,7 @@ export function useLiveSession(
             historyConfirmed: true,
             profile: getEngineMode(),
             matcherCorpus: corpusRef.current,
+            balancedConfig: balancedDecisionConfig(getNextBalancedThreshold()),
           });
         }
         if (!mounted) return;
@@ -153,6 +186,7 @@ export function useLiveSession(
               bankerPair: pairs?.bankerPair ?? PairState.UNKNOWN,
               profile: getEngineMode(),
               matcherCorpus: corpusRef.current,
+              balancedConfig: balancedConfigRef.current,
             });
             setState(next);
             setError(null);
@@ -205,6 +239,7 @@ export function useLiveSession(
         store.editHistory(shoeId, roundNumber, edit, {
           profile: getEngineMode(),
           matcherCorpus: corpusRef.current,
+          balancedConfig: balancedConfigRef.current,
         }),
       ),
     [runRevision],
@@ -216,6 +251,7 @@ export function useLiveSession(
         store.deleteHistory(shoeId, roundNumber, {
           profile: getEngineMode(),
           matcherCorpus: corpusRef.current,
+          balancedConfig: balancedConfigRef.current,
         }),
       ),
     [runRevision],

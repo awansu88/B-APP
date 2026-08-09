@@ -44,9 +44,17 @@ export function confidenceFromWinnerScore(
   return round6(Math.max(0, Math.min(config.maxConfidence, raw)));
 }
 
-/** Categorise a confidence value using the locked bands. */
-export function categoryFromConfidence(c: number): PredictionCategory {
-  if (c < 0.55) return PredictionCategory.BELOW_THRESHOLD;
+/**
+ * Categorise a confidence value using the locked bands. The BET/SKIP FLOOR
+ * (default 0.55) may be lowered to a versioned BALCFG-001 preset (0.54/0.53/
+ * 0.52) for the BALANCED DECISION-004 snapshot; the higher QUALIFIED (0.60) and
+ * HIGH (0.70) bands are NEVER changed.
+ */
+export function categoryFromConfidence(
+  c: number,
+  betThreshold: number = 0.55,
+): PredictionCategory {
+  if (c < betThreshold) return PredictionCategory.BELOW_THRESHOLD;
   if (c < 0.6) return PredictionCategory.EXPERIMENTAL;
   if (c < 0.7) return PredictionCategory.QUALIFIED;
   return PredictionCategory.HIGH_RECOMMENDATION;

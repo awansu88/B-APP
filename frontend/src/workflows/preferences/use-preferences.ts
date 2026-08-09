@@ -16,7 +16,10 @@ import { storage } from '@/src/utils/storage';
 import {
   DEFAULT_ENGINE_PROFILE_ID,
   isEngineProfileId,
+  isBalancedThreshold,
+  DEFAULT_BALANCED_THRESHOLD,
   type EngineProfileId,
+  type BalancedThreshold,
 } from '@/src/domain/decision';
 
 export interface UiPreferences {
@@ -26,17 +29,25 @@ export interface UiPreferences {
   readonly showDecisionComparison: boolean;
   /** Selected engine profile (versioned). Default STRICT / DECISION-001. */
   readonly engineMode: EngineProfileId;
+  /**
+   * M7.1 Patch 4 — the NEXT-shoe Balanced Threshold-Lab preset. This is a
+   * preference only: it becomes a shoe's immutable BALCFG-001 threshold at Start
+   * Live and NEVER mutates an already-active shoe.
+   */
+  readonly nextBalancedThreshold: BalancedThreshold;
 }
 
 export const DEFAULT_PREFERENCES: UiPreferences = Object.freeze({
   showDirectionalLean: true,
   showDecisionComparison: false,
   engineMode: DEFAULT_ENGINE_PROFILE_ID,
+  nextBalancedThreshold: DEFAULT_BALANCED_THRESHOLD,
 });
 
 const KEY_LEAN = 'bapp.pref.showDirectionalLean';
 const KEY_COMPARISON = 'bapp.pref.showDecisionComparison';
 const KEY_ENGINE_MODE = 'bapp.pref.engineMode';
+const KEY_NEXT_THRESHOLD = 'bapp.pref.nextBalancedThreshold';
 
 let state: UiPreferences = { ...DEFAULT_PREFERENCES };
 let hydrated = false;
@@ -53,10 +64,17 @@ async function hydrate(): Promise<void> {
     DEFAULT_PREFERENCES.showDecisionComparison,
   );
   const mode = await storage.getItem<string>(KEY_ENGINE_MODE, DEFAULT_PREFERENCES.engineMode);
+  const nextThreshold = await storage.getItem<number>(
+    KEY_NEXT_THRESHOLD,
+    DEFAULT_PREFERENCES.nextBalancedThreshold,
+  );
   state = {
     showDirectionalLean: lean !== false,
     showDecisionComparison: comparison === true,
     engineMode: isEngineProfileId(mode) ? mode : DEFAULT_ENGINE_PROFILE_ID,
+    nextBalancedThreshold: isBalancedThreshold(nextThreshold)
+      ? nextThreshold
+      : DEFAULT_BALANCED_THRESHOLD,
   };
   hydrated = true;
   emit();
@@ -93,6 +111,18 @@ export function getEngineMode(): EngineProfileId {
   return state.engineMode;
 }
 
+export function setNextBalancedThreshold(value: BalancedThreshold): void {
+  if (state.nextBalancedThreshold === value) return;
+  state = { ...state, nextBalancedThreshold: value };
+  emit();
+  void storage.setItem(KEY_NEXT_THRESHOLD, value);
+}
+
+/** Synchronous read of the NEXT-shoe Balanced threshold (session store at Start Live). */
+export function getNextBalancedThreshold(): BalancedThreshold {
+  return state.nextBalancedThreshold;
+}
+
 const subscribe = (cb: () => void): (() => void) => {
   listeners.add(cb);
   return () => {
@@ -107,6 +137,7 @@ export interface UsePreferences extends UiPreferences {
   readonly setShowDirectionalLean: (v: boolean) => void;
   readonly setShowDecisionComparison: (v: boolean) => void;
   readonly setEngineMode: (v: EngineProfileId) => void;
+  readonly setNextBalancedThreshold: (v: BalancedThreshold) => void;
 }
 
 export function usePreferences(): UsePreferences {
@@ -117,5 +148,6 @@ export function usePreferences(): UsePreferences {
     setShowDirectionalLean,
     setShowDecisionComparison,
     setEngineMode,
+    setNextBalancedThreshold,
   };
 }

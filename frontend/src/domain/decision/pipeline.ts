@@ -74,7 +74,7 @@ export function decide(
     rawCategory = PredictionCategory.BELOW_THRESHOLD;
     gateReasons.push(DecisionReason.BELOW_MIN_AGREEMENT);
   } else {
-    rawCategory = categoryFromConfidence(rawConfidence);
+    rawCategory = categoryFromConfidence(rawConfidence, config.betThreshold ?? 0.55);
     gateReasons.push(
       rawCategory === PredictionCategory.BELOW_THRESHOLD
         ? DecisionReason.INSUFFICIENT_EVIDENCE

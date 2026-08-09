@@ -4,3 +4,4 @@ export * from './threshold-observability';
 export * from './threshold-dataset';
 export * from './matcher-observability';
 export * from './matcher-presentation';
+export * from './threshold-lab';

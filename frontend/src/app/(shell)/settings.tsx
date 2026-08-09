@@ -4,6 +4,11 @@ import { ScrollView, StyleSheet, Switch, Text, View, Pressable } from "react-nat
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { usePreferences } from "@/src/workflows/preferences";
 import { matcherReadinessFromDataset, buildMatcherSettingsView } from "@/src/domain/observability";
+import {
+  resolveShoeThresholdFromLocks,
+  BALANCED_THRESHOLD_PRESETS,
+  type BalancedThreshold,
+} from "@/src/domain/decision";
 import { buildDiagnosticsSnapshot } from "@/src/diagnostics";
 import { Banner, Card, Row, ScreenHeader, SectionLabel } from "@/src/ui/data/cards";
 import { colors, radius, spacing } from "@/src/ui/theme";
@@ -31,6 +36,42 @@ export default function SettingsScreen() {
     () => (matcher ? buildMatcherSettingsView(matcher) : null),
     [matcher],
   );
+
+  // M7.1 Patch 4 — the CURRENT shoe's immutable Balanced threshold, recovered
+  // from the active shoe's own locks (works even under STRICT). 'LEGACY' = an
+  // active pre-Patch-4 shoe (no BALCFG lock); null = no active/locked shoe yet.
+  const currentShoe = useMemo(
+    () => dataset?.shoes.find((s) => s.status === "ACTIVE") ?? null,
+    [dataset],
+  );
+  const currentShoeThreshold = useMemo<BalancedThreshold | "LEGACY" | "CONFLICT" | null>(() => {
+    if (!dataset || !currentShoe) return null;
+    const locks = dataset.lockedPredictions
+      .filter((r) => r.shoeId === currentShoe.id && !r.invalidated)
+      .map((r) => {
+        try {
+          const p = JSON.parse(r.payload) as { balancedConfigVersion?: string; balancedThreshold?: number };
+          return { balancedConfigVersion: p.balancedConfigVersion, balancedThreshold: p.balancedThreshold };
+        } catch {
+          return {};
+        }
+      });
+    if (locks.length === 0) return null;
+    try {
+      const t = resolveShoeThresholdFromLocks(locks);
+      return t ?? "LEGACY";
+    } catch {
+      return "CONFLICT";
+    }
+  }, [dataset, currentShoe]);
+  const currentThresholdLabel =
+    currentShoeThreshold == null
+      ? "No active shoe"
+      : currentShoeThreshold === "LEGACY"
+        ? "0.55 (legacy DECISION-003)"
+        : currentShoeThreshold === "CONFLICT"
+          ? "INVARIANT CONFLICT"
+          : `${currentShoeThreshold.toFixed(2)} LOCKED`;
   const v = snapshot.versions;
 
   const adapter =
@@ -161,7 +202,7 @@ export default function SettingsScreen() {
                 <Text style={styles.modeChipTitle}>
                   {prefs.engineMode === "STRICT" ? "\u25C9 " : "\u25CB "}STRICT
                 </Text>
-                <Text style={styles.modeChipSub}>DECISION-001 · Accepted / conservative</Text>
+                <Text style={styles.modeChipSub}>DECISION-001 · Accepted · Threshold 0.55 LOCKED</Text>
               </Pressable>
               <Pressable
                 testID="engine-mode-balanced"
@@ -171,7 +212,9 @@ export default function SettingsScreen() {
                 <Text style={styles.modeChipTitle}>
                   {prefs.engineMode === "BALANCED" ? "\u25C9 " : "\u25CB "}BALANCED — Experimental
                 </Text>
-                <Text style={styles.modeChipSub}>DECISION-003 · Derived Road + Matcher</Text>
+                <Text style={styles.modeChipSub}>
+                  DECISION-004 · BALCFG-001 · {currentThresholdLabel}
+                </Text>
               </Pressable>
             </View>
             <Text style={styles.note} testID="engine-mode-note">
@@ -182,6 +225,50 @@ export default function SettingsScreen() {
               never rewrites an already-locked target — it applies to the next unlocked prediction only.
             </Text>
           </Card>
+
+          {prefs.engineMode === "BALANCED" ? (
+            <Card title="Threshold Lab (BALANCED — Experimental)" testID="settings-threshold-lab" wide>
+              <Row
+                label="STRICT (DECISION-001)"
+                value="Threshold 0.55 · LOCKED"
+                valueColor={colors.textMuted}
+                testID="threshold-strict-locked"
+              />
+              <Row
+                label="Current Shoe Threshold"
+                value={currentThresholdLabel}
+                valueColor={typeof currentShoeThreshold === "number" ? colors.tie : colors.textSecondary}
+                testID="threshold-current-shoe"
+              />
+              <SectionLabel>Next Shoe Threshold</SectionLabel>
+              <View style={styles.presetRow}>
+                {BALANCED_THRESHOLD_PRESETS.map((t) => {
+                  const active = prefs.nextBalancedThreshold === t;
+                  return (
+                    <Pressable
+                      key={t}
+                      testID={`threshold-preset-${t.toFixed(2)}`}
+                      onPress={() => prefs.setNextBalancedThreshold(t as BalancedThreshold)}
+                      style={[styles.presetChip, active ? styles.presetChipActive : null]}
+                    >
+                      <Text style={[styles.presetText, active ? styles.presetTextActive : null]}>
+                        {active ? "\u25C9 " : "\u25CB "}
+                        {t.toFixed(2)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={styles.note} testID="threshold-lab-note">
+                Only the BET/SKIP confidence FLOOR changes (DECISION-004 / BALCFG-001) — every other gate
+                (Data Quality, directional support, weighted agreement, conflict/opposition, risk and the
+                confidence cap) stays mandatory, and the confidence value itself is unchanged. Presets are
+                fixed (0.55 / 0.54 / 0.53 / 0.52) — no free entry. The Next-Shoe threshold becomes an
+                immutable per-shoe value at Start Live; it never alters the current shoe. STRICT is the
+                permanent control profile at 0.55.
+              </Text>
+            </Card>
+          ) : null}
 
           <Card title="Historical Matcher" testID="settings-matcher" wide>
             <Row label="Collection" value="ACTIVE (from persisted history)" testID="matcher-collection" />
@@ -260,4 +347,17 @@ const styles = StyleSheet.create({
   modeChipTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: "800", letterSpacing: 0.5 },
   modeChipTitleMuted: { color: colors.textSecondary, fontSize: 14, fontWeight: "800", letterSpacing: 0.5 },
   modeChipSub: { color: colors.textMuted, fontSize: 11 },
+  presetRow: { flexDirection: "row", gap: spacing.sm, flexWrap: "wrap", marginTop: 4 },
+  presetChip: {
+    minWidth: 72,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: "center",
+  },
+  presetChipActive: { borderColor: colors.accent, backgroundColor: colors.railActiveSurface },
+  presetText: { color: colors.textSecondary, fontSize: 14, fontWeight: "800", letterSpacing: 0.5 },
+  presetTextActive: { color: colors.textPrimary },
 });
