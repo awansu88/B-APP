@@ -24,6 +24,80 @@
     "frontendMatrix": "testing agent ALL PASS at 1280x800 (History/Settings real read-only; Active Shoe + Statistics/Export/Diagnostics regression; zero console errors)",
     "nativeSqliteStatus": "IMPLEMENTED_NOT_RUNTIME_VERIFIED (unchanged; no physical Android runtime evidence yet)"
   },
+  "milestone7_1Patch1": {
+    "name": "M7.1 Patch 1 — Decision Observability Foundation",
+    "status": "IMPLEMENTED",
+    "checkpointTag": "m07-decision-expansion-wip1",
+    "readOnlyExplanatoryLayer": true,
+    "decision001Integrity": {
+      "unchanged": true,
+      "noThresholdLowered": true,
+      "noAnalyzerWeightChanged": true,
+      "noConfidenceMathChanged": true,
+      "noFamilyCorrelationChanged": true,
+      "noRiskSemanticsChanged": true,
+      "noLockedPredictionSemanticsChanged": true,
+      "engineCoreFilesTouched": "none (src/domain/{decision,analysis,session,config} unchanged vs m06-data-management)"
+    },
+    "filesAdded": [
+      "src/domain/observability/decision-observability.ts",
+      "src/domain/observability/dataset-observability.ts",
+      "src/domain/observability/index.ts",
+      "src/workflows/preferences/use-preferences.ts",
+      "src/workflows/preferences/index.ts",
+      "src/tests/decision-observability.test.ts"
+    ],
+    "filesChangedPresentationOnly": [
+      "src/ui/live/LiveSessionPanel.tsx",
+      "src/ui/stats/DecisionAvailabilityCard.tsx",
+      "src/ui/stats/StatsView.tsx",
+      "src/app/(shell)/settings.tsx",
+      "src/app/(shell)/statistics.tsx",
+      "src/app/(shell)/index.tsx",
+      "src/app/(shell)/history.tsx",
+      "src/ui/roadmap/RoadmapBoards.tsx"
+    ],
+    "decisionAvailability": "eligible/BET/SKIP with explicit numerator/denominator (bet/eligible), SKIP rate, directional-lean counts, Top SKIP Reasons; labeled availability, NOT accuracy or win probability",
+    "skipReason": "stable SkipReason enum with deterministic precedence; missing stored trace => NOT_AVAILABLE (never regenerated)",
+    "directionalLean": "non-actionable PLAYER/BANKER/NONE + evidence share from stored player/banker scores; explicitly not a probability/win-rate/accuracy",
+    "settingsPreferences": {
+      "showDirectionalLean": "default ON",
+      "showDecisionDetails": "default OFF",
+      "persistence": "AsyncStorage only; no engine config; no DB schema"
+    },
+    "engineModeFoundation": {
+      "strict": "DECISION-001 active/selectable",
+      "balancedExperimental": "DECISION-002 NOT_IMPLEMENTED (disabled placeholder)"
+    },
+    "historicalMatcher": {
+      "readinessVisible": true,
+      "eligibilityRule": "completedShoes >= 100 AND nonTieRounds >= 5000",
+      "votingEnabled": false,
+      "votingStatus": "DISABLED IN DECISION-001 (no vote even when ELIGIBLE)",
+      "separateDatabase": false,
+      "webPreviewReadiness": { "completedShoes": 0, "nonTieRounds": 0, "eligibility": "COLLECTING" },
+      "note": "completedShoes counts ShoeStatus COMPLETED/ARCHIVED; workflow does not yet transition shoes out of ACTIVE, so stays 0 until a later patch; readiness does not activate voting"
+    },
+    "derivedRoad": "SHADOW_ONLY",
+    "verification": {
+      "typecheck": "PASS",
+      "lint": "0 errors / 0 warnings",
+      "test": "18 suites / 305 tests (277 baseline + 28 new decision-observability)",
+      "roadmap": 26,
+      "engine": 10,
+      "expoDoctor": "18/18",
+      "packageLock": "UNCHANGED",
+      "appJson": "UNCHANGED",
+      "db": "DB-001/DB-002 UNCHANGED; NO DB-003"
+    },
+    "frontendValidation": "targeted testing agent ALL PASS at 1280x800 (Settings switches/STRICT/BALANCED-disabled/Matcher COLLECTING; Live SKIP + informational Directional Lean + Why-Skip + Decision Details trace + 400ms guard one-round; Statistics Decision Availability eligible=2/BET=0/SKIP=2/'0 / 2 (0.0%)'/lean 1/1/0). Console clean apart from expected AsyncStorage web-preview diagnostic.",
+    "nativeBuildImpact": "NONE",
+    "milestone7NotComplete": true,
+    "m7bPending": true,
+    "patch2Started": false,
+    "decision002Implemented": false
+  },
+
   "milestone7b": {
     "status": "NOT_STARTED",
     "requiresExplicitAuthorization": true,

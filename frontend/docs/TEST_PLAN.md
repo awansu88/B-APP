@@ -1,5 +1,33 @@
 # Test Plan
 
+## M7.1 Patch 1 — Decision Observability Foundation (IMPLEMENTED; checkpoint `m07-decision-expansion-wip1`)
+**One new Jest suite** — `src/tests/decision-observability.test.ts` (**28** tests) over the pure observability
+layer: Directional Lean sides + evidence share (and NONE/no-evidence guards); SKIP reason mapping + deterministic
+precedence + NOT_AVAILABLE when trace missing; BET produces no SKIP reason; Decision Availability aggregate with
+explicit denominators (eligible/bet/skip/betRate/skipRate/lean counts/skip-reason counts/traceUnavailable);
+`topSkipReasons` ordering; Historical Matcher readiness (ELIGIBLE ⇔ shoes ≥ 100 AND nonTieRounds ≥ 5,000;
+`votingEnabled` always false; readiness never activates voting); dataset adapters reading the verbatim stored
+payload trace (missing ⇒ NOT_AVAILABLE, never regenerated). **DECISION-001 behavior is asserted UNCHANGED**
+(observability never recomputes prediction math).
+**Regression baseline preserved:** previous **277** tests all pass; total now **18 suites / 305 tests**. Gate
+re-run: typecheck PASS, lint **0/0**, `npm test` **18/305**, `test:roadmap` **26**, `test:engine` **10**,
+`expo-doctor` **18/18**, package-lock + app.json + DB-001/DB-002 schema UNCHANGED, **NO DB-003**.
+**Targeted frontend validation (testing agent, 1280×800 landscape) — ALL PASS:**
+- **Settings:** Display Preferences card — both switches (Show Directional Lean, Show Decision Details) toggle
+  ON/OFF without crash; Engine Mode — STRICT active, BALANCED — Experimental disabled ("Not enabled in this
+  patch"), no numeric engine-tuning knobs; Historical Matcher — Completed Shoes 0/100, Non-Tie Rounds 0/5,000,
+  Eligibility COLLECTING, Voting DISABLED IN DECISION-001.
+- **Active Shoe / Live:** P/T/B order + large targets unchanged; enter ~12 mixed rounds → Start Live; LOCKED
+  decision = SKIP → Directional Lean (BANKER) appears labeled informational/non-actionable with "Why Skip"
+  and the official decision still reads SKIP (no probability claim); Decision Details trace appears with the
+  preference ON; 400ms live-only double-tap guard yields exactly ONE round; History Input remains unthrottled.
+- **Statistics:** Decision Availability card — Eligible 2 / BET 0 / SKIP 2 / BET availability "0 / 2 (0.0%)" /
+  SKIP rate 100.0% / lean 1/1/0; disclaimer "availability, not accuracy or a win probability"; Top SKIP Reasons
+  + Historical Matcher (0/100, 12/5,000, COLLECTING, Voting DISABLED). Console clean apart from the expected
+  AsyncStorage web-preview diagnostic. **NATIVE_BUILD_IMPACT = NONE. M7B device QA still pending.**
+
+
+
 ## Milestone 7A (Final UI/UX + Release QA + Android build readiness) — IMPLEMENTED
 **No new Jest suites** — M7A adds two READ-ONLY screens (History, Settings) and a restrained Active
 Shoe layout polish only; no accepted domain/engine behavior changed, so the regression baseline is

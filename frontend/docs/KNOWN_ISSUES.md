@@ -1,5 +1,32 @@
 # Known Issues
 
+## M7.1 Patch 1 — Decision Observability Foundation (IMPLEMENTED; checkpoint `m07-decision-expansion-wip1`)
+
+### P1-1. Historical Matcher "Completed Shoes" stays at 0 until a shoe-completion step exists (by design)
+`countCompletedShoes` counts shoes with `ShoeStatus` COMPLETED/ARCHIVED (DB-002 semantics). The accepted
+workflow does not yet transition a shoe out of ACTIVE, so Completed Shoes reads **0 / 100** until a
+shoe-completion step is added in a later patch. Non-Tie Rounds counts correctly. Eligibility therefore
+reports **COLLECTING**. **Impact:** none — readiness is display-only and **does NOT activate matcher voting**
+(voting is DISABLED in DECISION-001 regardless of eligibility). **Action:** none for this patch.
+
+### P1-2. Historical locked-prediction payloads may lack a stored trace → SKIP reason NOT_AVAILABLE
+Decision Availability reads the **verbatim** stored locked-prediction payload; predictions locked before
+trace capture have no `reasonCodes`/`riskFlags`, so their SKIP reason is reported as **NOT AVAILABLE**
+(counted in `traceUnavailable`). Historical predictions are **never regenerated**. **Impact:** cosmetic only.
+**Action:** none.
+
+### P1-3. BALANCED / DECISION-002 is a disabled placeholder (NOT IMPLEMENTED)
+The Engine Mode card shows STRICT (DECISION-001) active and BALANCED — Experimental as a visibly disabled,
+non-selectable chip ("Not enabled in this patch"). DECISION-002 is intentionally NOT implemented in Patch 1.
+**Impact:** none. **Action:** Patch 2 (requires explicit authorization).
+
+### P1-4. Preferences are AsyncStorage-only (web-preview diagnostic expected)
+`usePreferences` persists two presentation toggles via AsyncStorage; on the web preview the expected
+AsyncStorage diagnostic message appears in the console and is NOT a failure. No engine value or DB schema is
+touched (DB-002 unchanged; NO DB-003). **Impact:** none. **Action:** none.
+
+
+
 ## Milestone 7A (IMPLEMENTED — final UI/UX + release QA + Android build readiness)
 
 ### M7A-1. Native SQLite/DB-002 transactional Merge/Restore + restart still NOT runtime-verified

@@ -7,6 +7,17 @@ SQLite restart/Merge/Restore verification, final release acceptance) — NOT STA
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
+## M7.1 Patch 1 — Decision Observability Foundation (this handoff addition; checkpoint tag `m07-decision-expansion-wip1`)
+- **Status:** IMPLEMENTED and validated (code regression gate + targeted frontend validation ALL PASS). A READ-ONLY explanatory layer only.
+- **DECISION-001:** UNCHANGED — no threshold lowered, no analyzer weight changed, no confidence math changed, no family correlation changed, no risk semantics changed, no LockedPrediction semantics changed. Files under `src/domain/{decision,analysis,session,config}` were NOT touched.
+- **Files added/changed (vs `m06-data-management`):** NEW `src/domain/observability/{decision-observability,dataset-observability,index}.ts`, `src/workflows/preferences/{use-preferences,index}.ts`, `src/tests/decision-observability.test.ts`; CHANGED (presentation only) `src/ui/live/LiveSessionPanel.tsx`, `src/ui/stats/{DecisionAvailabilityCard,StatsView}.tsx`, `src/app/(shell)/{settings,statistics,index,history}.tsx`, `src/ui/roadmap/RoadmapBoards.tsx`.
+- **Decision Availability:** BET/SKIP counts with explicit numerator/denominator (bet/eligible), SKIP rate, directional-lean counts, Top SKIP Reasons (stable enum, deterministic precedence), Historical Matcher readiness. Labeled availability — NEVER accuracy or a future win probability.
+- **Historical Matcher:** readiness VISIBLE (Completed Shoes / Non-Tie Rounds vs 100 / 5,000; COLLECTING|ELIGIBLE); **voting DISABLED IN DECISION-001** (no vote even when ELIGIBLE). Derived from authoritative shoes + rounds — **no separate matcher DB, NO DB-003.**
+- **STRICT/BALANCED foundation:** STRICT (DECISION-001) active/selectable; **BALANCED — Experimental (DECISION-002) NOT IMPLEMENTED** (disabled placeholder). **Derived Road: SHADOW_ONLY.**
+- **Gate:** typecheck PASS · lint 0/0 · **18 suites / 305 tests** (277 baseline + 28 new) · roadmap 26 · engine 10 · expo-doctor 18/18 · package-lock + app.json + DB-001/DB-002 UNCHANGED · NO DB-003 · **NATIVE_BUILD_IMPACT = NONE.**
+- **Do NOT begin Patch 2 / DECISION-002 without authorization. Milestone 7 still NOT COMPLETE; M7B still pending.**
+
+
 ## Milestone 6 (this handoff)
 - **Status:** **COMPLETE** — final acceptance audit PASSED (release-candidate tag `m06-data-management-rc1`). Completed milestone: **6**. Next: **Milestone 7 — NOT STARTED**.
 - **Scope:** Statistics + Export/Import/Merge + Backup/Restore + Recovery/Diagnostics. Local-first; no cloud sync; **no prediction-engine changes**.
