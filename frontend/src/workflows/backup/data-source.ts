@@ -45,4 +45,9 @@ export interface DataSource {
   applyMerge(plan: MergePlan): Promise<void>;
   /** Destructively restore a FULL_BACKUP transactionally (throws on web preview). */
   restore(exp: BappExport): Promise<RestoreSummary>;
+  /**
+   * M7.2 Patch 2 — produce a consistent raw SQLite snapshot (native only).
+   * Absent on web preview (no on-device SQLite file).
+   */
+  serializeDatabase?(): Promise<Uint8Array>;
 }

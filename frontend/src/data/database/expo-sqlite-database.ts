@@ -53,4 +53,14 @@ export class ExpoSqliteDatabase implements SqlDatabase {
   async withTransactionAsync(task: () => Promise<void>): Promise<void> {
     await this.db.withTransactionAsync(task);
   }
+
+  /**
+   * M7.2 Patch 2 — produce a transactionally-CONSISTENT raw SQLite snapshot as a
+   * `Uint8Array` via SQLite's native serialize (sqlite3_serialize). This does
+   * NOT copy the live DB file and does NOT interfere with WAL / active
+   * persistence — the safe raw-export mechanism for this Expo environment.
+   */
+  async serializeAsync(): Promise<Uint8Array> {
+    return this.db.serializeAsync();
+  }
 }

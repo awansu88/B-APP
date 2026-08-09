@@ -5,13 +5,12 @@
  */
 import { ExpoSqliteDatabase } from '@/src/data/database/expo-sqlite-database';
 import { runMigrations } from '@/src/data/database/migrations';
-import type { SqlDatabase } from '@/src/data/database/sql-database';
 import { applyMerge as applyMergeTx, loadDataset, restoreBackup } from '@/src/data/backup';
 import type { DataSource } from './data-source';
 
-let cachedDb: SqlDatabase | null = null;
+let cachedDb: ExpoSqliteDatabase | null = null;
 
-async function openDatabase(): Promise<SqlDatabase> {
+async function openDatabase(): Promise<ExpoSqliteDatabase> {
   if (cachedDb) return cachedDb;
   const db = await ExpoSqliteDatabase.open('bapp.db');
   await runMigrations(db);
@@ -27,5 +26,6 @@ export async function createDataSource(): Promise<DataSource> {
     loadDataset: () => loadDataset(db),
     applyMerge: (plan) => applyMergeTx(db, plan),
     restore: (exp) => restoreBackup(db, exp),
+    serializeDatabase: () => db.serializeAsync(),
   };
 }
