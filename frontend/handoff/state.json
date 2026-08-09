@@ -94,8 +94,66 @@
     "nativeBuildImpact": "NONE",
     "milestone7NotComplete": true,
     "m7bPending": true,
-    "patch2Started": false,
-    "decision002Implemented": false
+    "patch2Started": true,
+    "decision002Implemented": true
+  },
+
+  "milestone7_1Patch2": {
+    "name": "M7.1 Patch 2 — DECISION-002 (BALANCED) + Derived Road ACTIVE + Profile Comparison",
+    "status": "IMPLEMENTED",
+    "recommendedCheckpointTag": "m07-decision-expansion-wip2",
+    "profiles": {
+      "STRICT": { "decisionVersion": "DECISION-001", "status": "ACCEPTED", "default": true, "derivedRoad": "SHADOW_ONLY" },
+      "BALANCED": { "decisionVersion": "DECISION-002", "status": "EXPERIMENTAL", "default": false, "derivedRoad": "ACTIVE" }
+    },
+    "decision001Integrity": {
+      "unchanged": true,
+      "note": "STRICT behaviorally identical; 305-test baseline preserved; no VOTE-001/CONF-001/RISK-001/threshold/band change; derived reliability 0.30 + STRUCTURE family unchanged; engine core math files untouched"
+    },
+    "decision002Semantics": "Same accepted gates as DECISION-001 EXCEPT Derived Road analyzer activation flips SHADOW_ONLY -> ACTIVE (participates in existing weighted voting via STRUCTURE family, weight 1). No new threshold (no 0.52/0.53). No confidence-band change.",
+    "voteExtension": "NOT_REQUIRED (computeVoting already includes any ACTIVE directional module and handles STRUCTURE family; VOTE-001 unchanged)",
+    "derivedRoad": { "reliabilityPrior": 0.30, "family": "STRUCTURE", "tuned": false, "activation": "profile-dependent (SHADOW_ONLY in STRICT, ACTIVE in BALANCED)", "roadmapAlgorithmsChanged": false, "futureLeakage": false },
+    "historicalMatcher": { "votingEnabled": false, "votingStatus": "DISABLED — PATCH 3 (both profiles)" },
+    "volatility": "SHADOW_ONLY (both profiles)",
+    "profileComparisonPayload": { "version": "PROFILECMP-001", "location": "LockedPrediction.profileComparison (verbatim JSON payload)", "backwardCompatible": true, "prePatch2": "NOT_AVAILABLE", "regeneratesOldPayloads": false, "dbSchemaChange": false },
+    "lockSafety": "profile switch never rewrites/duplicates an already-locked target; reconstruct restores pending locks verbatim (no regeneration)",
+    "preferences": { "engineMode": "default STRICT, AsyncStorage-only, survives reload", "showDecisionComparison": "renamed from showDecisionDetails", "numericTuning": "none" },
+    "filesAdded": [
+      "src/domain/decision/profiles.ts",
+      "src/ui/stats/ProfileComparisonCard.tsx",
+      "src/tests/profiles.test.ts",
+      "src/tests/profile-stats.test.ts",
+      "src/tests/preferences.test.ts"
+    ],
+    "filesChanged": [
+      "src/domain/analysis/modules.ts",
+      "src/domain/decision/{pipeline,index}.ts",
+      "src/domain/session/{types,engine}.ts",
+      "src/domain/observability/{decision-observability,dataset-observability}.ts",
+      "src/workflows/preferences/use-preferences.ts",
+      "src/workflows/session/{session-store,use-live-session}.ts",
+      "src/app/(shell)/{settings,statistics}.tsx",
+      "src/ui/live/LiveSessionPanel.tsx",
+      "src/ui/stats/DecisionAvailabilityCard.tsx"
+    ],
+    "section15Result": "Derived Road activation raised BALANCED confidence on some fixtures (e.g. doubles SKIP 0.50 -> 0.54) but did NOT convert a STRICT SKIP into a BALANCED BET (no case C) and never opposed STRICT's side (no case D) in valid fixtures — consistent with the unchanged threshold",
+    "shoeCompletionAudit": { "SHOE_COMPLETION_PATCH_REQUIRED": "NO", "reasoning": "New Shoe already archives the previous shoe (ShoeStatus.ARCHIVED via HistoryStore.startNewShoe); countCompletedShoes already counts ARCHIVED; DB-002 already represents completion; Patch-1 showed 0 only because the test never started a 2nd shoe", "smallestFutureChange": "optional explicit Complete-Shoe affordance / auto-archive so completedShoes climbs toward 100" },
+    "verification": {
+      "typecheck": "PASS",
+      "lint": "0 errors / 0 warnings",
+      "test": "21 suites / 343 tests (305 baseline + 38 new: profiles 24, profile-stats 9, preferences 5)",
+      "roadmap": 26,
+      "engine": 10,
+      "expoDoctor": "18/18",
+      "packageLock": "UNCHANGED",
+      "appJson": "UNCHANGED",
+      "db": "DB-001/DB-002 UNCHANGED; NO DB-003"
+    },
+    "frontendValidation": "targeted testing agent ALL PASS at 1280x800 (Settings both modes selectable/no tuning/Voting DISABLED — PATCH 3; Live ENGINE MODE banner STRICT->BALANCED + one official recommendation + secondary comparison + 400ms guard one-round; Statistics Profile Comparison STRICT 1/4 vs BALANCED 0/4 BET availability + observed W/L/P, no accuracy/win-probability wording). Console clean apart from expected AsyncStorage web-preview diagnostic.",
+    "nativeBuildImpact": "NONE",
+    "milestone7NotComplete": true,
+    "patch3Started": false,
+    "m7bPending": true
   },
 
   "milestone7b": {

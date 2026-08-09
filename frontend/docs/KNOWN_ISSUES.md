@@ -1,6 +1,40 @@
 # Known Issues
 
-## M7.1 Patch 1 — Decision Observability Foundation (IMPLEMENTED; checkpoint `m07-decision-expansion-wip1`)
+## M7.1 Patch 2 — DECISION-002 (BALANCED) + Derived Road ACTIVE + Profile Comparison (IMPLEMENTED)
+
+### P2-1. BALANCED (DECISION-002) is EXPERIMENTAL
+BALANCED activates the Derived Road analyzer (STRUCTURE family) while keeping every accepted DECISION-001
+gate unchanged (no threshold/band change; VOTE-001/CONF-001/RISK-001 unchanged; reliability 0.30). It is
+labeled Experimental and is NOT the default. **Impact:** none unless the operator explicitly selects it.
+
+### P2-2. Section-15 result — Derived Road activation did NOT flip any decision in valid fixtures
+Across the tested fixtures the ACTIVE Derived Road raised BALANCED confidence on some shoes (e.g. "doubles":
+STRICT SKIP 0.50 vs BALANCED SKIP 0.54) but never crossed the UNCHANGED BET threshold (no STRICT-SKIP →
+BALANCED-BET / case C) and never opposed STRICT's side (no case D). This is expected — the threshold was not
+lowered in Patch 2. **Impact:** BALANCED currently rarely diverges from STRICT on the official decision;
+divergence is mostly a confidence delta. **Action:** none (a threshold study would be a future patch).
+
+### P2-3. Comparison telemetry only exists for Patch-2+ locks (NOT_AVAILABLE for older)
+`profileComparison` is written at lock time from Patch 2 onward. Pre-Patch-2 LockedPredictions have no
+telemetry and are reported `NOT_AVAILABLE` (excluded from the per-profile denominators; never regenerated).
+**Impact:** cosmetic. **Action:** none.
+
+### P2-4. Reconstruct recovery of a MISSING pending lock defaults to STRICT
+The rare recovery path in `SqliteSessionStore` that regenerates a *missing* pending lock does so under the
+default STRICT profile (the per-session engine profile is a live UI preference, not persisted per session, to
+avoid a DB-002 schema change). Normal reload restores the existing pending lock verbatim (no regeneration), so
+this only affects a crash mid-transaction. **Impact:** negligible. **Action:** persist per-session profile only
+if a future patch needs it (would touch session_state columns).
+
+### Shoe-completion readiness audit (section 16): SHOE_COMPLETION_PATCH_REQUIRED = NO
+`New Shoe` (`HistoryStore.startNewShoe`) already sets the previous shoe to `ShoeStatus.ARCHIVED`, and
+`countCompletedShoes` already counts ARCHIVED — DB-002 fully represents completion with no schema change. The
+Patch-1 "completedShoes = 0" observation was simply because the test session never started a second shoe. The
+smallest recommended change before Patch 3 is optional: surface an explicit "Complete Shoe" affordance (or
+auto-archive an ACTIVE shoe once ended) so `completedShoes` climbs toward the 100-shoe eligibility without
+relying on manual New Shoe. (Corrects the earlier P1-1 note that implied completion was unwired.)
+
+
 
 ### P1-1. Historical Matcher "Completed Shoes" stays at 0 until a shoe-completion step exists (by design)
 `countCompletedShoes` counts shoes with `ShoeStatus` COMPLETED/ARCHIVED (DB-002 semantics). The accepted

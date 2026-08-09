@@ -7,7 +7,16 @@ SQLite restart/Merge/Restore verification, final release acceptance) — NOT STA
 **Git repository root:** `/app`. **Expo app root:** `/app/frontend` (run all
 commands from here). **Package manager:** npm (`package-lock.json`, unchanged).
 
-## M7.1 Patch 1 — Decision Observability Foundation (this handoff addition; checkpoint tag `m07-decision-expansion-wip1`)
+## M7.1 Patch 2 — DECISION-002 (BALANCED) + Derived Road ACTIVE + Profile Comparison (IMPLEMENTED)
+- **Status:** IMPLEMENTED + validated (regression gate + targeted UI ALL PASS).
+- **Profiles:** STRICT (DECISION-001, ACCEPTED, default, derived SHADOW_ONLY) and BALANCED (DECISION-002, EXPERIMENTAL, derived ACTIVE). Only the analyzer-activation registry differs. **VOTE-001 unchanged; no threshold/band change; reliability 0.30 + STRUCTURE family unchanged.** Historical Matcher NO-VOTE and Volatility SHADOW_ONLY in BOTH profiles.
+- **Files:** NEW `src/domain/decision/profiles.ts`, `src/ui/stats/ProfileComparisonCard.tsx`, `src/tests/{profiles,profile-stats,preferences}.test.ts`; CHANGED `src/domain/analysis/modules.ts` (shared derived-road helper + ACTIVE variant), `src/domain/decision/pipeline.ts` (+profile param), `src/domain/session/{types,engine}.ts` (+profileComparison), `src/domain/observability/{decision,dataset}-observability.ts` (+profile comparison + betPlayer/betBanker + observed W/L/P), `src/workflows/preferences/use-preferences.ts` (+engineMode/showDecisionComparison/getEngineMode), `src/workflows/session/{session-store,use-live-session}.ts` (thread profile), `src/app/(shell)/{settings,statistics}.tsx`, `src/ui/live/LiveSessionPanel.tsx`.
+- **Immutable comparison payload:** `LockedPrediction.profileComparison` (`PROFILECMP-001`) holds both pre-result snapshots; stored verbatim; backward-compatible (pre-Patch-2 → NOT_AVAILABLE, never regenerated). Profile switch never rewrites a locked target.
+- **Gate:** typecheck PASS · lint 0/0 · **21 suites / 343 tests** (305 baseline + 38 new) · roadmap 26 · engine 10 · expo-doctor 18/18 · DB-001/DB-002 UNCHANGED · NO DB-003 · package-lock + app.json UNCHANGED · **NATIVE_BUILD_IMPACT = NONE**.
+- **Shoe-completion:** `SHOE_COMPLETION_PATCH_REQUIRED = NO` (New Shoe already archives previous → ARCHIVED counts as completed).
+- **Recommended next checkpoint tag:** `m07-decision-expansion-wip2`. Milestone 7 still NOT COMPLETE; Patch 3 NOT STARTED; M7B pending.
+
+
 - **Status:** IMPLEMENTED and validated (code regression gate + targeted frontend validation ALL PASS). A READ-ONLY explanatory layer only.
 - **DECISION-001:** UNCHANGED — no threshold lowered, no analyzer weight changed, no confidence math changed, no family correlation changed, no risk semantics changed, no LockedPrediction semantics changed. Files under `src/domain/{decision,analysis,session,config}` were NOT touched.
 - **Files added/changed (vs `m06-data-management`):** NEW `src/domain/observability/{decision-observability,dataset-observability,index}.ts`, `src/workflows/preferences/{use-preferences,index}.ts`, `src/tests/decision-observability.test.ts`; CHANGED (presentation only) `src/ui/live/LiveSessionPanel.tsx`, `src/ui/stats/{DecisionAvailabilityCard,StatsView}.tsx`, `src/app/(shell)/{settings,statistics,index,history}.tsx`, `src/ui/roadmap/RoadmapBoards.tsx`.

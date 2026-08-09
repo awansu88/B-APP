@@ -1,7 +1,35 @@
 # Test Plan
 
-## M7.1 Patch 1 — Decision Observability Foundation (IMPLEMENTED; checkpoint `m07-decision-expansion-wip1`)
-**One new Jest suite** — `src/tests/decision-observability.test.ts` (**28** tests) over the pure observability
+## M7.1 Patch 2 — DECISION-002 (BALANCED) + Derived Road ACTIVE + Profile Comparison (IMPLEMENTED)
+**Three new Jest suites (+38 tests) — total 21 suites / 343 tests** (305 baseline all preserved):
+- **`src/tests/profiles.test.ts` (24)** — profile config (default STRICT; BALANCED DECISION-002/EXPERIMENTAL;
+  derived SHADOW_ONLY under STRICT / ACTIVE under BALANCED; matcher DISABLED + volatility SHADOW_ONLY in both;
+  no numeric-tuning surface; registries differ ONLY by the derived-road module; helper functions); decision
+  integrity (STRICT stamps DECISION-001 / BALANCED DECISION-002; official == selected snapshot; STRICT snapshot
+  identical regardless of selection = determinism + no leakage; DECISION-001 still BET_BANKER on a banker shoe;
+  moduleResults reflect activation; comparison built pre-result); section-15 fixtures (both BET / both SKIP /
+  doubles confidence delta without threshold cross / side never opposed); lock audit A–E (locked STRICT stays
+  STRICT after switching to BALANCED; next target uses BALANCED; serialize→reconstruct restores pending lock
+  verbatim; new payload round-trips both snapshots; legacy payload without comparison stays valid).
+- **`src/tests/profile-stats.test.ts` (9)** — pure observed-outcome evaluation (Tie=PUSH, SKIP never W/L,
+  WIN/(WIN+LOSS) with PUSH excluded); per-profile BET/SKIP availability separated; observed W/L/P separated;
+  selected-profile counts; INVALIDATED excluded from available AND notAvailable; pre-Patch-2 → notAvailable;
+  telemetry independent of the played ledger (operatorAction).
+- **`src/tests/preferences.test.ts` (5)** — default STRICT + no numeric surface; select BALANCED persists;
+  **selection survives a reload** (rehydrate from storage); presentation toggles round-trip without touching
+  engineMode; invalid persisted mode falls back to STRICT.
+**File naming:** deliberately avoids the `engine`/`roadmap` tokens so `test:engine` (10) and `test:roadmap` (26)
+filtered counts are UNCHANGED.
+**Gate re-run:** typecheck PASS · lint 0/0 · `npm test` **21/343** · `test:roadmap` 26 · `test:engine` 10 ·
+`expo-doctor` 18/18 · DB-001/DB-002 UNCHANGED · NO DB-003 · package-lock + app.json UNCHANGED.
+**Targeted frontend validation (1280×800) — ALL PASS:** Settings (STRICT/BALANCED both selectable, no crash,
+no tuning knobs, Voting "DISABLED — PATCH 3", Matcher 0/100 · 0/5,000); Live (ENGINE MODE banner STRICT→
+BALANCED, exactly ONE official recommendation, secondary Profile-Comparison with `Show Decision Comparison` ON
+labeled control telemetry, 400ms double-tap guard = ONE round); Statistics (Profile Comparison STRICT BET
+availability 1/4 vs BALANCED 0/4 + observed W/L/P + coverage; no accuracy/win-probability wording). Console
+clean apart from the expected AsyncStorage web-preview diagnostic. **NATIVE_BUILD_IMPACT = NONE.**
+
+ — `src/tests/decision-observability.test.ts` (**28** tests) over the pure observability
 layer: Directional Lean sides + evidence share (and NONE/no-evidence guards); SKIP reason mapping + deterministic
 precedence + NOT_AVAILABLE when trace missing; BET produces no SKIP reason; Decision Availability aggregate with
 explicit denominators (eligible/bet/skip/betRate/skipRate/lean counts/skip-reason counts/traceUnavailable);
