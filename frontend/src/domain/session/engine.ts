@@ -8,7 +8,6 @@ import {
   runDecisionPipeline,
   DECISION_CONFIG,
   engineProfile,
-  otherProfileId,
   type DecisionResult,
   type EngineProfileId,
 } from '../decision';
@@ -101,36 +100,48 @@ export function computePrediction(
   const features = extractFeatures(rounds, { historyConfirmed });
   const ctx = { snapshot, features };
 
-  // M7.1 Patch 2 — compute BOTH profiles deterministically from the SAME
-  // pre-result snapshot (future-leakage protection is inherited from the
-  // completed-rounds-only snapshot). The SELECTED profile is official; the other
-  // is immutable comparison/control telemetry only.
+  // M7.1 Patch 2/3 — compute BOTH current profiles deterministically from the
+  // SAME immutable PRE-RESULT snapshot, INDEPENDENT of which profile is
+  // selected. The SELECTED profile is official/actionable; the other is
+  // CONTROL/COMPARISON telemetry only. Future-leakage protection is inherited
+  // from the completed-rounds-only snapshot.
   const selectedId: EngineProfileId = opts.profile ?? 'STRICT';
-  const selected = engineProfile(selectedId);
-  const other = engineProfile(otherProfileId(selectedId));
 
-  const report = runAnalysis(ctx, selected.modules);
-
-  // M7.1 Patch 3 — Historical Matcher (HMATCH-002) participates ONLY for the
-  // BALANCED / DECISION-003 official lock, ONLY when a corpus is supplied and
-  // the matcher passes every gate to a directional vote. The audit is computed
-  // PRE-RESULT (from completed rounds only) and stored immutably regardless of
-  // signal (COLLECTING / ineligible / abstain / directional).
+  // M7.1 Patch 3 — the Historical Matcher (HMATCH-002) is evaluated ONCE from
+  // the immutable pre-target state whenever a corpus is supplied, and belongs to
+  // the BALANCED / DECISION-003 profile ALWAYS (whether BALANCED is official or
+  // comparison). It is NEVER injected into STRICT / DECISION-001. On ABSTAIN no
+  // module is injected, so it can never touch module-count / support gates. The
+  // audit is immutable and pre-result (COLLECTING / ineligible / abstain /
+  // directional) and is stored for the BALANCED snapshot regardless of selection.
   let matcherAudit: MatcherAudit | undefined;
-  let extraModules: readonly ModuleAnalysis[] = [];
-  if (selectedId === 'BALANCED' && opts.matcherCorpus) {
+  let matcherModules: readonly ModuleAnalysis[] = [];
+  if (opts.matcherCorpus) {
     matcherAudit = evaluateMatcher(rounds, opts.matcherCorpus);
     const mod = matcherModuleAnalysis(matcherAudit);
-    if (mod) extraModules = [mod];
+    if (mod) matcherModules = [mod];
   }
 
-  const decision = runDecisionPipeline(ctx, DECISION_CONFIG, selected, extraModules);
-  const otherDecision = runDecisionPipeline(ctx, DECISION_CONFIG, other);
-  const moduleResults =
-    extraModules.length > 0 ? [...report.results, ...extraModules] : report.results;
+  // STRICT is always matcher-free; BALANCED always carries the matcher module
+  // (when directional). Both are computed identically regardless of selection.
+  const strictDecision = runDecisionPipeline(ctx, DECISION_CONFIG, engineProfile('STRICT'));
+  const balancedDecision = runDecisionPipeline(
+    ctx,
+    DECISION_CONFIG,
+    engineProfile('BALANCED'),
+    matcherModules,
+  );
 
-  const strictDecision = selectedId === 'STRICT' ? decision : otherDecision;
-  const balancedDecision = selectedId === 'BALANCED' ? decision : otherDecision;
+  const decision = selectedId === 'STRICT' ? strictDecision : balancedDecision;
+
+  // moduleResults reflect the OFFICIAL selected profile (STRICT is matcher-free;
+  // the matcher module appears only when BALANCED is the official profile).
+  const selectedReport = runAnalysis(ctx, engineProfile(selectedId).modules);
+  const moduleResults =
+    selectedId === 'BALANCED' && matcherModules.length > 0
+      ? [...selectedReport.results, ...matcherModules]
+      : selectedReport.results;
+
   const profileComparison: ProfileComparison = {
     version: PROFILE_COMPARISON_VERSION,
     selectedProfile: selectedId,

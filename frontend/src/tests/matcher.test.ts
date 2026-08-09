@@ -344,14 +344,15 @@ describe('DECISION-003 integration', () => {
   const NOW = '2026-02-01T00:00:00.000Z';
   const abstainCorpus: MatcherCorpus = { completedShoes: 10, nonTieRounds: 500, eligible: false, candidates: [] };
 
-  it('STRICT never runs the matcher (DECISION-001, no matcherAudit)', () => {
+  it('STRICT official is matcher-free (DECISION-001) even when a corpus is supplied', () => {
     const p = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
       now: NOW,
       profile: 'STRICT',
       matcherCorpus: directCorpus(queryFps(), [Winner.PLAYER], 10),
     });
     expect(p.decisionConfigVersion).toBe('DECISION-001');
-    expect(p.matcherAudit).toBeUndefined();
+    // Official STRICT modules never include the matcher.
+    expect(p.moduleResults.some((m) => m.moduleId === 'historical-matcher')).toBe(false);
   });
 
   it('BALANCED stamps DECISION-003 and stores the pre-result matcher audit', () => {
@@ -414,8 +415,128 @@ describe('DECISION-003 integration', () => {
 });
 
 // ===========================================================================
-// PERFORMANCE SANITY (synthetic 100 shoes / 5000+ non-Tie)
+// STAGE A.1 — DUAL-PROFILE PRE-RESULT COMPARISON TELEMETRY
+// (BALANCED snapshot is matcher-evaluated regardless of which profile is
+//  selected; the comparison matcher never touches official STRICT / ledger.)
 // ===========================================================================
+describe('Stage A.1 dual-profile pre-result comparison', () => {
+  const NOW = '2026-03-01T00:00:00.000Z';
+  const playerCorpus = (): MatcherCorpus => directCorpus(queryFps(), [Winner.PLAYER], 10);
+  const abstainCorpus: MatcherCorpus = { completedShoes: 10, nonTieRounds: 500, eligible: false, candidates: [] };
+
+  // Accepted DECISION-001 baseline (no matcher, no corpus, STRICT).
+  const strictBaseline = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+    now: NOW,
+    profile: 'STRICT',
+  });
+
+  it('1) STRICT selected + eligible matcher PLAYER: official STRICT == accepted DECISION-001; BALANCED comparison is DECISION-003 WITH matcher', () => {
+    const p = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'STRICT',
+      matcherCorpus: playerCorpus(),
+    });
+    // Official STRICT is byte-identical to the accepted DECISION-001 baseline.
+    expect(p.decision).toBe(strictBaseline.decision);
+    expect(p.confidence).toBe(strictBaseline.confidence);
+    expect(p.playerScore).toBe(strictBaseline.playerScore);
+    expect(p.bankerScore).toBe(strictBaseline.bankerScore);
+    expect(p.decisionConfigVersion).toBe('DECISION-001');
+    // STRICT comparison snapshot = DECISION-001, matcher NO VOTE.
+    expect(p.profileComparison?.strict.decisionVersion).toBe('DECISION-001');
+    // BALANCED comparison snapshot = DECISION-003 and reflects the matcher.
+    expect(p.profileComparison?.balanced.decisionVersion).toBe('DECISION-003');
+    expect(p.matcherAudit?.signal).toBe('PLAYER');
+    // The BALANCED comparison Player evidence exceeds the matcher-free BALANCED.
+    const noMatcher = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'BALANCED',
+    });
+    expect(p.profileComparison!.balanced.playerScore).toBeGreaterThan(noMatcher.playerScore);
+  });
+
+  it('2) STRICT selected + matcher ABSTAIN: official STRICT unchanged; BALANCED comparison DECISION-003; counts unaffected', () => {
+    const p = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'STRICT',
+      matcherCorpus: abstainCorpus,
+    });
+    expect(p.decision).toBe(strictBaseline.decision);
+    expect(p.playerScore).toBe(strictBaseline.playerScore);
+    expect(p.bankerScore).toBe(strictBaseline.bankerScore);
+    expect(p.matcherAudit?.signal).toBe('ABSTAIN');
+    expect(p.profileComparison?.balanced.decisionVersion).toBe('DECISION-003');
+    // ABSTAIN cannot change the BALANCED comparison support vs matcher-free BALANCED.
+    const balancedNoMatcher = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'BALANCED',
+    });
+    expect(p.profileComparison!.balanced.playerScore).toBe(balancedNoMatcher.playerScore);
+    expect(p.profileComparison!.balanced.bankerScore).toBe(balancedNoMatcher.bankerScore);
+  });
+
+  it('3) BALANCED selected: official DECISION-003 (Stage-A behavior); STRICT comparison stays DECISION-001', () => {
+    const p = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'BALANCED',
+      matcherCorpus: playerCorpus(),
+    });
+    expect(p.decisionConfigVersion).toBe('DECISION-003');
+    expect(p.matcherAudit?.signal).toBe('PLAYER');
+    expect(p.moduleResults.some((m) => m.moduleId === 'historical-matcher' && m.status === 'ACTIVE')).toBe(true);
+    expect(p.profileComparison?.strict.decisionVersion).toBe('DECISION-001');
+    expect(p.profileComparison?.strict.playerScore).toBe(strictBaseline.playerScore);
+  });
+
+  it('4) Same pre-target state + corpus: switching selection changes ONLY which snapshot is official, not snapshot contents', () => {
+    const strictSel = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'STRICT',
+      matcherCorpus: playerCorpus(),
+    });
+    const balancedSel = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'BALANCED',
+      matcherCorpus: playerCorpus(),
+    });
+    // The independently computed STRICT and BALANCED snapshots are identical
+    // across selections (selection changes only which one is official).
+    expect(strictSel.profileComparison?.strict).toEqual(balancedSel.profileComparison?.strict);
+    expect(strictSel.profileComparison?.balanced).toEqual(balancedSel.profileComparison?.balanced);
+    expect(strictSel.matcherAudit).toEqual(balancedSel.matcherAudit);
+    // Official pointer differs.
+    expect(strictSel.decisionConfigVersion).toBe('DECISION-001');
+    expect(balancedSel.decisionConfigVersion).toBe('DECISION-003');
+  });
+
+  it('5) comparison matcher telemetry has ZERO session/ledger side effects (official STRICT fields drive Played/operator/ledger)', () => {
+    const withMatcher = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'STRICT',
+      matcherCorpus: playerCorpus(),
+    });
+    // Every field that feeds Played Sequence / operator action / fixed-paper
+    // ledger / session progression comes from the OFFICIAL top-level decision,
+    // which equals the matcher-free STRICT baseline.
+    expect(withMatcher.decision).toBe(strictBaseline.decision);
+    expect(withMatcher.side).toBe(strictBaseline.side);
+    expect(withMatcher.category).toBe(strictBaseline.category);
+    expect(withMatcher.confidence).toBe(strictBaseline.confidence);
+    expect(withMatcher.riskLevel).toBe(strictBaseline.riskLevel);
+    expect(withMatcher.moduleResults.some((m) => m.moduleId === 'historical-matcher')).toBe(false);
+  });
+
+  it('6) matcher audit is immutable and pre-result (deep-frozen, JSON round-trips)', () => {
+    const p = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'shoe', {
+      now: NOW,
+      profile: 'STRICT',
+      matcherCorpus: playerCorpus(),
+    });
+    expect(Object.isFrozen(p.matcherAudit)).toBe(true);
+    expect(JSON.parse(JSON.stringify(p)).matcherAudit).toEqual(p.matcherAudit);
+  });
+});
+
 describe('performance sanity', () => {
   it('prepares a 100-shoe / 5000+ non-Tie corpus and answers a query quickly', () => {
     const patt = (i: number): string => (BASE + BASE).slice(0, 50 + (i % 5)); // >= 50 non-Tie each
