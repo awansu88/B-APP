@@ -2,6 +2,7 @@
  * Milestone 6 \u2014 Statistics view. Compact tablet-landscape cards rendering the
  * pure `FullStatistics` report. No engine changes; read-only.
  */
+import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card, Row, SectionLabel, fractionLabel } from '../data/cards';
@@ -54,7 +55,7 @@ function SequenceCard({ title, report, testID }: { title: string; report: Sequen
   );
 }
 
-export function StatsView({ stats }: { stats: FullStatistics }) {
+export function StatsView({ stats, footer }: { stats: FullStatistics; footer?: ReactNode }) {
   return (
     <ScrollView
       style={styles.container}
@@ -126,6 +127,7 @@ export function StatsView({ stats }: { stats: FullStatistics }) {
           <Row label="Invalidated predictions" value={stats.revisions.invalidatedPredictions} />
         </Card>
       </View>
+      {footer}
     </ScrollView>
   );
 }

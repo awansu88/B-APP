@@ -265,19 +265,46 @@ frontend:
         -agent: "testing"
         -comment: "M7A ACTIVE SHOE REGRESSION COMPLETE (1280x800 landscape). ALL CRITICAL TESTS PASS. ✅ P/T/B buttons render in correct order (Player → Tie → Banker) and are easily tappable. ✅ Entering rounds updates Shoe Information totals (Total rounds, Non-Tie, Player/Tie/Banker counts) and roadmaps correctly. ✅ All 5 roadmaps render: Bead Plate (top), Big Road (top), Big Eye Boy (bottom), Small Road (bottom), Cockroach Pig (bottom). Vertical distribution improved—no content clipping, no horizontal overflow/collision, latest results visible. ✅ PP/BP toggles and Partial/Complete pair mode work correctly. ✅ After entering 13 rounds (12 non-Tie), 'Start Live' button enabled. ✅ Start Live → LOCKED live panel appears showing TARGET, decision (SKIP in screenshot), confidence score, risk level, PLAYED/NOT_PLAYED selectors, engine progress (0/3), played progress (0/3), paper metrics (+0·0W 0L 0P). ✅ Review Data modal opens showing 15 rounds with edit/delete buttons (in live mode, edits route through live session store). ✅ Roadmap cell sizes increased for readability (BEAD 30px, BIG 28px, DERIVED 18px). Console: zero critical errors, zero React key warnings, zero unhandled rejections. Screenshots captured. Active Shoe polish is production-ready for landscape tablet 1280x800."
 
+  - task: "M7.1 Patch 1 — Decision Observability (Availability + SKIP reason + Directional Lean)"
+    implemented: true
+    working: "NA"
+    file: "src/domain/observability/*, src/ui/live/LiveSessionPanel.tsx, src/ui/stats/DecisionAvailabilityCard.tsx, src/app/(shell)/statistics.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Pure read-only observability over the ALREADY-PRODUCED accepted trace (no engine recompute; DECISION-001 output unchanged). Decision Availability (eligible/BET/SKIP + explicit denominators) + stable SKIP reason enum (deterministic precedence) + non-actionable Directional Lean (Player/Banker/None + evidence share) from stored player/banker scores. Live panel shows Lean + Why-Skip on SKIP (pref-gated) and a compact family/conflict trace (pref-gated). Statistics gains a Decision Availability + Top SKIP Reasons card. Historical trace read from the verbatim locked-prediction payload; missing trace => NOT AVAILABLE. 28 new Jest tests. Needs targeted UI validation."
+  - task: "M7.1 Patch 1 — Settings preferences + Engine Mode foundation + Matcher readiness"
+    implemented: true
+    working: "NA"
+    file: "src/app/(shell)/settings.tsx, src/workflows/preferences/*"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Settings now partially adjustable: two local UI preference switches (Show Directional Lean, Show Decision Details) persisted via AsyncStorage (NO DB schema; DB-002 unchanged). Engine Mode foundation shows STRICT (DECISION-001) selectable + BALANCED (DECISION-002) DISABLED 'Not enabled in this patch'. Historical Matcher readiness card: Collection ACTIVE, Completed Shoes N/100, Non-Tie Rounds N/5000, Eligibility COLLECTING/ELIGIBLE, Voting DISABLED. All engine knobs remain locked. Needs targeted UI validation."
+
 metadata:
   created_by: "main_agent"
-  version: "2.1"
+  version: "2.2"
   test_sequence: 0
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "M7.1 Patch 1 — Decision Observability (Availability + SKIP reason + Directional Lean)"
+    - "M7.1 Patch 1 — Settings preferences + Engine Mode foundation + Matcher readiness"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
+    -agent: "main"
+    -message: "M7.1 PATCH 1 (Decision Observability). Please run TARGETED validation at 1280x800 landscape on the THREE changed screens only. (1) SETTINGS (/settings): 'Display Preferences' card has two switches (testIDs pref-directional-lean, pref-decision-details) — toggle both and confirm no crash; 'Engine Mode' card shows STRICT active (engine-mode-strict) and BALANCED disabled with 'Not enabled in this patch' (engine-mode-balanced); 'Historical Matcher' card (settings-matcher) shows Completed Shoes N/100, Non-Tie Rounds N/5,000, Eligibility (matcher-eligibility) and Voting DISABLED IN DECISION-001. (2) ACTIVE SHOE Live (/): enter ~10-12 mixed P/T/B rounds then Start Live; in the LOCKED live panel, IF the decision is SKIP and 'Show Directional Lean' is ON, a Directional Lean block appears (testID live-skip-info / live-lean / live-why-skip) marked INFORMATIONAL and the official decision still reads SKIP (live-decision); with 'Show Decision Details' ON a compact trace appears (live-details / live-trace / live-family-trace). Confirm P/T/B order + large targets unchanged and the 400ms live double-tap guard still yields exactly one round. (3) STATISTICS (/statistics): a 'Decision Availability' card (stats-availability) shows Eligible decisions, Official BET, Official SKIP, BET availability 'X / Y (Z%)' (avail-bet-rate), plus 'Top SKIP Reasons' (stats-skip-reasons) and 'Historical Matcher' (stats-matcher). Confirm nothing is a win-probability claim. Report console errors/unhandled rejections (the AsyncStorage web-preview diagnostic is expected). This is web-preview; native SQLite runtime not verified from a browser."
     -agent: "testing"
     -message: "M7A UI/UX VALIDATION COMPLETE (1280x800 landscape). ALL PASS. History and Settings are now REAL read-only screens (NO 'Milestone 0 placeholder' badge anywhere). History: header + read-only banner, empty 'No shoes yet', populated shoe list with ACTIVE badge + 10 raw rounds in ascending order, NO edit/delete, Refresh OK. Settings: read-only Application (0.1.0, com.bapp.baccaratengine), Data & Persistence (DB-002 + adapter), Engine/System Status (version registry; Historical Matcher DISABLED; Derived Road + Volatility SHADOW_ONLY; warm-up 8; max confidence 0.75); NO editable controls. Active Shoe polish: P/T/B order + large touch targets preserved, all 5 roadmaps render (Bead+Big top, derived bottom), no clipping/overflow, PP/BP + Partial/Complete OK, Start Live enables after 8 non-Tie, LOCKED live panel + PLAYED/NOT_PLAYED, Review Data edit/delete OK. Statistics/Export/Diagnostics regression PASS (web write-gating: Apply Merge + Restore DISABLED with native-only note). Console: zero errors/rejections/React-key warnings (only expected AsyncStorage web diagnostic). 15 screenshots captured. Production-ready for web preview; native SQLite runtime NOT verified from a browser."
     -agent: "main"

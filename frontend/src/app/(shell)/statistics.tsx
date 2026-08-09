@@ -3,7 +3,9 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { computeFullStatistics } from "@/src/domain/statistics";
+import { computeAvailabilityFromDataset, matcherReadinessFromDataset } from "@/src/domain/observability";
 import { StatsView } from "@/src/ui/stats/StatsView";
+import { DecisionAvailabilityCard } from "@/src/ui/stats/DecisionAvailabilityCard";
 import { ActionButton, Banner, ScreenHeader } from "@/src/ui/data/cards";
 import { colors, spacing } from "@/src/ui/theme";
 
@@ -14,6 +16,11 @@ import { colors, spacing } from "@/src/ui/theme";
 export default function StatisticsScreen() {
   const { dataset, runtime, loading, error, reload } = useBappData();
   const stats = useMemo(() => (dataset ? computeFullStatistics(dataset) : null), [dataset]);
+  const availability = useMemo(
+    () => (dataset ? computeAvailabilityFromDataset(dataset) : null),
+    [dataset],
+  );
+  const matcher = useMemo(() => (dataset ? matcherReadinessFromDataset(dataset) : null), [dataset]);
   const isEmpty = dataset != null && dataset.rounds.length === 0 && dataset.lockedPredictions.length === 0;
 
   return (
@@ -56,7 +63,14 @@ export default function StatisticsScreen() {
               />
             </View>
           ) : null}
-          <StatsView stats={stats} />
+          <StatsView
+            stats={stats}
+            footer={
+              availability && matcher ? (
+                <DecisionAvailabilityCard availability={availability} matcher={matcher} />
+              ) : null
+            }
+          />
         </>
       ) : null}
     </View>

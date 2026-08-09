@@ -6,10 +6,19 @@
  * three-win progress, fixed-unit paper metrics, the PLAYED/NOT_PLAYED operator
  * control, and the last resolved outcome.
  */
-import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PredictionCategory, PredictionDecision } from '@/src/domain/models/enums';
+import { ModuleFamily } from '@/src/domain/decision';
+import {
+  conflictLevel,
+  deriveFamilyLeans,
+  deriveSkipDiagnostic,
+  LeanSide,
+  lockToTrace,
+  SKIP_REASON_LABEL,
+} from '@/src/domain/observability';
+import { usePreferences } from '@/src/workflows/preferences';
 import {
   OperatorAction,
   SessionEnvironment,
@@ -75,6 +84,26 @@ const resultColor = (r: StepResult): string => {
 const progressLabel = (seq: SequenceState): string =>
   seq.achieved ? 'COMPLETE' : `${seq.consecutiveWins} / 3`;
 
+const leanColor = (side: LeanSide): string =>
+  side === LeanSide.PLAYER
+    ? colors.player
+    : side === LeanSide.BANKER
+      ? colors.banker
+      : colors.textMuted;
+
+const FAMILY_SHORT: Partial<Record<ModuleFamily, string>> = {
+  [ModuleFamily.TREND]: 'Trend',
+  [ModuleFamily.ALTERNATION]: 'Alt',
+  [ModuleFamily.CONTEXT]: 'Context',
+  [ModuleFamily.STRUCTURE]: 'Structure',
+};
+
+const familyTraceText = (leans: ReturnType<typeof deriveFamilyLeans>): string =>
+  leans
+    .filter((f) => FAMILY_SHORT[f.family] != null)
+    .map((f) => `${FAMILY_SHORT[f.family]}: ${f.family === ModuleFamily.STRUCTURE ? 'SHADOW' : f.side}`)
+    .join(' · ') || 'no directional families';
+
 export function LiveSessionPanel({
   state,
   lastResolved,
@@ -83,7 +112,7 @@ export function LiveSessionPanel({
   busy,
   storeKind,
 }: Props) {
-  const [showTrace, setShowTrace] = useState(false);
+  const prefs = usePreferences();
   const prediction = state.currentPrediction;
   const envLabel =
     state.environment === SessionEnvironment.HISTORICAL_TEST ? 'HISTORICAL TEST' : 'LIVE FORWARD';
@@ -100,6 +129,7 @@ export function LiveSessionPanel({
   }
 
   const isSkip = prediction.decision === PredictionDecision.SKIP;
+  const diag = deriveSkipDiagnostic(lockToTrace(prediction));
 
   return (
     <View style={styles.card} testID="live-panel">
@@ -140,6 +170,31 @@ export function LiveSessionPanel({
         <Text style={styles.riskText} testID="live-risk">
           Risk: {prediction.riskFlags.join(', ')}
         </Text>
+      ) : null}
+
+      {isSkip && prefs.showDirectionalLean ? (
+        <View style={styles.skipInfo} testID="live-skip-info">
+          <View style={styles.leanRow}>
+            <Text style={styles.sectionLabel}>Directional Lean</Text>
+            <Text style={[styles.leanValue, { color: leanColor(diag.lean.side) }]} testID="live-lean">
+              {diag.lean.side}
+            </Text>
+            <View style={styles.infoTag}>
+              <Text style={styles.infoTagText}>INFORMATIONAL</Text>
+            </View>
+            {diag.lean.hasEvidence && diag.lean.evidenceShare != null ? (
+              <Text style={styles.leanShare} testID="live-lean-evidence">
+                Evidence {(diag.lean.evidenceShare * 100).toFixed(0)}%
+              </Text>
+            ) : null}
+          </View>
+          <Text style={styles.whySkip} testID="live-why-skip">
+            Why Skip: {diag.primaryReason ? SKIP_REASON_LABEL[diag.primaryReason] : '—'}
+          </Text>
+          <Text style={styles.nonActionable}>
+            Lean is non-actionable — the official recommendation is SKIP.
+          </Text>
+        </View>
       ) : null}
 
       {/* Operator action (attempt tracking); immutable to the locked prediction. */}
@@ -201,15 +256,22 @@ export function LiveSessionPanel({
         </View>
       ) : null}
 
-      <Pressable onPress={() => setShowTrace((v) => !v)} testID="live-trace-toggle">
-        <Text style={styles.traceToggle}>{showTrace ? 'Hide trace' : 'Show trace'}</Text>
-      </Pressable>
-      {showTrace ? (
-        <Text style={styles.traceText} testID="live-trace">
-          side={prediction.side ?? '—'} · P={prediction.playerScore.toFixed(2)} · B=
-          {prediction.bankerScore.toFixed(2)} · shadow={prediction.shadow.decision}
-          {prediction.shadow.differsFromActive ? ' (differs)' : ''}
-        </Text>
+      {prefs.showDecisionDetails ? (
+        <View style={styles.details} testID="live-details">
+          <Text style={styles.traceText} testID="live-trace">
+            side={prediction.side ?? '—'} · P={prediction.playerScore.toFixed(2)} · B=
+            {prediction.bankerScore.toFixed(2)} · agree=
+            {(prediction.weightedAgreement * 100).toFixed(0)}% · conflict=
+            {conflictLevel(prediction.conflictScore)}
+          </Text>
+          <Text style={styles.traceText} testID="live-family-trace">
+            {familyTraceText(deriveFamilyLeans(prediction.moduleResults))}
+          </Text>
+          <Text style={styles.traceText}>
+            shadow={prediction.shadow.decision}
+            {prediction.shadow.differsFromActive ? ' (differs)' : ''}
+          </Text>
+        </View>
       ) : null}
     </View>
   );
@@ -277,6 +339,31 @@ const styles = StyleSheet.create({
   feedbackRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   feedbackValue: { fontSize: 15, fontWeight: '900', letterSpacing: 1 },
   errorText: { color: colors.banker, fontSize: 12 },
-  traceToggle: { color: colors.accent, fontSize: 11, fontWeight: '700' },
+  skipInfo: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: 4,
+  },
+  leanRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  leanValue: { fontSize: 15, fontWeight: '900', letterSpacing: 1 },
+  infoTag: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  infoTagText: { color: colors.textMuted, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+  leanShare: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  whySkip: { color: colors.textPrimary, fontSize: 13, fontWeight: '700' },
+  nonActionable: { color: colors.textMuted, fontSize: 11, fontStyle: 'italic' },
+  details: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: 2,
+  },
   traceText: { color: colors.textMuted, fontSize: 11 },
 });
