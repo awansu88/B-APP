@@ -27,6 +27,8 @@ import {
 import { createSessionStore } from './create-session-store';
 import type { SessionStore, SessionStoreKind } from './session-store';
 import { getEngineMode } from '@/src/workflows/preferences';
+import type { MatcherCorpus } from '@/src/domain/matcher';
+import { useMatcherCorpus } from '@/src/workflows/matcher';
 
 const isForward = (env: SessionEnvironment | undefined): boolean =>
   env === SessionEnvironment.LIVE_FORWARD || env === SessionEnvironment.HISTORICAL_TEST;
@@ -72,6 +74,15 @@ export function useLiveSession(
   const roundsRef = useRef<readonly RoundRecord[]>(historyRounds);
   roundsRef.current = historyRounds;
 
+  // M7.1 Patch 3 Stage B1 — the pre-result matcher corpus (derived from the
+  // authoritative DB-002 dataset) is supplied to EVERY computePrediction call
+  // through the store opts. A ref keeps the async submit/revision callbacks on
+  // the freshest corpus without widening their dependency lists. When the corpus
+  // is below global eligibility the matcher simply abstains (COLLECTING).
+  const { corpus: matcherCorpus } = useMatcherCorpus(shoe?.id ?? null);
+  const corpusRef = useRef<MatcherCorpus | undefined>(undefined);
+  corpusRef.current = matcherCorpus;
+
   const [state, setState] = useState<SessionState | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -108,6 +119,7 @@ export function useLiveSession(
           next = await store.startLive(shoeId, roundsRef.current, environment, {
             historyConfirmed: true,
             profile: getEngineMode(),
+            matcherCorpus: corpusRef.current,
           });
         }
         if (!mounted) return;
@@ -140,6 +152,7 @@ export function useLiveSession(
               playerPair: pairs?.playerPair ?? PairState.UNKNOWN,
               bankerPair: pairs?.bankerPair ?? PairState.UNKNOWN,
               profile: getEngineMode(),
+              matcherCorpus: corpusRef.current,
             });
             setState(next);
             setError(null);
@@ -189,7 +202,10 @@ export function useLiveSession(
   const editHistory = useCallback(
     (roundNumber: number, edit: RoundEdit) =>
       runRevision((store, shoeId) =>
-        store.editHistory(shoeId, roundNumber, edit, { profile: getEngineMode() }),
+        store.editHistory(shoeId, roundNumber, edit, {
+          profile: getEngineMode(),
+          matcherCorpus: corpusRef.current,
+        }),
       ),
     [runRevision],
   );
@@ -197,7 +213,10 @@ export function useLiveSession(
   const deleteHistoryRound = useCallback(
     (roundNumber: number) =>
       runRevision((store, shoeId) =>
-        store.deleteHistory(shoeId, roundNumber, { profile: getEngineMode() }),
+        store.deleteHistory(shoeId, roundNumber, {
+          profile: getEngineMode(),
+          matcherCorpus: corpusRef.current,
+        }),
       ),
     [runRevision],
   );

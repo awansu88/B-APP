@@ -40,6 +40,7 @@ import {
 } from '@/src/domain/session';
 import { SessionEnvironment } from '@/src/domain/session';
 import type { EngineProfileId } from '@/src/domain/decision';
+import type { MatcherCorpus } from '@/src/domain/matcher';
 import type { RoundEdit } from '@/src/domain/history';
 
 /** Minimal key/value backend (structurally satisfied by `@/src/utils/storage`). */
@@ -53,6 +54,8 @@ export interface StartLiveOptions {
   readonly historyConfirmed?: boolean;
   /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
   readonly profile?: EngineProfileId;
+  /** M7.1 Patch 3 Stage B1 — pre-result Historical Matcher corpus (DB-002 archived history). */
+  readonly matcherCorpus?: MatcherCorpus;
 }
 
 export interface SubmitOptions {
@@ -65,6 +68,8 @@ export interface SubmitOptions {
   readonly bankerPair?: PairState;
   /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
   readonly profile?: EngineProfileId;
+  /** M7.1 Patch 3 Stage B1 — pre-result Historical Matcher corpus (DB-002 archived history). */
+  readonly matcherCorpus?: MatcherCorpus;
 }
 
 /** Persistence contract shared by the native (SQLite/DB-002) and web adapters. */
