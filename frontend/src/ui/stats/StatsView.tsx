@@ -105,6 +105,18 @@ export function StatsView({ stats, footer }: { stats: FullStatistics; footer?: R
               <Row label="Win rate" value={fractionLabel(c.winRate)} />
             </View>
           ))}
+          <Text style={styles.catNote} testID="stats-categories-note">
+            Historical fixed-band semantics: EXPERIMENTAL = 0.55 to under 0.60, QUALIFIED = 0.60 to
+            under 0.70, HIGH = 0.70 to 0.75. DECISION-004 (Threshold Lab) uses a configuration-specific
+            EXPERIMENTAL
+            lower bound (the per-shoe BALCFG-001 threshold), so its Experimental results are NOT pooled
+            here — they are segmented by threshold in the Threshold Lab card
+            {stats.decision004Experimental > 0
+              ? ` (${stats.decision004Experimental} DECISION-004 Experimental BET${
+                  stats.decision004Experimental === 1 ? '' : 's'
+                } shown there).`
+              : '.'}
+          </Text>
         </Card>
 
         <Card title="Player vs Banker" testID="stats-side">

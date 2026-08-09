@@ -115,6 +115,12 @@ export interface FullStatistics {
   readonly predictions: PredictionStats;
   readonly results: ResultStats;
   readonly categories: readonly CategoryStat[];
+  /**
+   * M7.1 Patch 4.1A — count of DECISION-004 EXPERIMENTAL valid BETs segmented
+   * OUT of the general Experimental band (config-specific lower bound). These
+   * are reported in the Threshold Lab card; surfaced here only for the note.
+   */
+  readonly decision004Experimental: number;
   readonly betPlayer: SideStat;
   readonly betBanker: SideStat;
   readonly engine: SequenceReport;
@@ -151,7 +157,23 @@ interface NormEntry {
   readonly result: StepResult;
   readonly played: boolean;
   readonly invalidated: boolean;
+  /**
+   * M7.1 Patch 4.1A — the OFFICIAL decisionConfigVersion (parsed from the
+   * immutable payload). Used to keep the general Confidence Categories view on
+   * pure historical fixed-0.55 semantics: DECISION-004 EXPERIMENTAL records use
+   * a configuration-specific lower bound (the per-shoe BALCFG-001 threshold) and
+   * are segmented in the Threshold Lab card instead of being blended here.
+   */
+  readonly decisionConfigVersion?: string;
 }
+
+const parseConfigVersion = (payload: string): string | undefined => {
+  try {
+    return (JSON.parse(payload) as { decisionConfigVersion?: string }).decisionConfigVersion;
+  } catch {
+    return undefined;
+  }
+};
 
 const normalize = (e: LockedPredictionEntryRecord): NormEntry => ({
   shoeId: e.shoeId,
@@ -161,6 +183,7 @@ const normalize = (e: LockedPredictionEntryRecord): NormEntry => ({
   result: e.evaluation as StepResult,
   played: e.operatorAction === 'PLAYED',
   invalidated: e.invalidated,
+  decisionConfigVersion: parseConfigVersion(e.payload),
 });
 
 const isBet = (d: PredictionDecision): boolean =>
@@ -291,13 +314,37 @@ export function computeFullStatistics(dataset: BappDataset): FullStatistics {
   };
 
   // --- CONFIDENCE CATEGORIES (valid BET only) ------------------------------
+  //
+  // M7.1 Patch 4.1A — CATEGORY SEMANTICS ARE VERSIONED:
+  //   DECISION-001/002/003:  EXPERIMENTAL = 0.55 <= confidence < 0.60
+  //   DECISION-004:          EXPERIMENTAL = balancedThreshold <= confidence < 0.60
+  //                          (balancedThreshold = immutable BALCFG-001 value)
+  //   QUALIFIED (0.60–<0.70) and HIGH (0.70–<=0.75) are IDENTICAL across all
+  //   versions.
+  //
+  // To avoid silently blending the configuration-specific DECISION-004
+  // EXPERIMENTAL lower bound with the historical fixed-0.55 EXPERIMENTAL band,
+  // DECISION-004 EXPERIMENTAL records are EXCLUDED from this general view; they
+  // remain represented (and segmented by balancedThreshold) in the Threshold Lab
+  // forward-statistics card. Bands with identical semantics are untouched.
+  const isDecision004 = (e: NormEntry): boolean => e.decisionConfigVersion === 'DECISION-004';
   const categories: CategoryStat[] = REPORTED_CATEGORIES.map((category) => {
-    const bucket = valid.filter((e) => e.category === category && isBet(e.decision));
+    const bucket = valid.filter(
+      (e) =>
+        e.category === category &&
+        isBet(e.decision) &&
+        !(category === PredictionCategory.EXPERIMENTAL && isDecision004(e)),
+    );
     const w = bucket.filter((e) => e.result === StepResult.WIN).length;
     const l = bucket.filter((e) => e.result === StepResult.LOSS).length;
     const p = bucket.filter((e) => e.result === StepResult.PUSH).length;
     return { category, totalBet: bucket.length, win: w, loss: l, push: p, winRate: winRate(w, l) };
   });
+  // Count of DECISION-004 EXPERIMENTAL valid BETs deliberately segmented out of
+  // the general Experimental band (surfaced by the UI note; never blended here).
+  const decision004Experimental = valid.filter(
+    (e) => isDecision004(e) && e.category === PredictionCategory.EXPERIMENTAL && isBet(e.decision),
+  ).length;
 
   // --- PLAYER vs BANKER RECOMMENDATION (valid) -----------------------------
   const sideStat = (decision: PredictionDecision): SideStat => {
@@ -327,6 +374,7 @@ export function computeFullStatistics(dataset: BappDataset): FullStatistics {
     predictions,
     results,
     categories,
+    decision004Experimental,
     betPlayer: sideStat(PredictionDecision.BET_PLAYER),
     betBanker: sideStat(PredictionDecision.BET_BANKER),
     engine,
