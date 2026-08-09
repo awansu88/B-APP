@@ -3,10 +3,11 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { computeFullStatistics } from "@/src/domain/statistics";
-import { computeAvailabilityFromDataset, computeNearThresholdFromDataset, computeProfileComparisonFromDataset, matcherReadinessFromDataset } from "@/src/domain/observability";
+import { computeAvailabilityFromDataset, computeNearThresholdFromDataset, computeProfileComparisonFromDataset, matcherReadinessFromDataset, computeMatcherStatsFromDataset } from "@/src/domain/observability";
 import { StatsView } from "@/src/ui/stats/StatsView";
 import { DecisionAvailabilityCard } from "@/src/ui/stats/DecisionAvailabilityCard";
 import { ProfileComparisonCard } from "@/src/ui/stats/ProfileComparisonCard";
+import { MatcherStatisticsCard } from "@/src/ui/stats/MatcherStatisticsCard";
 import { NearThresholdDiagnosticsCard } from "@/src/ui/stats/NearThresholdDiagnosticsCard";
 import { ActionButton, Banner, ScreenHeader } from "@/src/ui/data/cards";
 import { colors, spacing } from "@/src/ui/theme";
@@ -23,6 +24,10 @@ export default function StatisticsScreen() {
     [dataset],
   );
   const matcher = useMemo(() => (dataset ? matcherReadinessFromDataset(dataset) : null), [dataset]);
+  const matcherStats = useMemo(
+    () => (dataset ? computeMatcherStatsFromDataset(dataset) : null),
+    [dataset],
+  );
   const profileComparison = useMemo(
     () => (dataset ? computeProfileComparisonFromDataset(dataset) : null),
     [dataset],
@@ -78,7 +83,10 @@ export default function StatisticsScreen() {
             footer={
               availability && matcher ? (
                 <>
-                  <DecisionAvailabilityCard availability={availability} matcher={matcher} />
+                  <DecisionAvailabilityCard availability={availability} />
+                  {matcherStats ? (
+                    <MatcherStatisticsCard report={matcherStats} readiness={matcher} />
+                  ) : null}
                   {profileComparison ? <ProfileComparisonCard report={profileComparison} /> : null}
                   {nearThreshold ? (
                     <NearThresholdDiagnosticsCard

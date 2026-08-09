@@ -1,7 +1,7 @@
 /**
  * M7.1 Patch 2 — Profile Comparison card (read-only, pure inputs).
  *
- * Compares STRICT (DECISION-001) vs BALANCED (DECISION-002) over the IMMUTABLE
+ * Compares STRICT (DECISION-001) vs BALANCED (DECISION-003) over the IMMUTABLE
  * pre-result comparison telemetry stored in Patch-2 LockedPredictions. Reports
  * availability (BET/SKIP/side) and observed W/L/P (WIN/(WIN+LOSS), PUSH &
  * INVALIDATED excluded). Everything here is availability/observed telemetry —
@@ -86,7 +86,7 @@ export function ProfileComparisonCard({ report }: { readonly report: ProfileComp
       />
       <ProfileColumn
         title="BALANCED — Experimental"
-        version="DECISION-002 · Derived Road ACTIVE"
+        version="DECISION-003 · Derived Road + Matcher"
         data={report.balanced}
         testID="profile-balanced"
       />

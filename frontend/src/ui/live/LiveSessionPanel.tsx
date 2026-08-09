@@ -6,14 +6,17 @@
  * three-win progress, fixed-unit paper metrics, the PLAYED/NOT_PLAYED operator
  * control, and the last resolved outcome.
  */
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PredictionCategory, PredictionDecision } from '@/src/domain/models/enums';
 import {
+  buildMatcherLiveView,
   deriveSkipDiagnostic,
   LeanSide,
   lockToTrace,
   SKIP_REASON_LABEL,
+  type MatcherLiveState,
 } from '@/src/domain/observability';
 import { usePreferences } from '@/src/workflows/preferences';
 import {
@@ -88,6 +91,22 @@ const leanColor = (side: LeanSide): string =>
       ? colors.banker
       : colors.textMuted;
 
+const matcherStateColor = (s: MatcherLiveState): string => {
+  switch (s) {
+    case 'ACTIVE':
+      return colors.tie;
+    case 'COLLECTING':
+      return colors.accent;
+    case 'ELIGIBLE_ABSTAIN':
+      return colors.textSecondary;
+    default:
+      return colors.textMuted;
+  }
+};
+
+const matcherSignalColor = (sig: 'PLAYER' | 'BANKER' | null): string =>
+  sig === 'PLAYER' ? colors.player : sig === 'BANKER' ? colors.banker : colors.textMuted;
+
 export function LiveSessionPanel({
   state,
   lastResolved,
@@ -97,6 +116,7 @@ export function LiveSessionPanel({
   storeKind,
 }: Props) {
   const prefs = usePreferences();
+  const [matcherExpanded, setMatcherExpanded] = useState(false);
   const prediction = state.currentPrediction;
   const envLabel =
     state.environment === SessionEnvironment.HISTORICAL_TEST ? 'HISTORICAL TEST' : 'LIVE FORWARD';
@@ -114,6 +134,7 @@ export function LiveSessionPanel({
 
   const isSkip = prediction.decision === PredictionDecision.SKIP;
   const diag = deriveSkipDiagnostic(lockToTrace(prediction));
+  const matcherView = buildMatcherLiveView(prediction.matcherAudit, prefs.engineMode);
 
   return (
     <View style={styles.card} testID="live-panel">
@@ -250,6 +271,86 @@ export function LiveSessionPanel({
         </View>
       ) : null}
 
+      {matcherView.available ? (
+        <View style={styles.matcher} testID="live-matcher">
+          <View style={styles.matcherHeader}>
+            <Text style={styles.sectionLabel}>Historical Matcher</Text>
+            <View style={[styles.matcherStateTag, { borderColor: matcherStateColor(matcherView.state) }]}>
+              <Text
+                style={[styles.matcherStateText, { color: matcherStateColor(matcherView.state) }]}
+                testID="live-matcher-state"
+              >
+                {matcherView.stateLabel}
+              </Text>
+            </View>
+            {matcherView.signal ? (
+              <Text
+                style={[styles.matcherSignal, { color: matcherSignalColor(matcherView.signal) }]}
+                testID="live-matcher-signal"
+              >
+                {matcherView.signal}
+              </Text>
+            ) : null}
+          </View>
+
+          {matcherView.state === 'COLLECTING' ? (
+            <View style={styles.matcherLine}>
+              <Text style={styles.matcherMeta}>Completed Shoes {matcherView.shoesLabel}</Text>
+              <Text style={styles.matcherMeta}>Non-Tie {matcherView.roundsLabel}</Text>
+              <Text style={styles.matcherMeta}>{matcherView.votingLabel}</Text>
+            </View>
+          ) : null}
+
+          {matcherView.state === 'ELIGIBLE_ABSTAIN' ? (
+            <Text style={styles.matcherMeta} testID="live-matcher-abstain">
+              Reason: {matcherView.abstainReasonLabel}
+            </Text>
+          ) : null}
+
+          {matcherView.state === 'ACTIVE' ? (
+            <View style={styles.matcherLine}>
+              <Text style={styles.matcherMeta}>Evidence {matcherView.evidenceLabel}</Text>
+              <Text style={styles.matcherMeta}>Effective Matches {matcherView.effectiveMatches}</Text>
+            </View>
+          ) : null}
+
+          {matcherView.contextLabel ? (
+            <View style={styles.matcherContextRow}>
+              <View style={styles.infoTag}>
+                <Text style={styles.infoTagText}>SECONDARY</Text>
+              </View>
+              <Text style={styles.matcherContext} testID="live-matcher-context">
+                {matcherView.contextLabel}
+              </Text>
+            </View>
+          ) : null}
+
+          {matcherView.details.length > 0 ? (
+            <>
+              <Pressable
+                testID="live-matcher-details-toggle"
+                onPress={() => setMatcherExpanded((v) => !v)}
+                style={styles.matcherToggle}
+              >
+                <Text style={styles.matcherToggleText}>
+                  {matcherExpanded ? '▾ Hide matcher details' : '▸ Matcher details'}
+                </Text>
+              </Pressable>
+              {matcherExpanded ? (
+                <View style={styles.matcherDetails} testID="live-matcher-details">
+                  {matcherView.details.map((d) => (
+                    <View key={d.label} style={styles.matcherDetailRow}>
+                      <Text style={styles.matcherDetailKey}>{d.label}</Text>
+                      <Text style={styles.matcherDetailVal}>{d.value}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : null}
+        </View>
+      ) : null}
+
       {prefs.showDecisionComparison && prediction.profileComparison ? (
         <View style={styles.details} testID="live-comparison">
           <Text style={styles.sectionLabel}>Profile Comparison (secondary)</Text>
@@ -378,4 +479,29 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   traceText: { color: colors.textMuted, fontSize: 11 },
+  matcher: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: 4,
+  },
+  matcherHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  matcherStateTag: {
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  matcherStateText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  matcherSignal: { fontSize: 14, fontWeight: '900', letterSpacing: 1, marginLeft: 'auto' },
+  matcherLine: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  matcherMeta: { color: colors.textSecondary, fontSize: 12, fontWeight: '600' },
+  matcherContextRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  matcherContext: { color: colors.textMuted, fontSize: 11, fontStyle: 'italic', flexShrink: 1 },
+  matcherToggle: { paddingVertical: 2 },
+  matcherToggleText: { color: colors.accent, fontSize: 11, fontWeight: '700' },
+  matcherDetails: { gap: 2, paddingTop: 2 },
+  matcherDetailRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  matcherDetailKey: { color: colors.textMuted, fontSize: 11 },
+  matcherDetailVal: { color: colors.textPrimary, fontSize: 11, fontWeight: '700' },
 });

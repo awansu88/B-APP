@@ -3,3 +3,4 @@ export * from './dataset-observability';
 export * from './threshold-observability';
 export * from './threshold-dataset';
 export * from './matcher-observability';
+export * from './matcher-presentation';

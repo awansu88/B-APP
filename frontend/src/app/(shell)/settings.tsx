@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Switch, Text, View, Pressable } from "react-nat
 
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { usePreferences } from "@/src/workflows/preferences";
-import { matcherReadinessFromDataset } from "@/src/domain/observability";
+import { matcherReadinessFromDataset, buildMatcherSettingsView } from "@/src/domain/observability";
 import { buildDiagnosticsSnapshot } from "@/src/diagnostics";
 import { Banner, Card, Row, ScreenHeader, SectionLabel } from "@/src/ui/data/cards";
 import { colors, radius, spacing } from "@/src/ui/theme";
@@ -26,6 +26,10 @@ export default function SettingsScreen() {
   const matcher = useMemo(
     () => (dataset ? matcherReadinessFromDataset(dataset) : null),
     [dataset],
+  );
+  const matcherView = useMemo(
+    () => (matcher ? buildMatcherSettingsView(matcher) : null),
+    [matcher],
   );
   const v = snapshot.versions;
 
@@ -167,46 +171,56 @@ export default function SettingsScreen() {
                 <Text style={styles.modeChipTitle}>
                   {prefs.engineMode === "BALANCED" ? "\u25C9 " : "\u25CB "}BALANCED — Experimental
                 </Text>
-                <Text style={styles.modeChipSub}>DECISION-002 · Derived Road ACTIVE</Text>
+                <Text style={styles.modeChipSub}>DECISION-003 · Derived Road + Matcher</Text>
               </Pressable>
             </View>
             <Text style={styles.note} testID="engine-mode-note">
-              STRICT (DECISION-001) is the accepted default. BALANCED (DECISION-002) is EXPERIMENTAL:
-              it activates the Derived Road analyzer (STRUCTURE family) while keeping every accepted
-              confidence/threshold/risk rule unchanged. Historical Matcher stays NO-VOTE and Volatility
-              stays SHADOW_ONLY in both profiles. Switching mode never rewrites an already-locked target —
-              it applies to the next unlocked prediction only.
+              STRICT (DECISION-001) is the accepted default. BALANCED (DECISION-003) is EXPERIMENTAL:
+              it activates the Derived Road analyzer (STRUCTURE family) and the quality-gated Historical
+              Matcher (HMATCH-002) while keeping every accepted confidence/threshold/risk rule unchanged.
+              STRICT stays matcher-free and Volatility stays SHADOW_ONLY in both profiles. Switching mode
+              never rewrites an already-locked target — it applies to the next unlocked prediction only.
             </Text>
           </Card>
 
           <Card title="Historical Matcher" testID="settings-matcher" wide>
-            <Row label="Collection" value="ACTIVE (from first persisted shoe)" testID="matcher-collection" />
+            <Row label="Collection" value="ACTIVE (from persisted history)" testID="matcher-collection" />
             <Row
               label="Completed Shoes"
-              value={matcher ? `${matcher.completedShoes} / ${matcher.requiredShoes}` : "—"}
+              value={matcherView ? matcherView.completedShoesLabel : "—"}
               testID="matcher-shoes"
             />
             <Row
               label="Non-Tie Rounds"
-              value={
-                matcher
-                  ? `${matcher.nonTieRounds.toLocaleString()} / ${matcher.requiredNonTieRounds.toLocaleString()}`
-                  : "—"
-              }
+              value={matcherView ? matcherView.nonTieRoundsLabel : "—"}
               testID="matcher-rounds"
             />
             <Row
               label="Eligibility"
-              value={matcher ? matcher.eligibility : loading ? "computing…" : "—"}
-              valueColor={matcher?.eligibility === "ELIGIBLE" ? colors.tie : colors.textSecondary}
+              value={matcherView ? matcherView.eligibility : loading ? "computing…" : "—"}
+              valueColor={matcherView?.eligible ? colors.tie : colors.textSecondary}
               testID="matcher-eligibility"
             />
-            <Row label="Voting" value="DISABLED — PATCH 3" valueColor={colors.textMuted} testID="matcher-voting" />
-            <Text style={styles.note}>
+            <SectionLabel>Voting</SectionLabel>
+            <Row
+              label="STRICT (DECISION-001)"
+              value={matcherView ? matcherView.strictVoting : "DISABLED"}
+              valueColor={colors.textMuted}
+              testID="matcher-voting-strict"
+            />
+            <Row
+              label="BALANCED (DECISION-003)"
+              value={matcherView ? matcherView.balancedVoting : "WAITING FOR ELIGIBILITY"}
+              valueColor={matcherView?.eligible ? colors.tie : colors.textSecondary}
+              testID="matcher-voting-balanced"
+            />
+            <Text style={styles.note} testID="matcher-note">
               Derived from the authoritative shoes + rounds (no separate matcher database, no DB-003).
-              ELIGIBLE does not activate matching or voting in this patch. Completed-shoe counting uses
-              ShoeStatus COMPLETED/ARCHIVED; if the accepted workflow does not yet transition shoes out of
-              ACTIVE, this count stays at 0 until a shoe-completion step is added in a later patch.
+              Collection begins automatically from persisted history. The BALANCED matcher becomes
+              eligible automatically once BOTH global thresholds pass (100 completed shoes AND 5,000
+              non-Tie rounds); STRICT never receives the matcher vote. Eligibility does NOT guarantee a
+              vote every round — the per-round matcher (HMATCH-002) may still ABSTAIN when its quality
+              gates are not met. Thresholds are locked and not user-adjustable.
             </Text>
           </Card>
         </View>

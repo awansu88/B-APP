@@ -11,17 +11,14 @@ import {
   SKIP_REASON_LABEL,
   topSkipReasons,
   type DecisionAvailability,
-  type MatcherReadiness,
 } from '@/src/domain/observability';
 
 const pct = (n: number | null): string => (n == null ? 'n/a' : `${(n * 100).toFixed(1)}%`);
 
 export function DecisionAvailabilityCard({
   availability,
-  matcher,
 }: {
   readonly availability: DecisionAvailability;
-  readonly matcher: MatcherReadiness;
 }) {
   const top = topSkipReasons(availability, 4);
   return (
@@ -58,23 +55,6 @@ export function DecisionAvailabilityCard({
             (historical payload predates trace capture; not regenerated).
           </Text>
         ) : null}
-      </Card>
-
-      <Card title="Historical Matcher" testID="stats-matcher">
-        <Row label="Collection" value="ACTIVE" testID="stats-matcher-collection" />
-        <Row label="Completed Shoes" value={`${matcher.completedShoes} / ${matcher.requiredShoes}`} testID="stats-matcher-shoes" />
-        <Row
-          label="Non-Tie Rounds"
-          value={`${matcher.nonTieRounds.toLocaleString()} / ${matcher.requiredNonTieRounds.toLocaleString()}`}
-          testID="stats-matcher-rounds"
-        />
-        <Row
-          label="Eligibility"
-          value={matcher.eligibility}
-          valueColor={matcher.eligibility === 'ELIGIBLE' ? colors.tie : colors.textSecondary}
-          testID="stats-matcher-eligibility"
-        />
-        <Row label="Voting" value="DISABLED — PATCH 3" valueColor={colors.textMuted} testID="stats-matcher-voting" />
       </Card>
     </View>
   );
