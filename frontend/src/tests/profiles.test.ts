@@ -72,9 +72,9 @@ describe('Patch 2 · engine profile config (section 17)', () => {
     expect(STRICT_PROFILE.status).toBe('ACCEPTED');
   });
 
-  it('BALANCED is DECISION-002 / EXPERIMENTAL', () => {
+  it('BALANCED is DECISION-003 / EXPERIMENTAL (Patch 3 — matcher-eligible)', () => {
     expect(BALANCED_PROFILE.id).toBe('BALANCED');
-    expect(BALANCED_PROFILE.decisionVersion).toBe('DECISION-002');
+    expect(BALANCED_PROFILE.decisionVersion).toBe('DECISION-003');
     expect(BALANCED_PROFILE.status).toBe('EXPERIMENTAL');
   });
 
@@ -132,14 +132,14 @@ describe('Patch 2 · engine profile config (section 17)', () => {
 describe('Patch 2 · decision integrity (section 18)', () => {
   const rounds = bankerRounds(14);
 
-  it('STRICT is default and stamps DECISION-001; BALANCED stamps DECISION-002', () => {
+  it('STRICT is default and stamps DECISION-001; BALANCED stamps DECISION-003', () => {
     const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW });
     const balanced = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', {
       now: NOW,
       profile: 'BALANCED',
     });
     expect(strict.decisionConfigVersion).toBe('DECISION-001');
-    expect(balanced.decisionConfigVersion).toBe('DECISION-002');
+    expect(balanced.decisionConfigVersion).toBe('DECISION-003');
   });
 
   it('official fields equal the SELECTED profile snapshot', () => {
@@ -195,7 +195,7 @@ describe('Patch 2 · decision integrity (section 18)', () => {
     expect(pred.profileComparison?.version).toBe('PROFILECMP-001');
     // both snapshots exist regardless of any future outcome
     expect(pred.profileComparison?.strict.decisionVersion).toBe('DECISION-001');
-    expect(pred.profileComparison?.balanced.decisionVersion).toBe('DECISION-002');
+    expect(pred.profileComparison?.balanced.decisionVersion).toBe('DECISION-003');
   });
 });
 
@@ -269,7 +269,7 @@ describe('Patch 2 · locked profile audit (section 19)', () => {
 
     // The next unlocked target is computed under BALANCED.
     expect(next.currentPrediction?.targetRound).toBe(lockedTarget + 1);
-    expect(next.currentPrediction?.decisionConfigVersion).toBe('DECISION-002');
+    expect(next.currentPrediction?.decisionConfigVersion).toBe('DECISION-003');
     expect(next.currentPrediction?.profileComparison?.selectedProfile).toBe('BALANCED');
   });
 

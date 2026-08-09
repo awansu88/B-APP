@@ -20,6 +20,13 @@ import type { RoundRecord } from '../models/round';
 import { Winner } from '../models/outcome';
 import { SessionEnvironment } from './environment';
 import {
+  evaluateMatcher,
+  matcherModuleAnalysis,
+  type MatcherAudit,
+  type MatcherCorpus,
+} from '../matcher';
+import type { ModuleAnalysis } from '../analysis/types';
+import {
   ALL_PROFILES,
   LockedPrediction,
   PROFILE_CATEGORIES,
@@ -48,6 +55,13 @@ export interface ComputeOptions {
   readonly historyConfirmed?: boolean;
   /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
   readonly profile?: EngineProfileId;
+  /**
+   * M7.1 Patch 3 — prepared PRE-RESULT Historical Matcher corpus. When provided
+   * AND the selected profile is BALANCED (DECISION-003), the matcher is
+   * evaluated and, ONLY if it produces a directional vote through every gate,
+   * injected as one ACTIVE HISTORICAL module into the (unchanged) decision.
+   */
+  readonly matcherCorpus?: MatcherCorpus;
 }
 
 /** Build an immutable pre-result profile-decision snapshot from a pipeline result. */
@@ -96,8 +110,24 @@ export function computePrediction(
   const other = engineProfile(otherProfileId(selectedId));
 
   const report = runAnalysis(ctx, selected.modules);
-  const decision = runDecisionPipeline(ctx, DECISION_CONFIG, selected);
+
+  // M7.1 Patch 3 — Historical Matcher (HMATCH-002) participates ONLY for the
+  // BALANCED / DECISION-003 official lock, ONLY when a corpus is supplied and
+  // the matcher passes every gate to a directional vote. The audit is computed
+  // PRE-RESULT (from completed rounds only) and stored immutably regardless of
+  // signal (COLLECTING / ineligible / abstain / directional).
+  let matcherAudit: MatcherAudit | undefined;
+  let extraModules: readonly ModuleAnalysis[] = [];
+  if (selectedId === 'BALANCED' && opts.matcherCorpus) {
+    matcherAudit = evaluateMatcher(rounds, opts.matcherCorpus);
+    const mod = matcherModuleAnalysis(matcherAudit);
+    if (mod) extraModules = [mod];
+  }
+
+  const decision = runDecisionPipeline(ctx, DECISION_CONFIG, selected, extraModules);
   const otherDecision = runDecisionPipeline(ctx, DECISION_CONFIG, other);
+  const moduleResults =
+    extraModules.length > 0 ? [...report.results, ...extraModules] : report.results;
 
   const strictDecision = selectedId === 'STRICT' ? decision : otherDecision;
   const balancedDecision = selectedId === 'BALANCED' ? decision : otherDecision;
@@ -117,7 +147,7 @@ export function computePrediction(
     side: decision.active.side,
     confidence: decision.active.confidence,
     category: decision.active.category,
-    moduleResults: report.results,
+    moduleResults,
     riskFlags: decision.active.riskFlags,
     riskScore: decision.active.riskScore,
     riskLevel: decision.active.riskLevel,
@@ -151,6 +181,7 @@ export function computePrediction(
     lockedAt: now,
     locked: true,
     profileComparison,
+    ...(matcherAudit ? { matcherAudit } : {}),
   });
 }
 

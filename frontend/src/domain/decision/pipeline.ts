@@ -198,6 +198,7 @@ export function runDecisionPipeline(
   ctx: AnalysisContext,
   config: DecisionConfig = DECISION_CONFIG,
   profile: EngineProfile = STRICT_PROFILE,
+  extraModules: readonly ModuleAnalysis[] = [],
 ): DecisionResult {
   const report = runAnalysis(ctx, profile.modules);
   const f = ctx.features;
@@ -213,7 +214,13 @@ export function runDecisionPipeline(
       missingRounds: f.dataQuality.missingRounds,
     },
   };
-  const result = decide(report.results, context, config);
+  // M7.1 Patch 3 — the Historical Matcher (HMATCH-002) is injected here as an
+  // ADDITIONAL ACTIVE ModuleAnalysis (HISTORICAL family) ONLY when the caller
+  // proved it passed every gate and produced a directional vote. `decide()` and
+  // all voting/confidence/risk math are unchanged; default (no extras) is
+  // byte-identical to the accepted pipeline.
+  const results = extraModules.length > 0 ? [...report.results, ...extraModules] : report.results;
+  const result = decide(results, context, config);
   // STRICT stamps DECISION-001 (identity); non-STRICT profiles stamp their own
   // versioned decision label without touching any decision mathematics.
   return result.decisionConfigVersion === profile.decisionVersion

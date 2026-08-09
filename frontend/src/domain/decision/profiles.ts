@@ -47,7 +47,7 @@ export const STRICT_PROFILE: EngineProfile = Object.freeze({
 
 export const BALANCED_PROFILE: EngineProfile = Object.freeze({
   id: 'BALANCED',
-  decisionVersion: 'DECISION-002',
+  decisionVersion: 'DECISION-003',
   status: 'EXPERIMENTAL',
   derivedRoad: 'ACTIVE',
   modules: BALANCED_MODULES,

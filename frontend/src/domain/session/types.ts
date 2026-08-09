@@ -8,6 +8,7 @@
  */
 import type { DecisionReason, DecisionRiskFlag, RiskLevel, VoteSide } from '../decision';
 import type { ModuleAnalysis } from '../analysis/types';
+import type { MatcherAudit } from '../matcher';
 import { PredictionCategory, PredictionDecision } from '../models/enums';
 import type { RevisionRecord } from '../models/records';
 import type { RoundRecord } from '../models/round';
@@ -167,6 +168,12 @@ export interface LockedPrediction {
    * from the top-level fields, which belong to the selected profile).
    */
   readonly profileComparison?: ProfileComparison;
+  /**
+   * M7.1 Patch 3 — immutable PRE-RESULT Historical Matcher audit (HMATCH-002).
+   * OPTIONAL and backward-compatible: pre-Patch-3 payloads omit it and are
+   * reported as NOT_AVAILABLE. Never regenerated from a later/larger corpus.
+   */
+  readonly matcherAudit?: MatcherAudit;
 }
 
 /** A prediction plus its (eventual) evaluation — the audit trail entry. */

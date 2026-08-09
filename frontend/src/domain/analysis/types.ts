@@ -39,6 +39,8 @@ export enum ReasonCode {
   DATA_QUALITY_OK = 'DATA_QUALITY_OK',
   MODULE_DISABLED = 'MODULE_DISABLED',
   SHADOW_ONLY = 'SHADOW_ONLY',
+  HISTORICAL_MATCH = 'HISTORICAL_MATCH',
+  HISTORICAL_ABSTAIN = 'HISTORICAL_ABSTAIN',
 }
 
 /** Risk flags surfaced to downstream (voting/decision) layers. */
