@@ -14,9 +14,13 @@ import {
   computeMatcherReadiness,
   countCompletedShoes,
   countNonTieRounds,
+  evaluateSnapshotOutcome,
+  tallyObserved,
   type DecisionAvailability,
   type DecisionTraceLike,
   type MatcherReadiness,
+  type ObservedOutcome,
+  type ProfileObserved,
 } from './decision-observability';
 
 interface StoredPayloadTrace {
@@ -91,4 +95,112 @@ export function matcherReadinessFromDataset(dataset: BappDataset): MatcherReadin
     countCompletedShoes(dataset.shoes),
     countNonTieRounds(dataset.rounds),
   );
+}
+
+// --- M7.1 Patch 2: profile-comparison telemetry ----------------------------
+
+interface StoredSnapshot {
+  readonly decision: string;
+  readonly reasonCodes?: readonly string[];
+  readonly riskFlags?: readonly string[];
+  readonly playerScore?: number;
+  readonly bankerScore?: number;
+}
+
+interface StoredProfileComparison {
+  readonly version: string;
+  readonly selectedProfile: string;
+  readonly strict: StoredSnapshot;
+  readonly balanced: StoredSnapshot;
+}
+
+const snapToTrace = (s: StoredSnapshot): DecisionTraceLike => ({
+  decision: s.decision,
+  reasonCodes: s.reasonCodes,
+  riskFlags: s.riskFlags,
+  playerScore: s.playerScore,
+  bankerScore: s.bankerScore,
+});
+
+/** Parse the immutable `profileComparison` block from a stored payload; null when absent. */
+function parseProfileComparison(payload: string | null | undefined): StoredProfileComparison | null {
+  if (!payload) return null;
+  try {
+    const obj = JSON.parse(payload) as Record<string, unknown>;
+    const cmp = obj?.profileComparison as Record<string, unknown> | undefined;
+    if (!cmp || typeof cmp !== 'object') return null;
+    const strict = cmp.strict as StoredSnapshot | undefined;
+    const balanced = cmp.balanced as StoredSnapshot | undefined;
+    if (!strict?.decision || !balanced?.decision) return null;
+    return {
+      version: String(cmp.version ?? 'PROFILECMP-001'),
+      selectedProfile: String(cmp.selectedProfile ?? 'STRICT'),
+      strict,
+      balanced,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export interface ProfileAvailability {
+  readonly availability: DecisionAvailability;
+  readonly observed: ProfileObserved;
+}
+
+export interface ProfileComparisonReport {
+  /** Non-invalidated records that carry Patch-2 comparison telemetry. */
+  readonly available: number;
+  /** Non-invalidated records WITHOUT comparison telemetry (pre-Patch-2) — NOT_AVAILABLE. */
+  readonly notAvailable: number;
+  readonly selectedStrict: number;
+  readonly selectedBalanced: number;
+  readonly strict: ProfileAvailability;
+  readonly balanced: ProfileAvailability;
+}
+
+/**
+ * Compare STRICT vs BALANCED over the immutable stored comparison telemetry.
+ * Pre-Patch-2 records (no telemetry) are excluded from the per-profile
+ * denominators and counted as `notAvailable`. Observed W/L/P is derived from the
+ * stored pre-result decision + the actual winner — it NEVER touches the played
+ * or paper ledger (comparison is control telemetry only).
+ */
+export function computeProfileComparisonFromDataset(dataset: BappDataset): ProfileComparisonReport {
+  const strictTraces: DecisionTraceLike[] = [];
+  const balancedTraces: DecisionTraceLike[] = [];
+  const strictOutcomes: ObservedOutcome[] = [];
+  const balancedOutcomes: ObservedOutcome[] = [];
+  let available = 0;
+  let notAvailable = 0;
+  let selectedStrict = 0;
+  let selectedBalanced = 0;
+
+  for (const r of dataset.lockedPredictions) {
+    if (r.invalidated) continue;
+    const cmp = parseProfileComparison(r.payload);
+    if (!cmp) {
+      notAvailable += 1;
+      continue;
+    }
+    available += 1;
+    if (cmp.selectedProfile === 'BALANCED') selectedBalanced += 1;
+    else selectedStrict += 1;
+    strictTraces.push(snapToTrace(cmp.strict));
+    balancedTraces.push(snapToTrace(cmp.balanced));
+    strictOutcomes.push(evaluateSnapshotOutcome(cmp.strict.decision, r.actualWinner));
+    balancedOutcomes.push(evaluateSnapshotOutcome(cmp.balanced.decision, r.actualWinner));
+  }
+
+  return {
+    available,
+    notAvailable,
+    selectedStrict,
+    selectedBalanced,
+    strict: { availability: computeAvailability(strictTraces), observed: tallyObserved(strictOutcomes) },
+    balanced: {
+      availability: computeAvailability(balancedTraces),
+      observed: tallyObserved(balancedOutcomes),
+    },
+  };
 }

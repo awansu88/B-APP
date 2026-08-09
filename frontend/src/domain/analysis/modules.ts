@@ -356,47 +356,77 @@ export const volatilityAnalyzer: AnalysisModule = {
 };
 
 // ---------------------------------------------------------------------------
-// 8. Derived Road Analyzer (SHADOW_ONLY) — structural agreement (shadow).
+// 8. Derived Road Analyzer — structural agreement.
+//    SHADOW_ONLY under STRICT / DECISION-001 (computed, never votes). The
+//    BALANCED / DECISION-002 profile registry substitutes an ACTIVE variant
+//    (`derivedRoadAnalyzerActive`) that shares the SAME directional math,
+//    reliability prior (0.30) and STRUCTURE family — ONLY `status` differs so it
+//    participates in weighted voting. No VOTE-001 change is required.
 // ---------------------------------------------------------------------------
+function analyzeDerivedRoad(ctx: AnalysisContext, status: ModuleStatus): ModuleAnalysis {
+  const f = ctx.features;
+  const id = 'derived-road';
+  const version = ANALYZER_VERSIONS['derived-road'];
+  // Preserve the accepted SHADOW_ONLY reason-code trace verbatim; the ACTIVE
+  // variant simply omits the SHADOW_ONLY tag (informational only — voting reads
+  // status + signal, never reason codes).
+  const shadowTag = status === ModuleStatus.SHADOW_ONLY ? [ReasonCode.SHADOW_ONLY] : [];
+  if (belowWarmup(f) || !f.derivedRoads.bigEyeBoy.available) {
+    return abstain(
+      id,
+      version,
+      status,
+      [ReasonCode.INSUFFICIENT_DATA, ...shadowTag],
+      [...commonRiskFlags(f), RiskFlag.DERIVED_UNAVAILABLE],
+    );
+  }
+  const { currentSide } = f.streak;
+  const risks = commonRiskFlags(f);
+  if (currentSide && f.derivedRoads.agreement) {
+    return {
+      moduleId: id,
+      signal: sideToSignal(currentSide),
+      strength: round6(clamp01(f.derivedRoads.bigEyeBoy.currentRun / 4)),
+      reliability: reliabilityPrior(id),
+      status,
+      reasonCodes: [ReasonCode.DERIVED_AGREEMENT, ...shadowTag],
+      riskFlags: risks,
+      version,
+    };
+  }
+  return {
+    moduleId: id,
+    signal: AnalysisSignal.NEUTRAL,
+    strength: 0,
+    reliability: reliabilityPrior(id),
+    status,
+    reasonCodes: [ReasonCode.DERIVED_DISAGREEMENT, ...shadowTag],
+    riskFlags: risks,
+    version,
+  };
+}
+
 export const derivedRoadAnalyzer: AnalysisModule = {
   id: 'derived-road',
   version: ANALYZER_VERSIONS['derived-road'],
   status: ModuleStatus.SHADOW_ONLY,
-  analyze({ features }: AnalysisContext): ModuleAnalysis {
-    const f = features;
-    if (belowWarmup(f) || !f.derivedRoads.bigEyeBoy.available) {
-      return abstain(
-        this.id,
-        this.version,
-        this.status,
-        [ReasonCode.INSUFFICIENT_DATA, ReasonCode.SHADOW_ONLY],
-        [...commonRiskFlags(f), RiskFlag.DERIVED_UNAVAILABLE],
-      );
-    }
-    const { currentSide } = f.streak;
-    const risks = commonRiskFlags(f);
-    if (currentSide && f.derivedRoads.agreement) {
-      return {
-        moduleId: this.id,
-        signal: sideToSignal(currentSide),
-        strength: round6(clamp01(f.derivedRoads.bigEyeBoy.currentRun / 4)),
-        reliability: reliabilityPrior(this.id),
-        status: this.status,
-        reasonCodes: [ReasonCode.DERIVED_AGREEMENT, ReasonCode.SHADOW_ONLY],
-        riskFlags: risks,
-        version: this.version,
-      };
-    }
-    return {
-      moduleId: this.id,
-      signal: AnalysisSignal.NEUTRAL,
-      strength: 0,
-      reliability: reliabilityPrior(this.id),
-      status: this.status,
-      reasonCodes: [ReasonCode.DERIVED_DISAGREEMENT, ReasonCode.SHADOW_ONLY],
-      riskFlags: risks,
-      version: this.version,
-    };
+  analyze(ctx: AnalysisContext): ModuleAnalysis {
+    return analyzeDerivedRoad(ctx, this.status);
+  },
+};
+
+/**
+ * DECISION-002 (BALANCED) ACTIVE variant of the Derived Road analyzer. Identical
+ * directional math, reliability prior and STRUCTURE family; only `status` is
+ * ACTIVE so `computeVoting` includes it. Used ONLY by the BALANCED profile
+ * registry — never by STRICT.
+ */
+export const derivedRoadAnalyzerActive: AnalysisModule = {
+  id: 'derived-road',
+  version: ANALYZER_VERSIONS['derived-road'],
+  status: ModuleStatus.ACTIVE,
+  analyze(ctx: AnalysisContext): ModuleAnalysis {
+    return analyzeDerivedRoad(ctx, this.status);
   },
 };
 

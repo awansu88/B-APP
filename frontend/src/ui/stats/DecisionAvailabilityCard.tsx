@@ -74,7 +74,7 @@ export function DecisionAvailabilityCard({
           valueColor={matcher.eligibility === 'ELIGIBLE' ? colors.tie : colors.textSecondary}
           testID="stats-matcher-eligibility"
         />
-        <Row label="Voting" value="DISABLED IN DECISION-001" valueColor={colors.textMuted} />
+        <Row label="Voting" value="DISABLED — PATCH 3" valueColor={colors.textMuted} testID="stats-matcher-voting" />
       </Card>
     </View>
   );

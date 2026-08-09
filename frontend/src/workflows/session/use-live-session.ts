@@ -26,6 +26,7 @@ import {
 } from '@/src/domain/session';
 import { createSessionStore } from './create-session-store';
 import type { SessionStore, SessionStoreKind } from './session-store';
+import { getEngineMode } from '@/src/workflows/preferences';
 
 const isForward = (env: SessionEnvironment | undefined): boolean =>
   env === SessionEnvironment.LIVE_FORWARD || env === SessionEnvironment.HISTORICAL_TEST;
@@ -106,6 +107,7 @@ export function useLiveSession(
         if (!next) {
           next = await store.startLive(shoeId, roundsRef.current, environment, {
             historyConfirmed: true,
+            profile: getEngineMode(),
           });
         }
         if (!mounted) return;
@@ -137,6 +139,7 @@ export function useLiveSession(
               operatorAction: action,
               playerPair: pairs?.playerPair ?? PairState.UNKNOWN,
               bankerPair: pairs?.bankerPair ?? PairState.UNKNOWN,
+              profile: getEngineMode(),
             });
             setState(next);
             setError(null);
@@ -185,13 +188,17 @@ export function useLiveSession(
 
   const editHistory = useCallback(
     (roundNumber: number, edit: RoundEdit) =>
-      runRevision((store, shoeId) => store.editHistory(shoeId, roundNumber, edit)),
+      runRevision((store, shoeId) =>
+        store.editHistory(shoeId, roundNumber, edit, { profile: getEngineMode() }),
+      ),
     [runRevision],
   );
 
   const deleteHistoryRound = useCallback(
     (roundNumber: number) =>
-      runRevision((store, shoeId) => store.deleteHistory(shoeId, roundNumber)),
+      runRevision((store, shoeId) =>
+        store.deleteHistory(shoeId, roundNumber, { profile: getEngineMode() }),
+      ),
     [runRevision],
   );
 

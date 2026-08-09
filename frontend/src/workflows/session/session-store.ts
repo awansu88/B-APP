@@ -39,6 +39,7 @@ import {
   type SessionState,
 } from '@/src/domain/session';
 import { SessionEnvironment } from '@/src/domain/session';
+import type { EngineProfileId } from '@/src/domain/decision';
 import type { RoundEdit } from '@/src/domain/history';
 
 /** Minimal key/value backend (structurally satisfied by `@/src/utils/storage`). */
@@ -50,6 +51,8 @@ export interface KvStore {
 export interface StartLiveOptions {
   readonly now?: string;
   readonly historyConfirmed?: boolean;
+  /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
+  readonly profile?: EngineProfileId;
 }
 
 export interface SubmitOptions {
@@ -60,6 +63,8 @@ export interface SubmitOptions {
   readonly roundId?: string;
   readonly playerPair?: PairState;
   readonly bankerPair?: PairState;
+  /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
+  readonly profile?: EngineProfileId;
 }
 
 /** Persistence contract shared by the native (SQLite/DB-002) and web adapters. */

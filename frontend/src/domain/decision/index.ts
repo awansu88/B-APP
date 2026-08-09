@@ -11,3 +11,4 @@ export * from './voting';
 export * from './confidence';
 export * from './risk';
 export * from './pipeline';
+export * from './profiles';

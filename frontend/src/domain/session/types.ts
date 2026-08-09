@@ -91,6 +91,43 @@ export interface ShadowAudit {
   readonly differsFromActive: boolean;
 }
 
+/**
+ * M7.1 Patch 2 — immutable, pre-result profile-decision snapshot. Captured for
+ * BOTH engine profiles at lock time so a later comparison never needs to be
+ * reconstructed with future/current engine code.
+ */
+export interface ProfileDecisionSnapshot {
+  /** 'STRICT' | 'BALANCED'. */
+  readonly profileId: string;
+  /** 'DECISION-001' | 'DECISION-002'. */
+  readonly decisionVersion: string;
+  readonly decision: PredictionDecision;
+  readonly side: VoteSide | null;
+  readonly confidence: number;
+  readonly category: PredictionCategory;
+  readonly reasonCodes: readonly DecisionReason[];
+  readonly riskFlags: readonly DecisionRiskFlag[];
+  readonly playerScore: number;
+  readonly bankerScore: number;
+  readonly weightedAgreement: number;
+  readonly conflictScore: number;
+}
+
+/**
+ * Immutable comparison telemetry embedded in a Patch-2 LockedPrediction payload.
+ * `selectedProfile` is the profile that produced the OFFICIAL (actionable) lock;
+ * the other snapshot is control/comparison telemetry only.
+ */
+export interface ProfileComparison {
+  /** Payload sub-version so pre-Patch-2 payloads (no field) read as NOT_AVAILABLE. */
+  readonly version: string;
+  readonly selectedProfile: string;
+  readonly strict: ProfileDecisionSnapshot;
+  readonly balanced: ProfileDecisionSnapshot;
+}
+
+export const PROFILE_COMPARISON_VERSION = 'PROFILECMP-001';
+
 /** An immutable, locked prediction captured BEFORE its result is known. */
 export interface LockedPrediction {
   readonly id: string;
@@ -123,6 +160,13 @@ export interface LockedPrediction {
   readonly featureVersion: string;
   readonly lockedAt: string;
   readonly locked: true;
+  /**
+   * M7.1 Patch 2 — immutable STRICT + BALANCED pre-result comparison telemetry.
+   * OPTIONAL and backward-compatible: pre-Patch-2 payloads omit it and are
+   * reported as NOT_AVAILABLE. Never used for the official decision (that comes
+   * from the top-level fields, which belong to the selected profile).
+   */
+  readonly profileComparison?: ProfileComparison;
 }
 
 /** A prediction plus its (eventual) evaluation — the audit trail entry. */

@@ -3,9 +3,10 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { computeFullStatistics } from "@/src/domain/statistics";
-import { computeAvailabilityFromDataset, matcherReadinessFromDataset } from "@/src/domain/observability";
+import { computeAvailabilityFromDataset, computeProfileComparisonFromDataset, matcherReadinessFromDataset } from "@/src/domain/observability";
 import { StatsView } from "@/src/ui/stats/StatsView";
 import { DecisionAvailabilityCard } from "@/src/ui/stats/DecisionAvailabilityCard";
+import { ProfileComparisonCard } from "@/src/ui/stats/ProfileComparisonCard";
 import { ActionButton, Banner, ScreenHeader } from "@/src/ui/data/cards";
 import { colors, spacing } from "@/src/ui/theme";
 
@@ -21,6 +22,10 @@ export default function StatisticsScreen() {
     [dataset],
   );
   const matcher = useMemo(() => (dataset ? matcherReadinessFromDataset(dataset) : null), [dataset]);
+  const profileComparison = useMemo(
+    () => (dataset ? computeProfileComparisonFromDataset(dataset) : null),
+    [dataset],
+  );
   const isEmpty = dataset != null && dataset.rounds.length === 0 && dataset.lockedPredictions.length === 0;
 
   return (
@@ -67,7 +72,10 @@ export default function StatisticsScreen() {
             stats={stats}
             footer={
               availability && matcher ? (
-                <DecisionAvailabilityCard availability={availability} matcher={matcher} />
+                <>
+                  <DecisionAvailabilityCard availability={availability} matcher={matcher} />
+                  {profileComparison ? <ProfileComparisonCard report={profileComparison} /> : null}
+                </>
               ) : null
             }
           />

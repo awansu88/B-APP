@@ -4,7 +4,14 @@
  */
 import { deepFreeze } from '../analysis/helpers';
 import { runAnalysis } from '../analysis';
-import { runDecisionPipeline, DECISION_CONFIG } from '../decision';
+import {
+  runDecisionPipeline,
+  DECISION_CONFIG,
+  engineProfile,
+  otherProfileId,
+  type DecisionResult,
+  type EngineProfileId,
+} from '../decision';
 import { TransitionState } from '../features/feature-extraction';
 import { buildShoeStateSnapshot } from '../snapshot';
 import { extractFeatures } from '../features';
@@ -16,6 +23,9 @@ import {
   ALL_PROFILES,
   LockedPrediction,
   PROFILE_CATEGORIES,
+  PROFILE_COMPARISON_VERSION,
+  ProfileComparison,
+  ProfileDecisionSnapshot,
   ProfileSequenceMap,
   SequenceState,
   SessionProfile,
@@ -36,7 +46,28 @@ export const lockPrediction = (prediction: LockedPrediction): LockedPrediction =
 export interface ComputeOptions {
   readonly now?: string;
   readonly historyConfirmed?: boolean;
+  /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
+  readonly profile?: EngineProfileId;
 }
+
+/** Build an immutable pre-result profile-decision snapshot from a pipeline result. */
+const toProfileSnapshot = (
+  profileId: EngineProfileId,
+  decision: DecisionResult,
+): ProfileDecisionSnapshot => ({
+  profileId,
+  decisionVersion: decision.decisionConfigVersion,
+  decision: decision.active.decision,
+  side: decision.active.side,
+  confidence: decision.active.confidence,
+  category: decision.active.category,
+  reasonCodes: decision.active.reasonCodes,
+  riskFlags: decision.active.riskFlags,
+  playerScore: decision.playerScore,
+  bankerScore: decision.bankerScore,
+  weightedAgreement: decision.weightedAgreement,
+  conflictScore: decision.conflictScore,
+});
 
 /**
  * Build a LOCKED prediction for the NEXT target round from the completed rounds.
@@ -55,8 +86,27 @@ export function computePrediction(
   const snapshot = buildShoeStateSnapshot(rounds, { historyConfirmed });
   const features = extractFeatures(rounds, { historyConfirmed });
   const ctx = { snapshot, features };
-  const report = runAnalysis(ctx);
-  const decision = runDecisionPipeline(ctx, DECISION_CONFIG);
+
+  // M7.1 Patch 2 — compute BOTH profiles deterministically from the SAME
+  // pre-result snapshot (future-leakage protection is inherited from the
+  // completed-rounds-only snapshot). The SELECTED profile is official; the other
+  // is immutable comparison/control telemetry only.
+  const selectedId: EngineProfileId = opts.profile ?? 'STRICT';
+  const selected = engineProfile(selectedId);
+  const other = engineProfile(otherProfileId(selectedId));
+
+  const report = runAnalysis(ctx, selected.modules);
+  const decision = runDecisionPipeline(ctx, DECISION_CONFIG, selected);
+  const otherDecision = runDecisionPipeline(ctx, DECISION_CONFIG, other);
+
+  const strictDecision = selectedId === 'STRICT' ? decision : otherDecision;
+  const balancedDecision = selectedId === 'BALANCED' ? decision : otherDecision;
+  const profileComparison: ProfileComparison = {
+    version: PROFILE_COMPARISON_VERSION,
+    selectedProfile: selectedId,
+    strict: toProfileSnapshot('STRICT', strictDecision),
+    balanced: toProfileSnapshot('BALANCED', balancedDecision),
+  };
 
   return lockPrediction({
     id: `pred-${shoeId}-r${targetRound}-${now}`,
@@ -100,6 +150,7 @@ export function computePrediction(
     featureVersion: features.featureVersion,
     lockedAt: now,
     locked: true,
+    profileComparison,
   });
 }
 

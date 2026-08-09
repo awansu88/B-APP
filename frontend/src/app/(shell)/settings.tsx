@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Switch, Text, View, Pressable } from "react-native";
 
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { usePreferences } from "@/src/workflows/preferences";
@@ -74,15 +74,15 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.prefRow}>
               <View style={styles.prefText}>
-                <Text style={styles.prefLabel}>Show Decision Details</Text>
+                <Text style={styles.prefLabel}>Show Decision Comparison</Text>
                 <Text style={styles.prefHint}>
-                  Show the compact decision/comparison trace (scores, families, conflict).
+                  Show the compact secondary STRICT-vs-BALANCED comparison (control telemetry).
                 </Text>
               </View>
               <Switch
-                testID="pref-decision-details"
-                value={prefs.showDecisionDetails}
-                onValueChange={prefs.setShowDecisionDetails}
+                testID="pref-decision-comparison"
+                value={prefs.showDecisionComparison}
+                onValueChange={prefs.setShowDecisionComparison}
                 trackColor={{ true: colors.accent, false: colors.border }}
               />
             </View>
@@ -149,18 +149,33 @@ export default function SettingsScreen() {
 
           <Card title="Engine Mode" testID="settings-engine-mode" wide>
             <View style={styles.modeRow}>
-              <View style={[styles.modeChip, styles.modeChipActive]} testID="engine-mode-strict">
-                <Text style={styles.modeChipTitle}>STRICT</Text>
-                <Text style={styles.modeChipSub}>DECISION-001 · active</Text>
-              </View>
-              <View style={[styles.modeChip, styles.modeChipDisabled]} testID="engine-mode-balanced">
-                <Text style={styles.modeChipTitleMuted}>BALANCED — Experimental</Text>
-                <Text style={styles.modeChipSub}>DECISION-002 · Not enabled in this patch</Text>
-              </View>
+              <Pressable
+                testID="engine-mode-strict"
+                onPress={() => prefs.setEngineMode("STRICT")}
+                style={[styles.modeChip, prefs.engineMode === "STRICT" ? styles.modeChipActive : null]}
+              >
+                <Text style={styles.modeChipTitle}>
+                  {prefs.engineMode === "STRICT" ? "\u25C9 " : "\u25CB "}STRICT
+                </Text>
+                <Text style={styles.modeChipSub}>DECISION-001 · Accepted / conservative</Text>
+              </Pressable>
+              <Pressable
+                testID="engine-mode-balanced"
+                onPress={() => prefs.setEngineMode("BALANCED")}
+                style={[styles.modeChip, prefs.engineMode === "BALANCED" ? styles.modeChipActive : null]}
+              >
+                <Text style={styles.modeChipTitle}>
+                  {prefs.engineMode === "BALANCED" ? "\u25C9 " : "\u25CB "}BALANCED — Experimental
+                </Text>
+                <Text style={styles.modeChipSub}>DECISION-002 · Derived Road ACTIVE</Text>
+              </Pressable>
             </View>
-            <Text style={styles.note}>
-              Only STRICT (DECISION-001) is selectable. The Balanced profile is a placeholder for a
-              future patch and cannot be selected here.
+            <Text style={styles.note} testID="engine-mode-note">
+              STRICT (DECISION-001) is the accepted default. BALANCED (DECISION-002) is EXPERIMENTAL:
+              it activates the Derived Road analyzer (STRUCTURE family) while keeping every accepted
+              confidence/threshold/risk rule unchanged. Historical Matcher stays NO-VOTE and Volatility
+              stays SHADOW_ONLY in both profiles. Switching mode never rewrites an already-locked target —
+              it applies to the next unlocked prediction only.
             </Text>
           </Card>
 
@@ -186,7 +201,7 @@ export default function SettingsScreen() {
               valueColor={matcher?.eligibility === "ELIGIBLE" ? colors.tie : colors.textSecondary}
               testID="matcher-eligibility"
             />
-            <Row label="Voting" value="DISABLED IN DECISION-001" valueColor={colors.textMuted} testID="matcher-voting" />
+            <Row label="Voting" value="DISABLED — PATCH 3" valueColor={colors.textMuted} testID="matcher-voting" />
             <Text style={styles.note}>
               Derived from the authoritative shoes + rounds (no separate matcher database, no DB-003).
               ELIGIBLE does not activate matching or voting in this patch. Completed-shoe counting uses

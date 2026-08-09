@@ -9,10 +9,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PredictionCategory, PredictionDecision } from '@/src/domain/models/enums';
-import { ModuleFamily } from '@/src/domain/decision';
 import {
-  conflictLevel,
-  deriveFamilyLeans,
   deriveSkipDiagnostic,
   LeanSide,
   lockToTrace,
@@ -91,19 +88,6 @@ const leanColor = (side: LeanSide): string =>
       ? colors.banker
       : colors.textMuted;
 
-const FAMILY_SHORT: Partial<Record<ModuleFamily, string>> = {
-  [ModuleFamily.TREND]: 'Trend',
-  [ModuleFamily.ALTERNATION]: 'Alt',
-  [ModuleFamily.CONTEXT]: 'Context',
-  [ModuleFamily.STRUCTURE]: 'Structure',
-};
-
-const familyTraceText = (leans: ReturnType<typeof deriveFamilyLeans>): string =>
-  leans
-    .filter((f) => FAMILY_SHORT[f.family] != null)
-    .map((f) => `${FAMILY_SHORT[f.family]}: ${f.family === ModuleFamily.STRUCTURE ? 'SHADOW' : f.side}`)
-    .join(' · ') || 'no directional families';
-
 export function LiveSessionPanel({
   state,
   lastResolved,
@@ -142,6 +126,16 @@ export function LiveSessionPanel({
           <Text style={styles.lockedText}>LOCKED</Text>
         </View>
         <Text style={styles.storeKind}>{storeKind === 'sqlite' ? 'SQLite/DB-002' : 'AsyncStorage'}</Text>
+      </View>
+
+      <View style={styles.modeRow} testID="live-engine-mode">
+        <Text style={styles.sectionLabel}>Engine Mode</Text>
+        <Text
+          style={[styles.modeValue, prefs.engineMode === 'BALANCED' ? styles.modeBalanced : styles.modeStrict]}
+          testID="live-engine-mode-value"
+        >
+          {prefs.engineMode === 'BALANCED' ? 'BALANCED — EXPERIMENTAL' : 'STRICT'}
+        </Text>
       </View>
 
       <View style={styles.recommendRow}>
@@ -256,20 +250,31 @@ export function LiveSessionPanel({
         </View>
       ) : null}
 
-      {prefs.showDecisionDetails ? (
-        <View style={styles.details} testID="live-details">
-          <Text style={styles.traceText} testID="live-trace">
-            side={prediction.side ?? '—'} · P={prediction.playerScore.toFixed(2)} · B=
-            {prediction.bankerScore.toFixed(2)} · agree=
-            {(prediction.weightedAgreement * 100).toFixed(0)}% · conflict=
-            {conflictLevel(prediction.conflictScore)}
-          </Text>
-          <Text style={styles.traceText} testID="live-family-trace">
-            {familyTraceText(deriveFamilyLeans(prediction.moduleResults))}
-          </Text>
+      {prefs.showDecisionComparison && prediction.profileComparison ? (
+        <View style={styles.details} testID="live-comparison">
+          <Text style={styles.sectionLabel}>Profile Comparison (secondary)</Text>
+          <View style={styles.cmpRow}>
+            <Text
+              style={[styles.cmpProfile, prediction.profileComparison.selectedProfile === 'STRICT' ? styles.cmpSelected : null]}
+              testID="live-cmp-strict"
+            >
+              STRICT: {prediction.profileComparison.strict.decision === 'SKIP'
+                ? 'SKIP'
+                : `${prediction.profileComparison.strict.decision.replace('BET_', 'BET ')}`}{' '}
+              {prediction.profileComparison.strict.confidence.toFixed(2)}
+            </Text>
+            <Text
+              style={[styles.cmpProfile, prediction.profileComparison.selectedProfile === 'BALANCED' ? styles.cmpSelected : null]}
+              testID="live-cmp-balanced"
+            >
+              BALANCED: {prediction.profileComparison.balanced.decision === 'SKIP'
+                ? 'SKIP'
+                : `${prediction.profileComparison.balanced.decision.replace('BET_', 'BET ')}`}{' '}
+              {prediction.profileComparison.balanced.confidence.toFixed(2)}
+            </Text>
+          </View>
           <Text style={styles.traceText}>
-            shadow={prediction.shadow.decision}
-            {prediction.shadow.differsFromActive ? ' (differs)' : ''}
+            Comparison is control telemetry — only {prediction.profileComparison.selectedProfile} is actionable.
           </Text>
         </View>
       ) : null}
@@ -298,6 +303,13 @@ const styles = StyleSheet.create({
   lockedText: { color: colors.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1 },
   storeKind: { color: colors.textMuted, fontSize: 10, marginLeft: 'auto' },
   recommendRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  modeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  modeValue: { fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+  modeStrict: { color: colors.textSecondary },
+  modeBalanced: { color: colors.tie },
+  cmpRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  cmpProfile: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  cmpSelected: { color: colors.textPrimary },
   decisionChip: {
     borderWidth: 2,
     borderRadius: radius.md,

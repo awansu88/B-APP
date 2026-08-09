@@ -30,6 +30,7 @@ import {
   VoteSide,
 } from './types';
 import { computeVoting } from './voting';
+import { STRICT_PROFILE, type EngineProfile } from './profiles';
 import { round6 } from '../analysis/helpers';
 
 const withReasons = (
@@ -187,12 +188,18 @@ export function decide(
  * High-level entrypoint over an AnalysisContext. Runs the analysis modules and
  * derives the non-voting context from the feature set (regime transition and
  * recent pattern breaks are shadow/context signals). Deterministic.
+ *
+ * `profile` selects a versioned analyzer-activation registry (default STRICT /
+ * DECISION-001 — behaviorally identical to the accepted pipeline). The profile
+ * only changes which modules are ACTIVE and the stamped decision version; it
+ * never alters voting/confidence/risk mathematics.
  */
 export function runDecisionPipeline(
   ctx: AnalysisContext,
   config: DecisionConfig = DECISION_CONFIG,
+  profile: EngineProfile = STRICT_PROFILE,
 ): DecisionResult {
-  const report = runAnalysis(ctx);
+  const report = runAnalysis(ctx, profile.modules);
   const f = ctx.features;
   const context: DecisionContext = {
     nonTieCount: f.nonTieCount,
@@ -206,5 +213,10 @@ export function runDecisionPipeline(
       missingRounds: f.dataQuality.missingRounds,
     },
   };
-  return decide(report.results, context, config);
+  const result = decide(report.results, context, config);
+  // STRICT stamps DECISION-001 (identity); non-STRICT profiles stamp their own
+  // versioned decision label without touching any decision mathematics.
+  return result.decisionConfigVersion === profile.decisionVersion
+    ? result
+    : { ...result, decisionConfigVersion: profile.decisionVersion };
 }

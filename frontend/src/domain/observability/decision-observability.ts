@@ -181,6 +181,8 @@ export interface DecisionAvailability {
   readonly eligible: number;
   readonly bet: number;
   readonly skip: number;
+  readonly betPlayer: number;
+  readonly betBanker: number;
   /** bet / eligible, or null when there are zero eligible decisions. */
   readonly betRate: number | null;
   readonly skipRate: number | null;
@@ -213,6 +215,8 @@ export function computeAvailability(traces: readonly DecisionTraceLike[]): Decis
   const eligible = traces.length;
   let bet = 0;
   let skip = 0;
+  let betPlayer = 0;
+  let betBanker = 0;
   let leanPlayer = 0;
   let leanBanker = 0;
   let leanNone = 0;
@@ -228,8 +232,12 @@ export function computeAvailability(traces: readonly DecisionTraceLike[]): Decis
       if (diag.lean.side === LeanSide.PLAYER) leanPlayer += 1;
       else if (diag.lean.side === LeanSide.BANKER) leanBanker += 1;
       else leanNone += 1;
-    } else if (t.decision === 'BET_PLAYER' || t.decision === 'BET_BANKER') {
+    } else if (t.decision === 'BET_PLAYER') {
       bet += 1;
+      betPlayer += 1;
+    } else if (t.decision === 'BET_BANKER') {
+      bet += 1;
+      betBanker += 1;
     }
   }
 
@@ -237,6 +245,8 @@ export function computeAvailability(traces: readonly DecisionTraceLike[]): Decis
     eligible,
     bet,
     skip,
+    betPlayer,
+    betBanker,
     betRate: eligible > 0 ? round4(bet / eligible) : null,
     skipRate: eligible > 0 ? round4(skip / eligible) : null,
     leanPlayer,
@@ -351,4 +361,52 @@ export function conflictLevel(conflictScore: number): ConflictLevel {
   if (conflictScore >= DECISION_CONFIG.strongOpposition) return 'HIGH';
   if (conflictScore >= DECISION_CONFIG.moderateConflict) return 'MODERATE';
   return 'LOW';
+}
+
+// --- M7.1 Patch 2: profile-comparison observed outcome (pure) --------------
+
+export type ObservedOutcome = 'WIN' | 'LOSS' | 'PUSH' | 'SKIP' | 'PENDING';
+
+/**
+ * Derive a profile's observed outcome from its IMMUTABLE pre-result decision and
+ * the actual winner. Uses accepted M5 evaluation semantics (Tie on a BET = PUSH;
+ * SKIP is never W/L). Pure telemetry — this NEVER feeds the played/paper ledger.
+ */
+export function evaluateSnapshotOutcome(
+  decision: string,
+  actualWinner: string | null,
+): ObservedOutcome {
+  if (decision === 'SKIP') return 'SKIP';
+  if (actualWinner == null) return 'PENDING';
+  if (actualWinner === 'TIE') return 'PUSH';
+  if (decision === 'BET_PLAYER') return actualWinner === 'PLAYER' ? 'WIN' : 'LOSS';
+  if (decision === 'BET_BANKER') return actualWinner === 'BANKER' ? 'WIN' : 'LOSS';
+  return 'SKIP';
+}
+
+export interface ProfileObserved {
+  readonly resolved: number;
+  readonly win: number;
+  readonly loss: number;
+  readonly push: number;
+  /** win / (win + loss); null when no decided bets. PUSH and INVALIDATED excluded. */
+  readonly winRate: number | null;
+}
+
+export function emptyProfileObserved(): ProfileObserved {
+  return { resolved: 0, win: 0, loss: 0, push: 0, winRate: null };
+}
+
+/** Fold observed outcomes into a ProfileObserved (WIN/(WIN+LOSS) denominator). */
+export function tallyObserved(outcomes: readonly ObservedOutcome[]): ProfileObserved {
+  let win = 0;
+  let loss = 0;
+  let push = 0;
+  for (const o of outcomes) {
+    if (o === 'WIN') win += 1;
+    else if (o === 'LOSS') loss += 1;
+    else if (o === 'PUSH') push += 1;
+  }
+  const decided = win + loss;
+  return { resolved: win + loss + push, win, loss, push, winRate: decided > 0 ? round4(win / decided) : null };
 }
