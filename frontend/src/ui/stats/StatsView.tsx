@@ -154,4 +154,5 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   catBlock: { gap: 2 },
+  catNote: { color: colors.textMuted, fontSize: 11, lineHeight: 16, marginTop: spacing.xs },
 });
