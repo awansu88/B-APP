@@ -227,14 +227,15 @@ describe('DB-002 migration', () => {
 // 2. DATABASE-ENFORCED UNIQUENESS & LOCK-BEFORE-RESULT
 // ===========================================================================
 describe('DB-002 session store — invariants', () => {
-  it('duplicate valid lock for the same shoe+target is rejected by the DB', async () => {
+  it('duplicate valid lock for the same shoe+target is idempotently reconciled (M7.2 Patch 1)', async () => {
     const { db, rounds } = await seededDb(12);
     const store = new SqliteSessionStore(db);
     const started = await store.startLive(SHOE, rounds, SessionEnvironment.LIVE_FORWARD, {
       now: NOW,
     });
     const lpe = new LockedPredictionRepository(db);
-    const clone = { ...started.currentPrediction!, id: `${started.currentPrediction!.id}-dup` };
+    const originalId = started.currentPrediction!.id;
+    const clone = { ...started.currentPrediction!, id: `${originalId}-dup` };
     const dup: PredictionEntry = {
       prediction: clone,
       result: StepResult.PENDING,
@@ -242,9 +243,47 @@ describe('DB-002 session store — invariants', () => {
       operatorAction: null,
       invalidated: false,
     };
-    await expect(lpe.upsert(dup, { sequenceIndex: 99, now: NOW })).rejects.toThrow();
-    // still exactly one valid lock for target 13
+    // The persistence path is now IDEMPOTENT: a second valid lock for the same
+    // (shoe, target) under a different id does NOT throw — the already-persisted
+    // immutable lock is authoritative and reused (never overwritten).
+    const outcome = await lpe.upsert(dup, { sequenceIndex: 99, now: NOW });
+    expect(outcome).toEqual({ canonicalId: originalId, reconciled: true });
+    // still exactly one valid lock for target 13, and it is the ORIGINAL lock.
     expect(await lpe.countValidForTarget(SHOE, 13)).toBe(1);
+    expect(await lpe.findValidLockId(SHOE, 13)).toBe(originalId);
+    // the divergent `-dup` candidate was never inserted.
+    const dupRow = await db.getFirstAsync<CountRow>(
+      'SELECT COUNT(*) AS n FROM locked_prediction_entries WHERE id = ?;',
+      [clone.id],
+    );
+    expect(dupRow?.n).toBe(0);
+  });
+
+  it('the DB partial-unique invariant itself is UNCHANGED (raw duplicate INSERT still rejected)', async () => {
+    const { db, rounds } = await seededDb(12);
+    const store = new SqliteSessionStore(db);
+    const started = await store.startLive(SHOE, rounds, SessionEnvironment.LIVE_FORWARD, {
+      now: NOW,
+    });
+    const p = started.currentPrediction!;
+    // A RAW INSERT that bypasses the repository idempotency must STILL be
+    // rejected by `uq_lpe_valid_target` — the database protection is intact.
+    await expect(
+      db.runAsync(
+        `INSERT INTO locked_prediction_entries (
+           id, shoe_id, target_round_number, sequence_index, status, decision, side,
+           confidence, category, operator_action, evaluation, actual_winner,
+           invalidated, invalidated_by_revision_id, invalidated_at, locked_at,
+           evaluated_at, payload_version, payload, created_at
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+        [
+          `${p.id}-raw`, SHOE, p.targetRound, 99, 'LOCKED', p.decision, p.side,
+          p.confidence, p.category, 'UNSET', 'PENDING', null,
+          0, null, null, p.lockedAt, null, 'SESSION-001', JSON.stringify(p), NOW,
+        ],
+      ),
+    ).rejects.toThrow(/UNIQUE constraint failed/i);
+    expect(await new LockedPredictionRepository(db).countValidForTarget(SHOE, 13)).toBe(1);
   });
 
   it('lock-before-result: if the lock persist fails, nothing is accepted', async () => {

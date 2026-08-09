@@ -71,6 +71,30 @@ export interface EntryPersistMeta {
   readonly evaluatedAt?: string | null;
 }
 
+/**
+ * M7.2 Patch 1 — outcome of an idempotent lock persistence.
+ *   - `canonicalId`: the id of the AUTHORITATIVE valid lock for (shoe, target)
+ *     after the call (either the just-written candidate or a pre-existing lock).
+ *   - `reconciled`: true when a DIFFERENT valid lock already held the
+ *     (shoe, target) invariant, so the persisted immutable lock was reused and
+ *     the candidate was NOT inserted (idempotent no-op, never an overwrite).
+ */
+export interface UpsertOutcome {
+  readonly canonicalId: string;
+  readonly reconciled: boolean;
+}
+
+/**
+ * M7.2 Patch 1 — detect ONLY the expected `uq_lpe_valid_target` uniqueness
+ * conflict (one valid lock per shoe + target). Matching is deliberately narrow
+ * (references `target_round_number`) so unrelated SQLite errors are NEVER
+ * swallowed by the idempotency reconciliation path.
+ */
+const isValidTargetUniqueConflict = (e: unknown): boolean => {
+  const msg = e instanceof Error ? e.message : String(e);
+  return /UNIQUE constraint failed/i.test(msg) && /target_round_number/i.test(msg);
+};
+
 const statusFor = (entry: PredictionEntry): PredictionStatus =>
   entry.invalidated
     ? PredictionStatus.VOID
@@ -90,12 +114,74 @@ export class LockedPredictionRepository {
   constructor(private readonly db: SqlDatabase) {}
 
   /**
-   * Insert-or-update a locked prediction entry keyed by its immutable id. The
-   * immutable payload + identity columns are written on INSERT and NEVER updated
-   * on conflict; only lifecycle columns (status/operator/evaluation/invalidation)
-   * change — a locked prediction is thus never silently rewritten.
+   * Idempotently persist a locked prediction entry.
+   *
+   * M7.2 Patch 1 — the DB enforces AT MOST ONE valid (non-invalidated) lock per
+   * (shoe, target) via the partial-unique index `uq_lpe_valid_target`. Because a
+   * locked prediction's immutable id embeds the lock instant, the SAME
+   * (shoe, target) recomputed at two moments (Start-Live double-invoke,
+   * reconstruct-recovery re-entry, overlapping submit, retry-after-failure)
+   * yields DIFFERENT ids — which the `ON CONFLICT(id)` upsert alone cannot
+   * dedupe, previously surfacing a fatal `UNIQUE constraint failed` on native.
+   *
+   * This method makes persistence idempotent w.r.t. that invariant:
+   *   1. Same-id re-persist  -> `ON CONFLICT(id) DO UPDATE` (lifecycle only; the
+   *      immutable payload + identity columns are NEVER rewritten).
+   *   2. A DIFFERENT valid lock already holds (shoe, target) -> the persisted
+   *      immutable lock is AUTHORITATIVE: reuse it, do NOT insert/overwrite.
+   *   3. Check-then-insert RACE (two writers both saw no lock) -> the losing
+   *      INSERT hits `uq_lpe_valid_target`; that SPECIFIC conflict is caught and
+   *      reconciled by re-reading the winning valid lock. Any other error
+   *      propagates unchanged.
+   *
+   * Invalidated entries are exempt from the valid-target guard (invalidated rows
+   * may coexist) and always take the id-keyed upsert path.
    */
-  async upsert(entry: PredictionEntry, meta: EntryPersistMeta): Promise<void> {
+  async upsert(entry: PredictionEntry, meta: EntryPersistMeta): Promise<UpsertOutcome> {
+    const p = entry.prediction;
+    const isValidLock = !entry.invalidated;
+
+    // (2) Pre-check: a different valid lock already owns this (shoe, target).
+    if (isValidLock) {
+      const existingId = await this.findValidLockId(p.shoeId, p.targetRound);
+      if (existingId != null && existingId !== p.id) {
+        return { canonicalId: existingId, reconciled: true };
+      }
+    }
+
+    try {
+      await this.insertOrUpdateById(entry, meta);
+      return { canonicalId: p.id, reconciled: false };
+    } catch (e) {
+      // (3) Reconcile ONLY the expected valid-target uniqueness race.
+      if (isValidLock && isValidTargetUniqueConflict(e)) {
+        const existingId = await this.findValidLockId(p.shoeId, p.targetRound);
+        if (existingId != null && existingId !== p.id) {
+          return { canonicalId: existingId, reconciled: true };
+        }
+      }
+      throw e; // unrelated SQLite errors are never swallowed
+    }
+  }
+
+  /** The id of the current valid (non-invalidated) lock for a target, if any. */
+  async findValidLockId(shoeId: string, targetRound: number): Promise<string | null> {
+    const row = await this.db.getFirstAsync<{ id: string }>(
+      `SELECT id FROM locked_prediction_entries
+         WHERE shoe_id = ? AND target_round_number = ? AND invalidated = 0
+         LIMIT 1;`,
+      [shoeId, targetRound],
+    );
+    return row?.id ?? null;
+  }
+
+  /**
+   * Insert-or-update keyed by the immutable id. The immutable payload + identity
+   * columns are written on INSERT and NEVER updated on conflict; only lifecycle
+   * columns (status/operator/evaluation/invalidation) change — a locked
+   * prediction is thus never silently rewritten.
+   */
+  private async insertOrUpdateById(entry: PredictionEntry, meta: EntryPersistMeta): Promise<void> {
     const p = entry.prediction;
     await this.db.runAsync(
       `INSERT INTO locked_prediction_entries (

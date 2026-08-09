@@ -259,11 +259,18 @@ export class SqliteSessionStore implements SessionStore {
           invalidated: false,
         } as PredictionEntry,
       ];
-      state = reconstructSession({ ...persisted, predictions: entries });
+      const candidate = reconstructSession({ ...persisted, predictions: entries });
       await this.db.withTransactionAsync(async () => {
-        await this.persistEntries(state, now);
-        await this.persistCursor(state, now);
+        await this.persistEntries(candidate, now);
+        await this.persistCursor(candidate, now);
       });
+      // M7.2 Patch 1 — re-read the AUTHORITATIVE persisted entries so the
+      // returned state reflects the canonical lock even when the regenerated
+      // pending lock was idempotently reconciled to an already-persisted lock
+      // (concurrent reconstruct / Start-Live re-entry). This never inserts a
+      // duplicate and never overwrites the immutable persisted payload.
+      const persistedEntries = await this.lpe.listByShoe(shoeId);
+      state = reconstructSession({ ...persisted, predictions: persistedEntries });
     }
     return state;
   }
