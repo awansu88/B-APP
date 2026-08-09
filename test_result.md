@@ -267,26 +267,32 @@ frontend:
 
   - task: "M7.1 Patch 1 — Decision Observability (Availability + SKIP reason + Directional Lean)"
     implemented: true
-    working: "NA"
+    working: true
     file: "src/domain/observability/*, src/ui/live/LiveSessionPanel.tsx, src/ui/stats/DecisionAvailabilityCard.tsx, src/app/(shell)/statistics.tsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: "NA"
         -agent: "main"
         -comment: "Pure read-only observability over the ALREADY-PRODUCED accepted trace (no engine recompute; DECISION-001 output unchanged). Decision Availability (eligible/BET/SKIP + explicit denominators) + stable SKIP reason enum (deterministic precedence) + non-actionable Directional Lean (Player/Banker/None + evidence share) from stored player/banker scores. Live panel shows Lean + Why-Skip on SKIP (pref-gated) and a compact family/conflict trace (pref-gated). Statistics gains a Decision Availability + Top SKIP Reasons card. Historical trace read from the verbatim locked-prediction payload; missing trace => NOT AVAILABLE. 28 new Jest tests. Needs targeted UI validation."
+        -working: true
+        -agent: "testing"
+        -comment: "M7.1 PATCH 1 VALIDATION COMPLETE (1280x800 landscape tablet). ALL TESTS PASS. (B) ACTIVE SHOE/LIVE: ✅ P/T/B buttons in correct order (PLAYER→TIE→BANKER left-to-right). ✅ Entered 12 mixed rounds (P B P B B P B P P B T P), Start Live enabled after warm-up. ✅ Live panel LOCKED appeared with decision=SKIP, confidence=0.54, category=BELOW THRESHOLD. ✅ Directional Lean block appeared (testIDs live-skip-info/live-lean/live-why-skip): Lean=BANKER, Why-Skip='Multiple risk filters', labeled INFORMATIONAL and non-actionable, official decision STILL reads SKIP (no win-probability claim). ✅ Decision Details trace appeared after turning ON preference (testIDs live-details/live-trace/live-family-trace): 'side=— · P=0.00 · B=0.54 · agree=100% · conflict=LOW' and 'Alt: BANKER · Context: BANKER'. ✅ Duplicate-input guard works: rapid double-tap added exactly ONE round (second tap ignored within 400ms window). (C) STATISTICS: ✅ Decision Availability card (testID stats-availability) shows: Eligible decisions=2, Official BET=0, Official SKIP=2, BET availability='0 / 2 (0.0%)' formatted correctly, SKIP rate=100.0%, Directional lean='1 / 1 / 0' (Player/Banker/None). ✅ Card correctly describes this as 'availability, not accuracy or a win probability' (disclaimer present). ✅ Top SKIP Reasons card (testID stats-skip-reasons) found. ✅ Historical Matcher card (testID stats-matcher) shows: Completed Shoes=0/100, Non-Tie Rounds=12/5,000, Eligibility=COLLECTING, Voting=DISABLED. Console: Only expected AsyncStorage preview warnings (2), zero critical errors, zero page errors. 10 screenshots captured. Implementation is PRODUCTION-READY for web preview."
   - task: "M7.1 Patch 1 — Settings preferences + Engine Mode foundation + Matcher readiness"
     implemented: true
-    working: "NA"
+    working: true
     file: "src/app/(shell)/settings.tsx, src/workflows/preferences/*"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: "NA"
         -agent: "main"
         -comment: "Settings now partially adjustable: two local UI preference switches (Show Directional Lean, Show Decision Details) persisted via AsyncStorage (NO DB schema; DB-002 unchanged). Engine Mode foundation shows STRICT (DECISION-001) selectable + BALANCED (DECISION-002) DISABLED 'Not enabled in this patch'. Historical Matcher readiness card: Collection ACTIVE, Completed Shoes N/100, Non-Tie Rounds N/5000, Eligibility COLLECTING/ELIGIBLE, Voting DISABLED. All engine knobs remain locked. Needs targeted UI validation."
+        -working: true
+        -agent: "testing"
+        -comment: "M7.1 PATCH 1 VALIDATION COMPLETE (1280x800 landscape tablet). ALL TESTS PASS. (A) SETTINGS: ✅ Display Preferences card (testID settings-preferences) found with TWO switches: 'Show Directional Lean' (testID pref-directional-lean) and 'Show Decision Details' (testID pref-decision-details). Both switches toggle ON/OFF without crash. ✅ Engine Mode card (testID settings-engine-mode): STRICT mode (testID engine-mode-strict) shows 'DECISION-001 · active', BALANCED mode (testID engine-mode-balanced) shows 'DECISION-002 · Not enabled in this patch' and is visibly disabled/dimmed (opacity 0.55), clicking BALANCED does NOT crash or activate. ✅ NO numeric engine tuning inputs/sliders found (all read-only rows). ✅ Historical Matcher card (testID settings-matcher) shows: Completed Shoes=0/100 (testID matcher-shoes), Non-Tie Rounds=0/5,000 (testID matcher-rounds), Eligibility=COLLECTING (testID matcher-eligibility), Voting='DISABLED IN DECISION-001' (testID matcher-voting). Console: Only expected AsyncStorage preview warnings (2), zero critical errors, zero page errors. 10 screenshots captured. Implementation is PRODUCTION-READY for web preview."
 
 metadata:
   created_by: "main_agent"
@@ -295,9 +301,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "M7.1 Patch 1 — Decision Observability (Availability + SKIP reason + Directional Lean)"
-    - "M7.1 Patch 1 — Settings preferences + Engine Mode foundation + Matcher readiness"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -305,6 +309,8 @@ test_plan:
 agent_communication:
     -agent: "main"
     -message: "M7.1 PATCH 1 (Decision Observability). Please run TARGETED validation at 1280x800 landscape on the THREE changed screens only. (1) SETTINGS (/settings): 'Display Preferences' card has two switches (testIDs pref-directional-lean, pref-decision-details) — toggle both and confirm no crash; 'Engine Mode' card shows STRICT active (engine-mode-strict) and BALANCED disabled with 'Not enabled in this patch' (engine-mode-balanced); 'Historical Matcher' card (settings-matcher) shows Completed Shoes N/100, Non-Tie Rounds N/5,000, Eligibility (matcher-eligibility) and Voting DISABLED IN DECISION-001. (2) ACTIVE SHOE Live (/): enter ~10-12 mixed P/T/B rounds then Start Live; in the LOCKED live panel, IF the decision is SKIP and 'Show Directional Lean' is ON, a Directional Lean block appears (testID live-skip-info / live-lean / live-why-skip) marked INFORMATIONAL and the official decision still reads SKIP (live-decision); with 'Show Decision Details' ON a compact trace appears (live-details / live-trace / live-family-trace). Confirm P/T/B order + large targets unchanged and the 400ms live double-tap guard still yields exactly one round. (3) STATISTICS (/statistics): a 'Decision Availability' card (stats-availability) shows Eligible decisions, Official BET, Official SKIP, BET availability 'X / Y (Z%)' (avail-bet-rate), plus 'Top SKIP Reasons' (stats-skip-reasons) and 'Historical Matcher' (stats-matcher). Confirm nothing is a win-probability claim. Report console errors/unhandled rejections (the AsyncStorage web-preview diagnostic is expected). This is web-preview; native SQLite runtime not verified from a browser."
+    -agent: "testing"
+    -message: "M7.1 PATCH 1 VALIDATION COMPLETE (Feb 2026, 1280x800 landscape). ALL TESTS PASS. Validated THREE areas as requested: (A) SETTINGS: Display Preferences card with two working switches (Show Directional Lean, Show Decision Details), Engine Mode card with STRICT active and BALANCED disabled/dimmed (opacity 0.55), NO numeric inputs/sliders, Historical Matcher card showing 0/100 shoes, 0/5,000 rounds, COLLECTING eligibility, DISABLED voting. (B) ACTIVE SHOE/LIVE: P/T/B buttons in correct order, entered 12 mixed rounds, Start Live enabled, live panel LOCKED with decision=SKIP/confidence=0.54/category=BELOW THRESHOLD, Directional Lean block appeared (BANKER, 'Multiple risk filters', INFORMATIONAL, non-actionable, official decision STILL SKIP), Decision Details trace appeared ('side=— · P=0.00 · B=0.54 · agree=100% · conflict=LOW', 'Alt: BANKER · Context: BANKER'), duplicate-input guard works (exactly ONE round added on rapid double-tap). (C) STATISTICS: Decision Availability card with Eligible=2, BET=0, SKIP=2, BET availability='0 / 2 (0.0%)', SKIP rate=100.0%, lean='1 / 1 / 0', disclaimer correctly states 'availability, not accuracy or a win probability', Top SKIP Reasons card found, Historical Matcher card showing 0/100 shoes, 12/5,000 rounds, COLLECTING, DISABLED. Console: Only expected AsyncStorage preview warnings (2), zero critical errors, zero page errors. 10 screenshots captured. M7.1 Patch 1 is PRODUCTION-READY for web preview. Main agent should summarize and finish."
     -agent: "testing"
     -message: "M7A UI/UX VALIDATION COMPLETE (1280x800 landscape). ALL PASS. History and Settings are now REAL read-only screens (NO 'Milestone 0 placeholder' badge anywhere). History: header + read-only banner, empty 'No shoes yet', populated shoe list with ACTIVE badge + 10 raw rounds in ascending order, NO edit/delete, Refresh OK. Settings: read-only Application (0.1.0, com.bapp.baccaratengine), Data & Persistence (DB-002 + adapter), Engine/System Status (version registry; Historical Matcher DISABLED; Derived Road + Volatility SHADOW_ONLY; warm-up 8; max confidence 0.75); NO editable controls. Active Shoe polish: P/T/B order + large touch targets preserved, all 5 roadmaps render (Bead+Big top, derived bottom), no clipping/overflow, PP/BP + Partial/Complete OK, Start Live enables after 8 non-Tie, LOCKED live panel + PLAYED/NOT_PLAYED, Review Data edit/delete OK. Statistics/Export/Diagnostics regression PASS (web write-gating: Apply Merge + Restore DISABLED with native-only note). Console: zero errors/rejections/React-key warnings (only expected AsyncStorage web diagnostic). 15 screenshots captured. Production-ready for web preview; native SQLite runtime NOT verified from a browser."
     -agent: "main"
