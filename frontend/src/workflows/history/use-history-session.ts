@@ -60,6 +60,7 @@ const makeRoundId = (shoeId: string, roundNumber: number): string => {
 
 export interface HistorySessionState {
   readonly ready: boolean;
+  readonly initializationError: string | null;
   readonly busy: boolean;
   readonly shoe: ShoeRecord | null;
   readonly rounds: readonly RoundRecord[];
@@ -74,6 +75,7 @@ export interface HistorySessionState {
 }
 
 export interface HistorySessionActions {
+  retryInitialization(): void;
   addResult(winner: Winner): void;
   undo(): void;
   editRound(roundNumber: number, edit: RoundEdit): void;
@@ -92,11 +94,33 @@ export interface HistorySessionActions {
 
 const EMPTY_ROADMAP: RoadmapResult = buildRoadmap([]);
 
+type HistoryInitializationResult =
+  | { readonly ok: true; readonly store: HistoryStore; readonly snapshot: Awaited<ReturnType<HistoryStore['loadActive']>> }
+  | { readonly ok: false; readonly error: string };
+
+/** Catch the complete native History startup path so it cannot reject unhandled. */
+export async function initializeHistorySession(
+  createStore: () => Promise<HistoryStore>,
+): Promise<HistoryInitializationResult> {
+  try {
+    const store = await createStore();
+    const snapshot = await store.loadActive();
+    return { ok: true, store, snapshot };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export function useHistorySession(): HistorySessionState & HistorySessionActions {
   const storeRef = useRef<HistoryStore | null>(null);
   const guardRef = useRef(new TransactionGuard());
 
   const [ready, setReady] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [initializationAttempt, setInitializationAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
   const [shoe, setShoe] = useState<ShoeRecord | null>(null);
   const [rounds, setRounds] = useState<readonly RoundRecord[]>([]);
@@ -106,19 +130,30 @@ export function useHistorySession(): HistorySessionState & HistorySessionActions
 
   useEffect(() => {
     let mounted = true;
+    setReady(false);
+    setInitializationError(null);
+    storeRef.current = null;
     (async () => {
-      const store = await createHistoryStore();
-      const snapshot = await store.loadActive();
+      const result = await initializeHistorySession(createHistoryStore);
       if (!mounted) return;
-      storeRef.current = store;
-      setShoe(snapshot.shoe);
-      setRounds(snapshot.rounds);
+      if (!result.ok) {
+        setInitializationError(result.error);
+        return;
+      }
+      storeRef.current = result.store;
+      setShoe(result.snapshot.shoe);
+      setRounds(result.snapshot.rounds);
       setReady(true);
     })();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [initializationAttempt]);
+
+  const retryInitialization = useCallback(
+    () => setInitializationAttempt((attempt) => attempt + 1),
+    [],
+  );
 
   const roadmap = useMemo(
     () => (rounds.length ? buildRoadmap(rounds.slice()) : EMPTY_ROADMAP),
@@ -297,6 +332,7 @@ export function useHistorySession(): HistorySessionState & HistorySessionActions
 
   return {
     ready,
+    initializationError,
     busy,
     shoe,
     rounds,
@@ -308,6 +344,7 @@ export function useHistorySession(): HistorySessionState & HistorySessionActions
     nonTieRemaining,
     historyConfirmed,
     checkpointDue,
+    retryInitialization,
     addResult,
     undo,
     editRound,

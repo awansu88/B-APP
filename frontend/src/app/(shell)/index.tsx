@@ -49,6 +49,22 @@ export default function ActiveShoeScreen() {
     [liveMode, liveRounds, session.statistics],
   );
 
+  if (session.initializationError) {
+    return (
+      <View style={styles.loading} testID="history-initialization-error">
+        <Text style={styles.databaseErrorTitle}>Database unavailable</Text>
+        <Text style={styles.databaseErrorDetail}>{session.initializationError}</Text>
+        <Pressable
+          onPress={session.retryInitialization}
+          style={styles.retryBtn}
+          testID="history-initialization-retry"
+        >
+          <Text style={styles.retryText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   if (!session.ready) {
     return (
       <View style={styles.loading} testID="screen-active-shoe-loading">
@@ -208,6 +224,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   loading: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md, backgroundColor: colors.background },
   loadingText: { color: colors.textSecondary, fontSize: 14 },
+  databaseErrorTitle: { color: colors.banker, fontSize: 18, fontWeight: "700" },
+  databaseErrorDetail: { color: colors.textSecondary, fontSize: 14, textAlign: "center" },
   body: { flex: 1, flexDirection: "row", padding: spacing.md, gap: spacing.md },
   center: { flex: 1, gap: spacing.sm },
   liveError: {
