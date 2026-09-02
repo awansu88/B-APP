@@ -24,6 +24,8 @@ export const VERSION_REGISTRY = Object.freeze({
   confidence: 'CONF-001',
   /** Risk model version. */
   risk: 'RISK-001',
+  /** Immutable bundled historical corpus version. */
+  corpus: 'BAPP-CORPUS-001',
 } as const);
 
 export type VersionRegistry = typeof VERSION_REGISTRY;
