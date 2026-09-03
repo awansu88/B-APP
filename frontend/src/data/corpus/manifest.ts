@@ -1,7 +1,12 @@
-import { VERSION_REGISTRY } from '../../config/versions';
+import {
+  BAPP_CORPUS_ENCODING,
+  BAPP_CORPUS_VERSION,
+} from './bapp-corpus-001.generated';
 
+/** Locked provenance metadata; sha256 is recorded, not recomputed without its canonical serializer. */
 export const BAPP_CORPUS_MANIFEST = Object.freeze({
-  version: VERSION_REGISTRY.corpus,
+  version: BAPP_CORPUS_VERSION,
+  encoding: BAPP_CORPUS_ENCODING,
   sourceDataset:
     '100,000 unique simulated baccarat shoes; 8 decks; approximately 50-card cut card; raw cards reduced to P/B/T outcomes',
   samplingMethodology: 'Deterministic distributed sampling',
