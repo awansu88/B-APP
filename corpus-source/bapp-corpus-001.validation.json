@@ -1,0 +1,82 @@
+{
+  "zipJsonEntries": 200000,
+  "uniqueShoes": 100000,
+  "duplicateGroups": 100000,
+  "duplicateContentMismatches": 0,
+  "selectedShoes": 1000,
+  "validationErrors": [],
+  "totalRounds": 72900,
+  "player": 32591,
+  "banker": 33495,
+  "tie": 6814,
+  "nonTie": 66086,
+  "minRounds": 68,
+  "maxRounds": 79,
+  "meanRounds": 72.9,
+  "medianRounds": 73.0,
+  "matcherEligible": true,
+  "corpusSha256": "da1be17266426ab2ef3ae986ae38ce6b4810f4437bf48660cc87edd0f65afc8d",
+  "corpusBytes": 126744,
+  "firstSelections": [
+    {
+      "block": 0,
+      "offset": 59,
+      "sourceIndex": 59,
+      "sourceId": "b100529068"
+    },
+    {
+      "block": 1,
+      "offset": 53,
+      "sourceIndex": 153,
+      "sourceId": "b101373524"
+    },
+    {
+      "block": 2,
+      "offset": 72,
+      "sourceIndex": 272,
+      "sourceId": "b102439174"
+    },
+    {
+      "block": 3,
+      "offset": 51,
+      "sourceIndex": 351,
+      "sourceId": "b103149082"
+    },
+    {
+      "block": 4,
+      "offset": 0,
+      "sourceIndex": 400,
+      "sourceId": "b103597826"
+    },
+    {
+      "block": 5,
+      "offset": 1,
+      "sourceIndex": 501,
+      "sourceId": "b104502333"
+    },
+    {
+      "block": 6,
+      "offset": 94,
+      "sourceIndex": 694,
+      "sourceId": "b10624161"
+    },
+    {
+      "block": 7,
+      "offset": 13,
+      "sourceIndex": 713,
+      "sourceId": "b106405285"
+    },
+    {
+      "block": 8,
+      "offset": 53,
+      "sourceIndex": 853,
+      "sourceId": "b107668633"
+    },
+    {
+      "block": 9,
+      "offset": 38,
+      "sourceIndex": 938,
+      "sourceId": "b108431681"
+    }
+  ]
+}
