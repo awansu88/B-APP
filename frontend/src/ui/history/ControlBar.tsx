@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { InputDraft, PairInputMode } from '@/src/domain/history';
 import { Winner } from '@/src/domain/models/outcome';
+import { OperatorAction } from '@/src/domain/session';
 import { colors, radius, spacing } from '../theme';
 
 interface ControlBarProps {
@@ -13,6 +14,10 @@ interface ControlBarProps {
   /** Gates Edit/Delete Round (opens Review Data). Defaults to `canUndo`. */
   readonly canReview?: boolean;
   readonly canStart: boolean;
+  readonly liveMode?: boolean;
+  readonly operatorAction?: OperatorAction;
+  readonly operatorPlayedDisabled?: boolean;
+  readonly onSetOperatorAction?: (action: OperatorAction) => void;
   readonly onSelectWinner: (winner: Winner) => void;
   readonly onTogglePlayerPair: () => void;
   readonly onToggleBankerPair: () => void;
@@ -65,6 +70,7 @@ function Toggle({
   onPress,
   disabled,
   testID,
+  wide = false,
 }: {
   label: string;
   active: boolean;
@@ -72,6 +78,7 @@ function Toggle({
   onPress: () => void;
   disabled: boolean;
   testID: string;
+  wide?: boolean;
 }) {
   return (
     <Pressable
@@ -80,6 +87,7 @@ function Toggle({
       disabled={disabled}
       style={[
         styles.toggle,
+        wide ? styles.toggleWide : null,
         active ? { backgroundColor: color, borderColor: color } : null,
         disabled ? styles.disabled : null,
       ]}
@@ -212,13 +220,40 @@ export function ControlBar(props: ControlBarProps) {
       </View>
 
       <View style={styles.secondaryRow}>
-        <SecondaryButton testID="btn-undo" label="Undo" onPress={props.onUndo} disabled={disabled || !props.canUndo} />
-        <SecondaryButton testID="btn-edit" label="Edit Round" onPress={props.onEditRound} disabled={disabled || !canReview} />
-        <SecondaryButton testID="btn-delete" label="Delete Round" onPress={props.onDeleteRound} disabled={disabled || !canReview} />
-        <SecondaryButton testID="btn-new-shoe" label="New Shoe" onPress={props.onNewShoe} disabled={disabled} />
-        <SecondaryButton testID="btn-clear-shoe" label="Clear Shoe" tone="danger" onPress={props.onClearShoe} disabled={disabled || !props.canUndo} />
-        <SecondaryButton testID="btn-start-live" label="Start Live" tone="primary" onPress={props.onStartLive} disabled={disabled || !props.canStart} />
-        <SecondaryButton testID="btn-start-historical" label="Start Historical Test" tone="primary" onPress={props.onStartHistoricalTest} disabled={disabled || !props.canStart} />
+        {props.liveMode ? (
+          <>
+            <Toggle
+              testID="op-played"
+              label="PLAYED"
+              active={props.operatorAction === OperatorAction.PLAYED && !props.operatorPlayedDisabled}
+              color={colors.accent}
+              onPress={() => props.onSetOperatorAction?.(OperatorAction.PLAYED)}
+              disabled={disabled || !!props.operatorPlayedDisabled}
+              wide
+            />
+            <Toggle
+              testID="op-not-played"
+              label="NOT PLAYED"
+              active={props.operatorAction === OperatorAction.NOT_PLAYED || !!props.operatorPlayedDisabled}
+              color={colors.accent}
+              onPress={() => props.onSetOperatorAction?.(OperatorAction.NOT_PLAYED)}
+              disabled={disabled}
+              wide
+            />
+            <SecondaryButton testID="btn-review" label="Review" onPress={props.onEditRound} disabled={disabled || !canReview} />
+            <SecondaryButton testID="btn-new-shoe" label="New Shoe" onPress={props.onNewShoe} disabled={disabled} />
+          </>
+        ) : (
+          <>
+            <SecondaryButton testID="btn-undo" label="Undo" onPress={props.onUndo} disabled={disabled || !props.canUndo} />
+            <SecondaryButton testID="btn-edit" label="Edit Round" onPress={props.onEditRound} disabled={disabled || !canReview} />
+            <SecondaryButton testID="btn-delete" label="Delete Round" onPress={props.onDeleteRound} disabled={disabled || !canReview} />
+            <SecondaryButton testID="btn-new-shoe" label="New Shoe" onPress={props.onNewShoe} disabled={disabled} />
+            <SecondaryButton testID="btn-clear-shoe" label="Clear Shoe" tone="danger" onPress={props.onClearShoe} disabled={disabled || !props.canUndo} />
+            <SecondaryButton testID="btn-start-live" label="Start Live" tone="primary" onPress={props.onStartLive} disabled={disabled || !props.canStart} />
+            <SecondaryButton testID="btn-start-historical" label="Start Historical Test" tone="primary" onPress={props.onStartHistoricalTest} disabled={disabled || !props.canStart} />
+          </>
+        )}
       </View>
     </View>
   );
@@ -263,6 +298,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surfaceRaised,
   },
+  toggleWide: { width: 104, height: 44 },
   toggleText: { color: colors.textSecondary, fontSize: 15, fontWeight: '800' },
   toggleTextActive: { color: '#FFFFFF' },
   modeGroup: { alignItems: 'center', gap: 4 },
