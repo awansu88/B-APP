@@ -367,3 +367,8 @@ PLAYED step, net units for paper P/L. Uncalibrated MVP.
 
 ## No functional defects
 All verification gates pass (see `docs/TEST_PLAN.md` and `docs/CURRENT_STATE.md`).
+
+## HMATCH-002 production promotion
+No known code-level blocker remains for official matcher voting. Physical-device
+SQLite restart verification remains part of the pre-existing M7B limitation; no
+APK/device validation was performed by this patch.

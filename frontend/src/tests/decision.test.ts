@@ -337,7 +337,7 @@ describe('decision — versions & determinism', () => {
     expect(r.votingVersion).toBe('VOTE-001');
     expect(r.confidenceVersion).toBe('CONF-001');
     expect(r.riskVersion).toBe('RISK-001');
-    expect(r.engineVersion).toBe('ENGINE-001');
+    expect(r.engineVersion).toBe('ENGINE-002');
     expect(r.configVersion).toBe('CFG-001');
     expect(r.decisionConfigVersion).toBe('DECISION-001');
   });

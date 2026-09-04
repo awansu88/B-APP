@@ -6,7 +6,7 @@
  * Context: regime-transition
  * Structure: derived-road (SHADOW_ONLY)
  * Risk: volatility (SHADOW_ONLY)
- * Historical: historical-matcher (DISABLED)
+ * Historical: historical-matcher (dynamic HMATCH-002 voter)
  */
 import { ModuleFamily } from './types';
 

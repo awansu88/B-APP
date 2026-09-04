@@ -65,17 +65,17 @@ const statusOf = (profileId: 'STRICT' | 'BALANCED', moduleId: string): ModuleSta
 // Section 17 — profile config
 // ---------------------------------------------------------------------------
 describe('Patch 2 · engine profile config (section 17)', () => {
-  it('default profile is STRICT', () => {
-    expect(DEFAULT_ENGINE_PROFILE_ID).toBe('STRICT');
+  it('default profile is matcher-enabled production', () => {
+    expect(DEFAULT_ENGINE_PROFILE_ID).toBe('BALANCED');
     expect(STRICT_PROFILE.id).toBe('STRICT');
     expect(STRICT_PROFILE.decisionVersion).toBe('DECISION-001');
     expect(STRICT_PROFILE.status).toBe('ACCEPTED');
   });
 
-  it('BALANCED is DECISION-003 / EXPERIMENTAL (Patch 3 — matcher-eligible)', () => {
+  it('BALANCED is the accepted DECISION-003 production profile', () => {
     expect(BALANCED_PROFILE.id).toBe('BALANCED');
     expect(BALANCED_PROFILE.decisionVersion).toBe('DECISION-003');
-    expect(BALANCED_PROFILE.status).toBe('EXPERIMENTAL');
+    expect(BALANCED_PROFILE.status).toBe('ACCEPTED');
   });
 
   it('STRICT registry keeps Derived Road SHADOW_ONLY', () => {
@@ -132,8 +132,8 @@ describe('Patch 2 · engine profile config (section 17)', () => {
 describe('Patch 2 · decision integrity (section 18)', () => {
   const rounds = bankerRounds(14);
 
-  it('STRICT is default and stamps DECISION-001; BALANCED stamps DECISION-003', () => {
-    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW });
+  it('production defaults to BALANCED/DECISION-003; explicit STRICT remains DECISION-001 control', () => {
+    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW, profile: 'STRICT' });
     const balanced = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', {
       now: NOW,
       profile: 'BALANCED',
@@ -143,7 +143,7 @@ describe('Patch 2 · decision integrity (section 18)', () => {
   });
 
   it('official fields equal the SELECTED profile snapshot', () => {
-    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW });
+    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW, profile: 'STRICT' });
     expect(strict.profileComparison?.selectedProfile).toBe('STRICT');
     expect(strict.decision).toBe(strict.profileComparison?.strict.decision);
     expect(strict.confidence).toBe(strict.profileComparison?.strict.confidence);
@@ -175,12 +175,12 @@ describe('Patch 2 · decision integrity (section 18)', () => {
   });
 
   it('DECISION-001 (STRICT) on a banker shoe still recommends BET_BANKER', () => {
-    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW });
+    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW, profile: 'STRICT' });
     expect(strict.decision).toBe(PredictionDecision.BET_BANKER);
   });
 
   it('moduleResults reflect the selected profile activation (STRICT shadow / BALANCED active)', () => {
-    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW });
+    const strict = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW, profile: 'STRICT' });
     const bal = computePrediction(rounds, SessionEnvironment.LIVE_FORWARD, 'shoe-p2', { now: NOW, profile: 'BALANCED' });
     const dStrict = strict.moduleResults.find((m) => m.moduleId === 'derived-road');
     const dBal = bal.moduleResults.find((m) => m.moduleId === 'derived-road');

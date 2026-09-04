@@ -3,7 +3,8 @@ import { ScrollView, StyleSheet, Switch, Text, View, Pressable } from "react-nat
 
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { usePreferences } from "@/src/workflows/preferences";
-import { matcherReadinessFromDataset, buildMatcherSettingsView } from "@/src/domain/observability";
+import { matcherReadinessFromCorpus, buildMatcherSettingsView } from "@/src/domain/observability";
+import { matcherCorpusFromSources } from "@/src/workflows/matcher";
 import {
   resolveShoeThresholdFromLocks,
   BALANCED_THRESHOLD_PRESETS,
@@ -28,10 +29,11 @@ export default function SettingsScreen() {
   const { dataset, runtime, loading } = useBappData();
   const prefs = usePreferences();
   const snapshot = useMemo(() => buildDiagnosticsSnapshot(), []);
-  const matcher = useMemo(
-    () => (dataset ? matcherReadinessFromDataset(dataset) : null),
-    [dataset],
-  );
+  const matcher = useMemo(() => {
+    if (!dataset) return null;
+    const activeShoeId = dataset.shoes.find((shoe) => shoe.status === "ACTIVE")?.id ?? null;
+    return matcherReadinessFromCorpus(matcherCorpusFromSources(dataset, activeShoeId));
+  }, [dataset]);
   const matcherView = useMemo(
     () => (matcher ? buildMatcherSettingsView(matcher) : null),
     [matcher],
@@ -186,48 +188,25 @@ export default function SettingsScreen() {
               value={snapshot.thresholds.maxUncalibratedConfidence}
             />
             <Text style={styles.note} testID="settings-engine-note">
-              Historical Matcher stays DISABLED; Derived Road and Volatility stay SHADOW_ONLY.
+              Historical Matcher is ACTIVE and quality gated; Derived Road is ACTIVE in production and
+              Volatility stays SHADOW_ONLY.
               Financial tracking is fixed-unit paper only. These are versioned engine decisions
               and are not user-adjustable.
             </Text>
           </Card>
 
           <Card title="Engine Mode" testID="settings-engine-mode" wide>
-            <View style={styles.modeRow}>
-              <Pressable
-                testID="engine-mode-strict"
-                onPress={() => prefs.setEngineMode("STRICT")}
-                style={[styles.modeChip, prefs.engineMode === "STRICT" ? styles.modeChipActive : null]}
-              >
-                <Text style={styles.modeChipTitle}>
-                  {prefs.engineMode === "STRICT" ? "\u25C9 " : "\u25CB "}STRICT
-                </Text>
-                <Text style={styles.modeChipSub}>DECISION-001 · Accepted · Threshold 0.55 LOCKED</Text>
-              </Pressable>
-              <Pressable
-                testID="engine-mode-balanced"
-                onPress={() => prefs.setEngineMode("BALANCED")}
-                style={[styles.modeChip, prefs.engineMode === "BALANCED" ? styles.modeChipActive : null]}
-              >
-                <Text style={styles.modeChipTitle}>
-                  {prefs.engineMode === "BALANCED" ? "\u25C9 " : "\u25CB "}BALANCED — Experimental
-                </Text>
-                <Text style={styles.modeChipSub}>
-                  DECISION-004 · BALCFG-001 · {currentThresholdLabel}
-                </Text>
-              </Pressable>
-            </View>
+            <Row label="Mode" value="PRODUCTION" testID="engine-mode-production" />
+            <Row label="Decision" value="DECISION-004 / BALCFG-001" />
+            <Row label="Current Shoe Threshold" value={currentThresholdLabel} />
             <Text style={styles.note} testID="engine-mode-note">
-              STRICT (DECISION-001) is the accepted default. BALANCED (DECISION-003) is EXPERIMENTAL:
-              it activates the Derived Road analyzer (STRUCTURE family) and the quality-gated Historical
-              Matcher (HMATCH-002) while keeping every accepted confidence/threshold/risk rule unchanged.
-              STRICT stays matcher-free and Volatility stays SHADOW_ONLY in both profiles. Switching mode
-              never rewrites an already-locked target — it applies to the next unlocked prediction only.
+              Production activates the Derived Road analyzer (STRUCTURE family) and the quality-gated
+              Historical Matcher (HMATCH-002) while keeping the existing voting, family, confidence and
+              risk pipeline. STRICT remains an internal legacy/control profile only.
             </Text>
           </Card>
 
-          {prefs.engineMode === "BALANCED" ? (
-            <Card title="Threshold Lab (BALANCED — Experimental)" testID="settings-threshold-lab" wide>
+            <Card title="Production Threshold" testID="settings-threshold-lab" wide>
               <Row
                 label="STRICT (DECISION-001)"
                 value="Threshold 0.55 · LOCKED"
@@ -268,7 +247,6 @@ export default function SettingsScreen() {
                 permanent control profile at 0.55.
               </Text>
             </Card>
-          ) : null}
 
           <Card title="Historical Matcher" testID="settings-matcher" wide>
             <Row label="Collection" value="ACTIVE (from persisted history)" testID="matcher-collection" />
@@ -288,26 +266,17 @@ export default function SettingsScreen() {
               valueColor={matcherView?.eligible ? colors.tie : colors.textSecondary}
               testID="matcher-eligibility"
             />
-            <SectionLabel>Voting</SectionLabel>
             <Row
-              label="STRICT (DECISION-001)"
-              value={matcherView ? matcherView.strictVoting : "DISABLED"}
-              valueColor={colors.textMuted}
-              testID="matcher-voting-strict"
-            />
-            <Row
-              label="BALANCED (DECISION-003)"
-              value={matcherView ? matcherView.balancedVoting : "WAITING FOR ELIGIBILITY"}
+              label="HMATCH-002"
+              value={matcherView ? matcherView.productionVoting : "WAITING FOR ELIGIBILITY"}
               valueColor={matcherView?.eligible ? colors.tie : colors.textSecondary}
-              testID="matcher-voting-balanced"
+              testID="matcher-voting-production"
             />
             <Text style={styles.note} testID="matcher-note">
               Derived from the authoritative shoes + rounds (no separate matcher database, no DB-003).
-              Collection begins automatically from persisted history. The BALANCED matcher becomes
-              eligible automatically once BOTH global thresholds pass (100 completed shoes AND 5,000
-              non-Tie rounds); STRICT never receives the matcher vote. Eligibility does NOT guarantee a
-              vote every round — the per-round matcher (HMATCH-002) may still ABSTAIN when its quality
-              gates are not met. Thresholds are locked and not user-adjustable.
+              The source is BAPP-CORPUS-001 plus eligible archived user shoes, excluding the active shoe.
+              Directional signals join official voting exactly once; ABSTAIN contributes no vote. Existing
+              HMATCH-002 quality gates remain locked and not user-adjustable.
             </Text>
           </Card>
         </View>

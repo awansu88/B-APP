@@ -85,7 +85,7 @@ export function ProfileComparisonCard({ report }: { readonly report: ProfileComp
         testID="profile-strict"
       />
       <ProfileColumn
-        title="BALANCED — Experimental"
+        title="PRODUCTION (BALANCED)"
         version="DECISION-003 · Derived Road + Matcher"
         data={report.balanced}
         testID="profile-balanced"

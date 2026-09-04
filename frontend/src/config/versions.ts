@@ -9,7 +9,7 @@ export const VERSION_REGISTRY = Object.freeze({
   /** Application semantic version. */
   app: '0.1.0',
   /** Prediction engine version. */
-  engine: 'ENGINE-001',
+  engine: 'ENGINE-002',
   /** Prediction configuration version (immutable during a test batch). */
   config: 'CFG-001',
   /** Local database schema version. */

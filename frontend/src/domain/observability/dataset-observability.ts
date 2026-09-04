@@ -9,6 +9,7 @@
  */
 import type { BappDataset, LockedPredictionEntryRecord } from '../backup/dataset';
 import type { LockedPrediction } from '../session/types';
+import type { MatcherCorpus } from '../matcher';
 import {
   computeAvailability,
   computeMatcherReadiness,
@@ -95,6 +96,11 @@ export function matcherReadinessFromDataset(dataset: BappDataset): MatcherReadin
     countCompletedShoes(dataset.shoes),
     countNonTieRounds(dataset.rounds),
   );
+}
+
+/** Readiness from the exact prepared production corpus used by HMATCH-002. */
+export function matcherReadinessFromCorpus(corpus: MatcherCorpus): MatcherReadiness {
+  return computeMatcherReadiness(corpus.completedShoes, corpus.nonTieRounds);
 }
 
 // --- M7.1 Patch 2: profile-comparison telemetry ----------------------------

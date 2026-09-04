@@ -40,7 +40,7 @@ export function matcherAbstainLabel(reason: MatcherAbstainReason): string {
 // ---------------------------------------------------------------------------
 // SETTINGS — Historical Matcher status.
 // ---------------------------------------------------------------------------
-export type MatcherBalancedVoting = 'WAITING FOR ELIGIBILITY' | 'AUTO — QUALITY GATED';
+export type MatcherProductionVoting = 'WAITING FOR ELIGIBILITY' | 'ACTIVE — QUALITY GATED';
 
 export interface MatcherSettingsView {
   readonly collection: 'ACTIVE';
@@ -48,10 +48,7 @@ export interface MatcherSettingsView {
   readonly nonTieRoundsLabel: string; // "N / 5,000"
   readonly eligibility: 'COLLECTING' | 'ELIGIBLE';
   readonly eligible: boolean;
-  /** STRICT (DECISION-001) never receives the matcher vote. */
-  readonly strictVoting: 'DISABLED';
-  /** BALANCED (DECISION-003) auto quality-gates once BOTH global thresholds pass. */
-  readonly balancedVoting: MatcherBalancedVoting;
+  readonly productionVoting: MatcherProductionVoting;
 }
 
 export function buildMatcherSettingsView(r: MatcherReadiness): MatcherSettingsView {
@@ -62,8 +59,7 @@ export function buildMatcherSettingsView(r: MatcherReadiness): MatcherSettingsVi
     nonTieRoundsLabel: `${n(r.nonTieRounds)} / ${n(r.requiredNonTieRounds)}`,
     eligibility: r.eligibility,
     eligible,
-    strictVoting: 'DISABLED',
-    balancedVoting: eligible ? 'AUTO — QUALITY GATED' : 'WAITING FOR ELIGIBILITY',
+    productionVoting: eligible ? 'ACTIVE — QUALITY GATED' : 'WAITING FOR ELIGIBILITY',
   };
 }
 

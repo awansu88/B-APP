@@ -11,8 +11,9 @@ export interface AnalyzerDescriptor {
 }
 
 /**
- * The LOCKED MVP analyzer registry. Modes here are part of the frozen
- * architecture — do not flip a mode without a versioned engine decision.
+ * Operator-facing production capability registry. Historical Matcher is
+ * reported ACTIVE here, but its authoritative vote is created only by the
+ * dynamic HMATCH-002 audit adapter (it is not activated in ALL_MODULES).
  */
 export const ANALYZER_REGISTRY: readonly AnalyzerDescriptor[] = Object.freeze([
   { id: 'streak', label: 'Streak Analyzer', mode: ModuleStatus.ACTIVE },
@@ -34,6 +35,6 @@ export const ANALYZER_REGISTRY: readonly AnalyzerDescriptor[] = Object.freeze([
   {
     id: 'historical-matcher',
     label: 'Historical Matcher',
-    mode: ModuleStatus.DISABLED,
+    mode: ModuleStatus.ACTIVE,
   },
 ] as const);

@@ -3,7 +3,8 @@ import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { useBappData } from "@/src/workflows/backup/use-bapp-data";
 import { computeFullStatistics } from "@/src/domain/statistics";
-import { computeAvailabilityFromDataset, computeNearThresholdFromDataset, computeProfileComparisonFromDataset, matcherReadinessFromDataset, computeMatcherStatsFromDataset, computeThresholdLabFromDataset } from "@/src/domain/observability";
+import { computeAvailabilityFromDataset, computeNearThresholdFromDataset, computeProfileComparisonFromDataset, matcherReadinessFromCorpus, computeMatcherStatsFromDataset, computeThresholdLabFromDataset } from "@/src/domain/observability";
+import { matcherCorpusFromSources } from "@/src/workflows/matcher";
 import { StatsView } from "@/src/ui/stats/StatsView";
 import { DecisionAvailabilityCard } from "@/src/ui/stats/DecisionAvailabilityCard";
 import { ProfileComparisonCard } from "@/src/ui/stats/ProfileComparisonCard";
@@ -24,7 +25,11 @@ export default function StatisticsScreen() {
     () => (dataset ? computeAvailabilityFromDataset(dataset) : null),
     [dataset],
   );
-  const matcher = useMemo(() => (dataset ? matcherReadinessFromDataset(dataset) : null), [dataset]);
+  const matcher = useMemo(() => {
+    if (!dataset) return null;
+    const activeShoeId = dataset.shoes.find((shoe) => shoe.status === "ACTIVE")?.id ?? null;
+    return matcherReadinessFromCorpus(matcherCorpusFromSources(dataset, activeShoeId));
+  }, [dataset]);
   const matcherStats = useMemo(
     () => (dataset ? computeMatcherStatsFromDataset(dataset) : null),
     [dataset],

@@ -1,4 +1,17 @@
 {
+  "hmatch002ProductionPromotion": {
+    "status": "IMPLEMENTED",
+    "officialProfile": "BALANCED",
+    "legacyControl": "STRICT",
+    "preferenceMigration": "STRICT -> BALANCED",
+    "engineVersion": "ENGINE-002",
+    "decisionVersions": "DECISION-003 / DECISION-004 unchanged",
+    "matcherVersion": "HMATCH-002 unchanged",
+    "fingerprintVersion": "MATCHFP-001 unchanged",
+    "readinessSource": "BAPP-CORPUS-001 + eligible archived user shoes - active shoe",
+    "databaseSchema": "DB-002 unchanged",
+    "oldLocksRewritten": false
+  },
   "project": "B-APP Baccarat Engine",
   "gitRepositoryRoot": "/app",
   "mobileProjectRoot": "/app/frontend",
@@ -229,7 +242,7 @@
   },
   "versions": {
     "app": "0.1.0",
-    "engine": "ENGINE-001",
+    "engine": "ENGINE-002",
     "config": "CFG-001",
     "databaseSchema": "DB-002",
     "roadmap": "ROADMAP-001",

@@ -53,14 +53,13 @@ const audit = (over: Partial<MatcherAudit>): MatcherAudit => ({
 // SETTINGS
 // ===========================================================================
 describe('Settings matcher view-model', () => {
-  it('0 / 100 and 0 / 5000 => COLLECTING, STRICT disabled, BALANCED waiting', () => {
+  it('0 / 100 and 0 / 5000 => COLLECTING, production waiting', () => {
     const v = buildMatcherSettingsView(computeMatcherReadiness(0, 0));
     expect(v.collection).toBe('ACTIVE');
     expect(v.completedShoesLabel).toBe('0 / 100');
     expect(v.nonTieRoundsLabel).toBe('0 / 5,000');
     expect(v.eligibility).toBe('COLLECTING');
-    expect(v.strictVoting).toBe('DISABLED');
-    expect(v.balancedVoting).toBe('WAITING FOR ELIGIBILITY');
+    expect(v.productionVoting).toBe('WAITING FOR ELIGIBILITY');
   });
 
   it('partially collected => still COLLECTING', () => {
@@ -68,15 +67,14 @@ describe('Settings matcher view-model', () => {
     expect(v.completedShoesLabel).toBe('42 / 100');
     expect(v.nonTieRoundsLabel).toBe('2,430 / 5,000');
     expect(v.eligibility).toBe('COLLECTING');
-    expect(v.balancedVoting).toBe('WAITING FOR ELIGIBILITY');
+    expect(v.productionVoting).toBe('WAITING FOR ELIGIBILITY');
   });
 
-  it('exactly 100 / 5000 => ELIGIBLE, BALANCED auto quality-gated, STRICT still disabled', () => {
+  it('exactly 100 / 5000 => ELIGIBLE and production quality-gated', () => {
     const v = buildMatcherSettingsView(computeMatcherReadiness(100, 5000));
     expect(v.eligibility).toBe('ELIGIBLE');
     expect(v.eligible).toBe(true);
-    expect(v.strictVoting).toBe('DISABLED');
-    expect(v.balancedVoting).toBe('AUTO — QUALITY GATED');
+    expect(v.productionVoting).toBe('ACTIVE — QUALITY GATED');
   });
 
   it('one threshold short of both => COLLECTING (BOTH gates required)', () => {
