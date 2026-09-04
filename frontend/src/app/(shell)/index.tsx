@@ -6,6 +6,7 @@ import { buildRoadmap } from "@/src/domain/roadmap/engine";
 import { OperatorAction } from "@/src/domain/session";
 import { resolvePairState, computeStatistics, DuplicateInputGuard } from "@/src/domain/history";
 import { Winner } from "@/src/domain/models/outcome";
+import { PredictionDecision } from "@/src/domain/models/enums";
 import {
   CheckpointBanner,
   ConfirmDialog,
@@ -108,13 +109,15 @@ export default function ActiveShoeScreen() {
   return (
     <View style={styles.screen} testID="screen-active-shoe">
       <View style={styles.body}>
-        <ShoeInfoPanel
-          shoe={session.shoe}
-          statistics={activeStatistics}
-          canStart={session.canStartForwardModes}
-          nonTieRemaining={session.nonTieRemaining}
-          historyConfirmed={liveActive ? true : session.historyConfirmed}
-        />
+        {!liveMode ? (
+          <ShoeInfoPanel
+            shoe={session.shoe}
+            statistics={activeStatistics}
+            canStart={session.canStartForwardModes}
+            nonTieRemaining={session.nonTieRemaining}
+            historyConfirmed={liveActive ? true : session.historyConfirmed}
+          />
+        ) : null}
 
         <View style={styles.center}>
           {live.active && live.error ? (
@@ -127,14 +130,7 @@ export default function ActiveShoeScreen() {
           ) : null}
 
           {liveMode && live.state ? (
-            <LiveSessionPanel
-              state={live.state}
-              lastResolved={live.lastResolved}
-              operatorAction={operatorAction}
-              onSetOperatorAction={setOperatorAction}
-              busy={live.busy}
-              storeKind={live.storeKind}
-            />
+            <LiveSessionPanel state={live.state} />
           ) : null}
 
           {session.checkpointDue ? (
@@ -170,6 +166,10 @@ export default function ActiveShoeScreen() {
         canUndo={liveActive ? false : session.rounds.length > 0}
         canReview={activeRounds.length > 0}
         canStart={session.canStartForwardModes}
+        liveMode={liveMode}
+        operatorAction={operatorAction}
+        operatorPlayedDisabled={live.state?.currentPrediction?.decision === PredictionDecision.SKIP}
+        onSetOperatorAction={setOperatorAction}
         onSelectWinner={onSelectWinner}
         onTogglePlayerPair={session.togglePlayerPair}
         onToggleBankerPair={session.toggleBankerPair}
