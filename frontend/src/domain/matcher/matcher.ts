@@ -9,7 +9,6 @@
  * — the matcher only contributes a single ModuleAnalysis in the HISTORICAL
  * family when it genuinely passes every gate.
  */
-import { buildRoadmap } from '../roadmap/engine';
 import { Winner } from '../models/outcome';
 import { ModuleStatus, ShoeStatus } from '../models/enums';
 import type { RoundRecord } from '../models/round';
@@ -85,26 +84,41 @@ const runLengths = (sides: readonly string[]): number[] => {
   return heights;
 };
 
-const marksToChars = (cells: readonly { mark: string }[]): string[] =>
-  cells.map((c) => (c.mark === 'RED' ? 'R' : 'B'));
-
 /**
- * Build every requested-window fingerprint for a PREFIX in ONE roadmap pass
- * (the derived roads are computed over EXACTLY the prefix — no future leakage).
+ * MATCHFP-001 only observes the ordered derived-road marks, not their rendered
+ * grid positions. This is the same column-comparison walk used by ROADMAP-001,
+ * expressed locally so matcher preparation does not allocate complete roadmap
+ * boards for every historical endpoint.
  */
-export function fingerprintsForPrefix(
-  prefixRounds: readonly RoundRecord[],
-  windows: readonly number[] = CONTEXT_WINDOWS,
-): Map<number, MatchFingerprint> {
+const derivedMarkChars = (heights: readonly number[], offset: number): string[] => {
+  const marks: string[] = [];
+  for (let column = 0; column < heights.length; column += 1) {
+    for (let row = 0; row < heights[column]; row += 1) {
+      if (row === 0) {
+        const compared = column - 1 - offset;
+        if (compared >= 0) {
+          marks.push(heights[column - 1] === heights[compared] ? 'R' : 'B');
+        }
+      } else {
+        const compared = column - offset;
+        if (compared >= 0) marks.push(heights[compared] >= row + 1 ? 'R' : 'B');
+      }
+    }
+  }
+  return marks;
+};
+
+const fingerprintsForSides = (
+  sides: readonly string[],
+  windows: readonly number[],
+): Map<number, MatchFingerprint> => {
   const map = new Map<number, MatchFingerprint>();
-  const sides = nonTieSides(prefixRounds);
   const minW = Math.min(...windows);
   if (sides.length < minW) return map;
-  const roadmap = buildRoadmap(prefixRounds);
   const columnHeights = runLengths(sides);
-  const bigEye = marksToChars(roadmap.bigEyeBoy);
-  const small = marksToChars(roadmap.smallRoad);
-  const cockroach = marksToChars(roadmap.cockroachPig);
+  const bigEye = derivedMarkChars(columnHeights, 1);
+  const small = derivedMarkChars(columnHeights, 2);
+  const cockroach = derivedMarkChars(columnHeights, 3);
   for (const window of windows) {
     if (sides.length < window) continue;
     map.set(window, {
@@ -118,6 +132,18 @@ export function fingerprintsForPrefix(
     });
   }
   return map;
+};
+
+/**
+ * Build every requested-window fingerprint for a PREFIX in one derived-state
+ * projection (computed over EXACTLY the prefix — no future leakage).
+ */
+export function fingerprintsForPrefix(
+  prefixRounds: readonly RoundRecord[],
+  windows: readonly number[] = CONTEXT_WINDOWS,
+): Map<number, MatchFingerprint> {
+  const sides = nonTieSides(prefixRounds);
+  return fingerprintsForSides(sides, windows);
 }
 
 /**
@@ -137,10 +163,10 @@ export function buildFingerprint(
 const suffixMatch = (a: readonly string[], b: readonly string[]): number => {
   const l = Math.min(a.length, b.length);
   if (l === 0) return 0;
-  const aa = a.slice(-l);
-  const bb = b.slice(-l);
   let eq = 0;
-  for (let i = 0; i < l; i += 1) if (aa[i] === bb[i]) eq += 1;
+  const aStart = a.length - l;
+  const bStart = b.length - l;
+  for (let i = 0; i < l; i += 1) if (a[aStart + i] === b[bStart + i]) eq += 1;
   return eq / l;
 };
 
@@ -153,13 +179,15 @@ const roadSim = (a: readonly string[], b: readonly string[]): number => {
 const heightSim = (a: readonly number[], b: readonly number[]): number => {
   const l = Math.min(a.length, b.length, 6);
   if (l === 0) return a.length === 0 && b.length === 0 ? 1 : 0;
-  const aa = a.slice(-l);
-  const bb = b.slice(-l);
   let diff = 0;
   let denom = 0;
+  const aStart = a.length - l;
+  const bStart = b.length - l;
   for (let i = 0; i < l; i += 1) {
-    diff += Math.abs(aa[i] - bb[i]);
-    denom += Math.max(aa[i], bb[i]);
+    const ah = a[aStart + i];
+    const bh = b[bStart + i];
+    diff += Math.abs(ah - bh);
+    denom += Math.max(ah, bh);
   }
   return denom === 0 ? 1 : clamp01(1 - diff / denom);
 };
@@ -206,11 +234,16 @@ export function buildCandidatesForShoe(rounds: readonly RoundRecord[]): Historic
   const ordered = [...rounds].sort((a, b) => a.roundNumber - b.roundNumber);
   const out: HistoricalCandidate[] = [];
   const startEndpoint = Math.max(1, ordered.length - 1 - MAX_CANDIDATE_ENDPOINTS_PER_SHOE);
+  const sides: string[] = [];
+  for (let i = 0; i < startEndpoint; i += 1) {
+    if (ordered[i].winner !== Winner.TIE) {
+      sides.push(ordered[i].winner === Winner.PLAYER ? 'P' : 'B');
+    }
+  }
   for (let e = startEndpoint; e < ordered.length; e += 1) {
-    const prefix = ordered.slice(0, e);
     const continuation = ordered[e].winner;
     const shoeId = ordered[e].shoeId;
-    const fps = fingerprintsForPrefix(prefix);
+    const fps = fingerprintsForSides(sides, CONTEXT_WINDOWS);
     for (const [w, fp] of fps) {
       out.push({
         sourceShoeId: shoeId,
@@ -220,6 +253,9 @@ export function buildCandidatesForShoe(rounds: readonly RoundRecord[]): Historic
         fingerprint: fp,
         fingerprintVersion: MATCH_FINGERPRINT_VERSION,
       });
+    }
+    if (continuation !== Winner.TIE) {
+      sides.push(continuation === Winner.PLAYER ? 'P' : 'B');
     }
   }
   return out;
@@ -267,6 +303,24 @@ export function prepareCorpus(
     completedShoes,
     nonTieRounds,
     candidates,
+    eligible: completedShoes >= REQUIRED_COMPLETED_SHOES && nonTieRounds >= REQUIRED_NONTIE_ROUNDS,
+  };
+}
+
+/** Combine already-prepared sources without rebuilding either source. */
+export function combineMatcherCorpora(
+  first: MatcherCorpus,
+  second: MatcherCorpus,
+): MatcherCorpus {
+  if (second.completedShoes === 0 && second.nonTieRounds === 0 && second.candidates.length === 0) {
+    return first;
+  }
+  const completedShoes = first.completedShoes + second.completedShoes;
+  const nonTieRounds = first.nonTieRounds + second.nonTieRounds;
+  return {
+    completedShoes,
+    nonTieRounds,
+    candidates: [...first.candidates, ...second.candidates],
     eligible: completedShoes >= REQUIRED_COMPLETED_SHOES && nonTieRounds >= REQUIRED_NONTIE_ROUNDS,
   };
 }
@@ -351,20 +405,28 @@ export function evaluateMatcher(
   // Score candidates against same-window query fingerprints.
   const queries = fingerprintsForPrefix(currentRounds);
 
-  const scored: { sim: number; continuation: Winner }[] = [];
+  const topK: { sim: number; continuation: Winner }[] = [];
+  let candidatesConsidered = 0;
+  const compareScore = (
+    a: { sim: number; continuation: Winner },
+    b: { sim: number; continuation: Winner },
+  ): number => b.sim - a.sim || a.continuation.localeCompare(b.continuation);
   for (const c of corpus.candidates) {
     const q = queries.get(c.window);
     if (!q) continue;
-    scored.push({ sim: similarity(q, c.fingerprint), continuation: c.continuation });
+    candidatesConsidered += 1;
+    const score = { sim: similarity(q, c.fingerprint), continuation: c.continuation };
+    if (topK.length === TOP_K && compareScore(score, topK[topK.length - 1]) >= 0) continue;
+    let insertAt = topK.length;
+    while (insertAt > 0 && compareScore(score, topK[insertAt - 1]) < 0) insertAt -= 1;
+    topK.splice(insertAt, 0, score);
+    if (topK.length > TOP_K) topK.pop();
   }
-  const candidatesConsidered = scored.length;
   if (candidatesConsidered < MIN_CANDIDATES) {
     return abstainAudit(corpus, candidatesConsidered, 0, 0, 0, 0, 0, 'INSUFFICIENT_CANDIDATES');
   }
 
   // Deterministic ordering: similarity desc, then continuation for stable ties.
-  scored.sort((a, b) => b.sim - a.sim || a.continuation.localeCompare(b.continuation));
-  const topK = scored.slice(0, TOP_K);
   const topSimilarity = topK.length > 0 ? topK[0].sim : 0;
 
   const effective = topK.filter(

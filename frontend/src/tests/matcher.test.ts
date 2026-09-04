@@ -34,6 +34,7 @@ import { Winner } from '@/src/domain/models/outcome';
 import { PairState } from '@/src/domain/models/pair';
 import type { RoundRecord } from '@/src/domain/models/round';
 import type { ShoeRecord } from '@/src/domain/models/records';
+import { buildRoadmap } from '@/src/domain/roadmap/engine';
 
 const winnerOf = (ch: string): Winner =>
   ch === 'P' ? Winner.PLAYER : ch === 'B' ? Winner.BANKER : Winner.TIE;
@@ -143,6 +144,39 @@ describe('global eligibility', () => {
 // FINGERPRINT (MATCHFP-001)
 // ===========================================================================
 describe('fingerprint MATCHFP-001', () => {
+  const legacyFingerprint = (rounds: readonly RoundRecord[], window: number): MatchFingerprint | null => {
+    const ordered = [...rounds].sort((a, b) => a.roundNumber - b.roundNumber);
+    const sides = ordered.filter((r) => r.winner !== Winner.TIE).map((r) => r.winner === Winner.PLAYER ? 'P' : 'B');
+    if (sides.length < window) return null;
+    const heights: number[] = [];
+    let previous: string | null = null;
+    for (const side of sides) {
+      if (side === previous) heights[heights.length - 1] += 1;
+      else { heights.push(1); previous = side; }
+    }
+    const roadmap = buildRoadmap(ordered);
+    const chars = (cells: readonly { mark: string }[]) => cells.map((cell) => cell.mark === 'RED' ? 'R' : 'B');
+    return {
+      version: MATCH_FINGERPRINT_VERSION,
+      window,
+      raw: sides.slice(-window),
+      columnHeights: heights,
+      bigEye: chars(roadmap.bigEyeBoy).slice(-window),
+      small: chars(roadmap.smallRoad).slice(-window),
+      cockroach: chars(roadmap.cockroachPig).slice(-window),
+    };
+  };
+
+  it.each(['PBPBPBPB', 'TTPPPTBBTTPBPBPPBB', 'PPPPPPPPBBBBBBBB', BASE])(
+    'matches the original ROADMAP-001 projection for %s',
+    (pattern) => {
+      const rounds = roundsFromString('equivalence', pattern);
+      for (const window of CONTEXT_WINDOWS) {
+        expect(buildFingerprint(rounds, window)).toEqual(legacyFingerprint(rounds, window));
+      }
+    },
+  );
+
   it('is deterministic (same prefix => identical fingerprint)', () => {
     expect(buildFingerprint(currentRounds, 12)).toEqual(buildFingerprint(currentRounds, 12));
   });
