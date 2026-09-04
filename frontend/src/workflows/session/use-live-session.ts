@@ -79,11 +79,10 @@ export function useLiveSession(
   const roundsRef = useRef<readonly RoundRecord[]>(historyRounds);
   roundsRef.current = historyRounds;
 
-  // M7.1 Patch 3 Stage B1 — the pre-result matcher corpus (derived from the
-  // authoritative DB-002 dataset) is supplied to EVERY computePrediction call
-  // through the store opts. A ref keeps the async submit/revision callbacks on
-  // the freshest corpus without widening their dependency lists. When the corpus
-  // is below global eligibility the matcher simply abstains (COLLECTING).
+  // M7.1 Patch 3 Stage B1 — the pre-result matcher corpus (immutable
+  // BAPP-CORPUS-001 plus authoritative user DB-002 history) is supplied to EVERY
+  // computePrediction call through the store opts. A ref keeps async callbacks
+  // on the freshest user dataset without widening their dependency lists.
   const { corpus: matcherCorpus } = useMatcherCorpus(shoe?.id ?? null);
   const corpusRef = useRef<MatcherCorpus | undefined>(undefined);
   corpusRef.current = matcherCorpus;
