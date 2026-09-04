@@ -16,8 +16,8 @@ import type { RoundRecord } from '@/src/domain/models/round';
 import type { ShoeRecord } from '@/src/domain/models/records';
 import type { BappDataset, LockedPredictionEntryRecord } from '@/src/domain/backup';
 import { getBundledCorpusProjection } from '@/src/data/corpus';
-import { prepareCorpus, type MatcherCorpus } from '@/src/domain/matcher';
-import { matcherCorpusFromSources } from '@/src/workflows/matcher/corpus';
+import { evaluateMatcher, prepareCorpus, type MatcherCorpus } from '@/src/domain/matcher';
+import { getBundledMatcherCorpus, matcherCorpusFromSources } from '@/src/workflows/matcher/corpus';
 import {
   aggregateMatcherAudits,
   computeMatcherStatsFromDataset,
@@ -84,8 +84,32 @@ describe('production corpus wiring', () => {
     expect(c.completedShoes).toBe(1000);
     expect(c.nonTieRounds).toBe(66086);
     expect(c.eligible).toBe(true);
-    expect(c.candidates.length).toBeGreaterThan(0);
+    expect(c.candidates).toHaveLength(178918);
     expect(c.candidates.some((candidate) => candidate.sourceShoeId.startsWith('corpus001-'))).toBe(true);
+  });
+
+  it('A2) caches an immutable bundled prepared corpus by identity', () => {
+    const first = getBundledMatcherCorpus();
+    expect(getBundledMatcherCorpus()).toBe(first);
+    expect(matcherCorpusFromSources(undefined, null)).toBe(first);
+    expect(Object.isFrozen(first)).toBe(true);
+    expect(Object.isFrozen(first.candidates)).toBe(true);
+  });
+
+  it.each([
+    [0, 8, 'BANKER', 23, 1, 0.950724, 6, 15.866661, 0.394666, null],
+    [0, 24, 'ABSTAIN', 22, 1, 0.963976, 11.468094, 9.739386, 0, 'TIED_OR_DISPERSED_SUPPORT'],
+    [0, 40, 'PLAYER', 21, 1, 0.924077, 13.015224, 6.390395, 0.264993, null],
+  ])('A3) preserves bundled golden audit shoe %i prefix %i', (shoeIndex, length, signal, effectiveMatches, topSimilarity, meanTopSimilarity, playerSupport, bankerSupport, strength, abstainReason) => {
+    const source = bundled.shoes[shoeIndex];
+    const prefix = bundled.rounds.filter((round) => round.shoeId === source.id).slice(0, length);
+    const audit = evaluateMatcher(prefix, getBundledMatcherCorpus());
+    expect(audit).toMatchObject({
+      status: 'ELIGIBLE', eligible: true, completedShoes: 1000, nonTieRounds: 66086,
+      candidatesConsidered: length === 8 ? 64056 : 178918, effectiveMatches, topK: 25,
+      topSimilarity, meanTopSimilarity, playerSupport, bankerSupport, signal, strength,
+      reliability: 0.3, abstainReason,
+    });
   });
 
   it.each([null, undefined])('B) missing user dataset (%s) still uses the bundled source', (dataset) => {

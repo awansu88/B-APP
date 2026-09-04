@@ -10,7 +10,19 @@
  */
 import { getBundledCorpusProjection } from '@/src/data/corpus';
 import type { BappDataset } from '@/src/domain/backup';
-import { prepareCorpus, type MatcherCorpus } from '@/src/domain/matcher';
+import { combineMatcherCorpora, prepareCorpus, type MatcherCorpus } from '@/src/domain/matcher';
+
+let bundledMatcherCorpus: MatcherCorpus | null = null;
+
+/** Lazily prepare and freeze immutable bundled matcher work once per process. */
+export function getBundledMatcherCorpus(): MatcherCorpus {
+  if (bundledMatcherCorpus) return bundledMatcherCorpus;
+  const bundled = getBundledCorpusProjection();
+  const prepared = prepareCorpus(bundled.shoes, bundled.rounds, null);
+  Object.freeze(prepared.candidates);
+  bundledMatcherCorpus = Object.freeze(prepared);
+  return bundledMatcherCorpus;
+}
 
 /**
  * Build the pre-result matcher corpus from immutable bundled history plus the
@@ -22,10 +34,7 @@ export function matcherCorpusFromSources(
   dataset: BappDataset | null | undefined,
   activeShoeId: string | null,
 ): MatcherCorpus {
-  const bundled = getBundledCorpusProjection();
-  return prepareCorpus(
-    [...bundled.shoes, ...(dataset?.shoes ?? [])],
-    [...bundled.rounds, ...(dataset?.rounds ?? [])],
-    activeShoeId,
-  );
+  const bundled = getBundledMatcherCorpus();
+  const user = prepareCorpus(dataset?.shoes ?? [], dataset?.rounds ?? [], activeShoeId);
+  return combineMatcherCorpora(bundled, user);
 }
