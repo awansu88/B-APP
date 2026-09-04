@@ -227,6 +227,47 @@ describe('session — prediction lock immutability', () => {
 // RESULT SUBMISSION (transaction + duplicate rejection + WIN/LOSS/PUSH)
 // ===========================================================================
 describe('session — result submission', () => {
+  it.each([SessionEnvironment.LIVE_FORWARD, SessionEnvironment.HISTORICAL_TEST])(
+    'normalizes requested PLAYED to NOT_PLAYED for a SKIP in %s',
+    (environment) => {
+      const initial = start(environment);
+      const skip = fakePrediction(
+        PredictionDecision.SKIP,
+        PredictionCategory.BELOW_THRESHOLD,
+        initial.currentPrediction!.targetRound,
+      );
+      const state = {
+        ...initial,
+        currentPrediction: skip,
+        predictions: [
+          {
+            prediction: skip,
+            result: StepResult.PENDING,
+            actualWinner: null,
+            operatorAction: null,
+            invalidated: false,
+          },
+        ],
+      };
+      const playedBefore = state.sequences.played;
+      const paperBefore = state.paper;
+
+      const next = submitResult(state, Winner.PLAYER, {
+        now: NOW,
+        operatorAction: OperatorAction.PLAYED,
+      });
+      const resolved = next.predictions[0];
+
+      expect(resolved.operatorAction).toBe(OperatorAction.NOT_PLAYED);
+      expect(resolved.result).toBe(StepResult.SKIPPED);
+      expect(resolved.actualWinner).toBe(Winner.PLAYER);
+      expect(next.sequences.played).toEqual(playedBefore);
+      expect(next.paper).toEqual(paperBefore);
+      expect(next.rounds.at(-1)?.winner).toBe(Winner.PLAYER);
+      expect(next.currentPrediction?.targetRound).toBe(skip.targetRound + 1);
+    },
+  );
+
   it('records a WIN and advances the engine sequence for a correct banker call', () => {
     const s = start();
     const next = submitResult(s, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED });
@@ -235,6 +276,8 @@ describe('session — result submission', () => {
     expect(resolved.actualWinner).toBe(Winner.BANKER);
     expect(next.sequences.engine.EXPERIMENTAL_PLUS.consecutiveWins).toBe(1);
     expect(next.sequences.played.EXPERIMENTAL_PLUS.consecutiveWins).toBe(1);
+    expect(resolved.operatorAction).toBe(OperatorAction.PLAYED);
+    expect(next.paper.wins).toBe(1);
     expect(next.rounds).toHaveLength(13);
     expect(next.currentPrediction?.targetRound).toBe(14);
   });
@@ -250,6 +293,8 @@ describe('session — result submission', () => {
     const next = submitResult(start(), Winner.BANKER, { now: NOW, operatorAction: OperatorAction.NOT_PLAYED });
     expect(next.sequences.engine.EXPERIMENTAL_PLUS.consecutiveWins).toBe(1);
     expect(next.sequences.played.EXPERIMENTAL_PLUS.consecutiveWins).toBe(0);
+    expect(next.predictions[0].operatorAction).toBe(OperatorAction.NOT_PLAYED);
+    expect(next.paper).toEqual({ unitsStaked: 0, netUnits: 0, wins: 0, losses: 0, pushes: 0 });
   });
 
   it('rejects duplicate/out-of-order results (wrong target round) atomically', () => {
@@ -584,6 +629,33 @@ describe('session M5B — restart reconstruction scenarios', () => {
       .map((e) => e.operatorAction)
       .sort();
     expect(actions).toEqual([OperatorAction.NOT_PLAYED, OperatorAction.PLAYED]);
+  });
+
+  it('persists a newly resolved SKIP as NOT_PLAYED after reconstruction', () => {
+    const initial = start();
+    const skip = fakePrediction(
+      PredictionDecision.SKIP,
+      PredictionCategory.BELOW_THRESHOLD,
+      initial.currentPrediction!.targetRound,
+    );
+    const state = {
+      ...initial,
+      currentPrediction: skip,
+      predictions: [{
+        prediction: skip,
+        result: StepResult.PENDING,
+        actualWinner: null,
+        operatorAction: null,
+        invalidated: false,
+      }],
+    };
+
+    const restored = roundTrip(
+      submitResult(state, Winner.BANKER, { now: NOW, operatorAction: OperatorAction.PLAYED }),
+    );
+    expect(restored.predictions[0].operatorAction).toBe(OperatorAction.NOT_PLAYED);
+    expect(restored.sequences.played).toEqual(initial.sequences.played);
+    expect(restored.paper).toEqual(initial.paper);
   });
 
   it('E. revision invalidation survives reconstruction', () => {

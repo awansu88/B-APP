@@ -4,6 +4,7 @@ import { InputDraft, PairInputMode } from '@/src/domain/history';
 import { Winner } from '@/src/domain/models/outcome';
 import { OperatorAction } from '@/src/domain/session';
 import { colors, radius, spacing } from '../theme';
+import { operatorActionControlState } from './operator-action-state';
 
 interface ControlBarProps {
   readonly draft: InputDraft;
@@ -150,6 +151,10 @@ export function ControlBar(props: ControlBarProps) {
   const resultDisabled = props.resultDisabled ?? disabled;
   const canReview = props.canReview ?? props.canUndo;
   const isComplete = draft.pairMode === PairInputMode.COMPLETE;
+  const operatorState = operatorActionControlState(
+    props.operatorAction ?? OperatorAction.NOT_PLAYED,
+    !!props.operatorPlayedDisabled,
+  );
 
   return (
     <View style={styles.bar} testID="control-bar">
@@ -225,16 +230,16 @@ export function ControlBar(props: ControlBarProps) {
             <Toggle
               testID="op-played"
               label="PLAYED"
-              active={props.operatorAction === OperatorAction.PLAYED && !props.operatorPlayedDisabled}
+              active={operatorState.playedActive}
               color={colors.accent}
               onPress={() => props.onSetOperatorAction?.(OperatorAction.PLAYED)}
-              disabled={disabled || !!props.operatorPlayedDisabled}
+              disabled={disabled || operatorState.playedDisabled}
               wide
             />
             <Toggle
               testID="op-not-played"
               label="NOT PLAYED"
-              active={props.operatorAction === OperatorAction.NOT_PLAYED || !!props.operatorPlayedDisabled}
+              active={operatorState.notPlayedActive}
               color={colors.accent}
               onPress={() => props.onSetOperatorAction?.(OperatorAction.NOT_PLAYED)}
               disabled={disabled}

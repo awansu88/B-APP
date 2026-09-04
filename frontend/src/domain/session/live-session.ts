@@ -10,7 +10,7 @@
 import { editRound as editRoundPure, deleteRound as deleteRoundPure } from '../history';
 import type { RoundEdit } from '../history';
 import { PairState } from '../models/pair';
-import { RoundSource } from '../models/enums';
+import { PredictionDecision, RoundSource } from '../models/enums';
 import type { RoundRecord } from '../models/round';
 import { Winner } from '../models/outcome';
 import { SessionEnvironment } from './environment';
@@ -165,7 +165,14 @@ export function submitResult(
   if (opts.expectedTargetRound != null && opts.expectedTargetRound !== target) {
     throw new TargetRoundError(target, opts.expectedTargetRound);
   }
-  const action = opts.operatorAction ?? OperatorAction.NOT_PLAYED;
+  const requestedAction = opts.operatorAction ?? OperatorAction.NOT_PLAYED;
+  // An official SKIP is never an operator-played recommendation. Normalize at
+  // the domain boundary so every caller and persistence adapter shares the
+  // invariant, even if stale presentation state requests PLAYED.
+  const action =
+    current.decision === PredictionDecision.SKIP
+      ? OperatorAction.NOT_PLAYED
+      : requestedAction;
   const now = opts.now ?? new Date().toISOString();
 
   // 3. save actual round

@@ -1,6 +1,9 @@
 import { PredictionCategory, PredictionDecision } from '@/src/domain/models/enums';
 import { compactLiveView } from '@/src/ui/live/compact-live-view';
 import type { LockedPrediction } from '@/src/domain/session';
+import { OperatorAction } from '@/src/domain/session';
+import { operatorActionForDecision } from '@/src/workflows/session/operator-action';
+import { operatorActionControlState } from '@/src/ui/history/operator-action-state';
 
 const prediction = (
   decision: PredictionDecision,
@@ -18,6 +21,26 @@ const prediction = (
 } as unknown as LockedPrediction);
 
 describe('compact Live recommendation view', () => {
+  it('normalizes carried PLAYED state for SKIP without resetting ordinary bets', () => {
+    expect(
+      operatorActionForDecision(OperatorAction.PLAYED, PredictionDecision.SKIP),
+    ).toBe(OperatorAction.NOT_PLAYED);
+    expect(
+      operatorActionForDecision(OperatorAction.PLAYED, PredictionDecision.BET_PLAYER),
+    ).toBe(OperatorAction.PLAYED);
+    expect(
+      operatorActionForDecision(OperatorAction.NOT_PLAYED, PredictionDecision.BET_BANKER),
+    ).toBe(OperatorAction.NOT_PLAYED);
+  });
+
+  it('disables PLAYED and presents NOT PLAYED active for stale PLAYED state on SKIP', () => {
+    expect(operatorActionControlState(OperatorAction.PLAYED, true)).toEqual({
+      playedActive: false,
+      notPlayedActive: true,
+      playedDisabled: true,
+    });
+  });
+
   it.each([
     [PredictionDecision.BET_PLAYER, 'BET PLAYER'],
     [PredictionDecision.BET_BANKER, 'BET BANKER'],
