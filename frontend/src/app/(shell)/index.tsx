@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { useHistorySession, useLiveSession } from "@/src/workflows";
@@ -17,6 +17,7 @@ import {
 import { LiveSessionPanel } from "@/src/ui/live";
 import { RoadmapBoards } from "@/src/ui/roadmap";
 import { colors, radius, spacing } from "@/src/ui/theme";
+import { operatorActionForDecision } from "@/src/workflows/session/operator-action";
 
 type ConfirmKind = "clear" | "new" | null;
 
@@ -49,6 +50,12 @@ export default function ActiveShoeScreen() {
     () => (liveMode && liveRounds ? computeStatistics(liveRounds) : session.statistics),
     [liveMode, liveRounds, session.statistics],
   );
+
+  const currentPrediction = live.state?.currentPrediction ?? null;
+  useEffect(() => {
+    if (!currentPrediction) return;
+    setOperatorAction((action) => operatorActionForDecision(action, currentPrediction.decision));
+  }, [currentPrediction]);
 
   if (session.initializationError) {
     return (
