@@ -27,7 +27,7 @@ import {
  */
 describe('engine — locked constants & version', () => {
   it('carries the locked engine version', () => {
-    expect(ENGINE_VERSION).toBe('ENGINE-001');
+    expect(ENGINE_VERSION).toBe('ENGINE-002');
   });
 
   it('locks the core thresholds', () => {
@@ -81,10 +81,10 @@ describe('engine — analyzer registry modes (data only, no analyzer logic)', ()
     }
   });
 
-  it('registers Volatility & Derived Road as SHADOW_ONLY and Historical Matcher as DISABLED', () => {
+  it('reports Volatility/Derived Road controls and the dynamic Historical Matcher capability', () => {
     expect(mode('volatility')).toBe(AnalyzerMode.SHADOW_ONLY);
     expect(mode('derived-road')).toBe(AnalyzerMode.SHADOW_ONLY);
-    expect(mode('historical-matcher')).toBe(AnalyzerMode.DISABLED);
+    expect(mode('historical-matcher')).toBe(AnalyzerMode.ACTIVE);
   });
 });
 

@@ -26,10 +26,10 @@ describe('Patch 2 · engine-mode preference (section 17)', () => {
     jest.resetModules();
   });
 
-  it('default profile is STRICT; only the bounded Balanced threshold preset is numeric', async () => {
+  it('default profile is matcher-enabled production; only the bounded threshold preset is numeric', async () => {
     const prefs = await import('@/src/workflows/preferences');
-    expect(prefs.getEngineMode()).toBe('STRICT');
-    expect(prefs.DEFAULT_PREFERENCES.engineMode).toBe('STRICT');
+    expect(prefs.getEngineMode()).toBe('BALANCED');
+    expect(prefs.DEFAULT_PREFERENCES.engineMode).toBe('BALANCED');
     // Presentation booleans + versioned engineMode + the M7.1 Patch-4 Balanced
     // threshold PRESET (bounded 0.55/0.54/0.53/0.52 — not an arbitrary knob).
     expect(Object.keys(prefs.DEFAULT_PREFERENCES).sort()).toEqual(
@@ -44,6 +44,7 @@ describe('Patch 2 · engine-mode preference (section 17)', () => {
 
   it('the preference can select BALANCED and persists the write', async () => {
     const prefs = await import('@/src/workflows/preferences');
+    prefs.setEngineMode('STRICT');
     prefs.setEngineMode('BALANCED');
     expect(prefs.getEngineMode()).toBe('BALANCED');
     await flush();
@@ -68,14 +69,14 @@ describe('Patch 2 · engine-mode preference (section 17)', () => {
     await flush();
     expect(mockStore['bapp.pref.showDecisionComparison']).toBe(true);
     expect(mockStore['bapp.pref.showDirectionalLean']).toBe(false);
-    expect(prefs.getEngineMode()).toBe('STRICT');
+    expect(prefs.getEngineMode()).toBe('BALANCED');
   });
 
-  it('an invalid persisted engine mode falls back to STRICT', async () => {
+  it('an invalid persisted engine mode falls back to production', async () => {
     mockStore['bapp.pref.engineMode'] = 'GARBAGE';
     const prefs = await import('@/src/workflows/preferences');
     await flush();
-    expect(prefs.getEngineMode()).toBe('STRICT');
+    expect(prefs.getEngineMode()).toBe('BALANCED');
   });
 
   // ---- M7.1 Patch 4 — Next-Shoe Balanced threshold preference ----
@@ -87,7 +88,7 @@ describe('Patch 2 · engine-mode preference (section 17)', () => {
     await flush();
     expect(mockStore['bapp.pref.nextBalancedThreshold']).toBe(0.52);
     // it does NOT touch the engine mode (profile selection is independent)
-    expect(prefs.getEngineMode()).toBe('STRICT');
+    expect(prefs.getEngineMode()).toBe('BALANCED');
   });
 
   it('Next-Shoe threshold rehydrates SEPARATELY from engine mode after reload', async () => {
@@ -100,6 +101,14 @@ describe('Patch 2 · engine-mode preference (section 17)', () => {
     await flush();
     expect(reloaded.getNextBalancedThreshold()).toBe(0.54);
     expect(reloaded.getEngineMode()).toBe('BALANCED');
+  });
+
+  it('migrates a persisted legacy STRICT preference to production', async () => {
+    mockStore['bapp.pref.engineMode'] = 'STRICT';
+    const prefs = await import('@/src/workflows/preferences');
+    await flush();
+    expect(prefs.getEngineMode()).toBe('BALANCED');
+    expect(mockStore['bapp.pref.engineMode']).toBe('BALANCED');
   });
 
   it('an invalid persisted Next-Shoe threshold falls back to 0.53', async () => {

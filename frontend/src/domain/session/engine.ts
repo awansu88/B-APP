@@ -11,6 +11,7 @@ import {
   BALANCED_PROFILE,
   BALANCED_CONFIG_VERSION,
   DECISION_004_VERSION,
+  DEFAULT_ENGINE_PROFILE_ID,
   decisionConfigForBalanced,
   type BalancedDecisionConfig,
   type DecisionResult,
@@ -57,7 +58,7 @@ export const lockPrediction = (prediction: LockedPrediction): LockedPrediction =
 export interface ComputeOptions {
   readonly now?: string;
   readonly historyConfirmed?: boolean;
-  /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
+  /** Selected engine profile for the OFFICIAL lock. Default production/BALANCED. */
   readonly profile?: EngineProfileId;
   /**
    * M7.1 Patch 3 — prepared PRE-RESULT Historical Matcher corpus. When provided
@@ -118,7 +119,7 @@ export function computePrediction(
   // selected. The SELECTED profile is official/actionable; the other is
   // CONTROL/COMPARISON telemetry only. Future-leakage protection is inherited
   // from the completed-rounds-only snapshot.
-  const selectedId: EngineProfileId = opts.profile ?? 'STRICT';
+  const selectedId: EngineProfileId = opts.profile ?? DEFAULT_ENGINE_PROFILE_ID;
 
   // M7.1 Patch 3 — the Historical Matcher (HMATCH-002) is evaluated ONCE from
   // the immutable pre-target state whenever a corpus is supplied, and belongs to

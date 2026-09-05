@@ -8,8 +8,10 @@
  * gates (voting math, confidence bands/cap, risk semantics, data-quality gate)
  * are shared unchanged — no confidence-threshold reduction, no VOTE-001 change.
  *
- * Historical Matcher stays NO-VOTE (DISABLED) in BOTH profiles; Volatility stays
- * SHADOW_ONLY in BOTH profiles. Default profile is STRICT.
+ * The static Historical Matcher placeholder stays DISABLED in both registries;
+ * the one authoritative dynamic HMATCH-002 module is appended by the session
+ * engine. Volatility stays SHADOW_ONLY. BALANCED is the production default;
+ * STRICT remains a matcher-free legacy/control path.
  */
 import { ALL_MODULES, derivedRoadAnalyzerActive } from '../analysis/modules';
 import type { AnalysisModule } from '../analysis/types';
@@ -48,7 +50,7 @@ export const STRICT_PROFILE: EngineProfile = Object.freeze({
 export const BALANCED_PROFILE: EngineProfile = Object.freeze({
   id: 'BALANCED',
   decisionVersion: 'DECISION-003',
-  status: 'EXPERIMENTAL',
+  status: 'ACCEPTED',
   derivedRoad: 'ACTIVE',
   modules: BALANCED_MODULES,
 });
@@ -58,7 +60,8 @@ export const ENGINE_PROFILES: Readonly<Record<EngineProfileId, EngineProfile>> =
   BALANCED: BALANCED_PROFILE,
 });
 
-export const DEFAULT_ENGINE_PROFILE_ID: EngineProfileId = 'STRICT';
+/** Official production profile. STRICT remains available only as a legacy/control path. */
+export const DEFAULT_ENGINE_PROFILE_ID: EngineProfileId = 'BALANCED';
 
 export const isEngineProfileId = (v: unknown): v is EngineProfileId =>
   v === 'STRICT' || v === 'BALANCED';

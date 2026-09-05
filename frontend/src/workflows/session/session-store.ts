@@ -57,7 +57,7 @@ export interface KvStore {
 export interface StartLiveOptions {
   readonly now?: string;
   readonly historyConfirmed?: boolean;
-  /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
+  /** Selected engine profile for the OFFICIAL lock. Default production/BALANCED. */
   readonly profile?: EngineProfileId;
   /** M7.1 Patch 3 Stage B1 — pre-result Historical Matcher corpus (DB-002 archived history). */
   readonly matcherCorpus?: MatcherCorpus;
@@ -73,12 +73,20 @@ export interface SubmitOptions {
   readonly roundId?: string;
   readonly playerPair?: PairState;
   readonly bankerPair?: PairState;
-  /** M7.1 Patch 2 — selected engine profile for the OFFICIAL lock. Default STRICT. */
+  /** Selected engine profile for the OFFICIAL lock. Default production/BALANCED. */
   readonly profile?: EngineProfileId;
   /** M7.1 Patch 3 Stage B1 — pre-result Historical Matcher corpus (DB-002 archived history). */
   readonly matcherCorpus?: MatcherCorpus;
   /** M7.1 Patch 4 — immutable per-shoe Balanced Threshold-Lab config (BALCFG-001). */
   readonly balancedConfig?: BalancedDecisionConfig;
+}
+
+/** Inputs needed only when reconstruction must create a missing pending lock. */
+export interface ReconstructOptions {
+  /** Official profile to use for a newly recovered lock. Default production/BALANCED. */
+  readonly profile?: EngineProfileId;
+  /** Already-prepared production corpus; corpus ownership remains in the workflow layer. */
+  readonly matcherCorpus?: MatcherCorpus;
 }
 
 /** Persistence contract shared by the native (SQLite/DB-002) and web adapters. */
@@ -120,7 +128,7 @@ export interface SessionStore {
     roundNumber: number,
     opts?: StartLiveOptions,
   ): Promise<SessionState>;
-  reconstruct(shoeId: string): Promise<SessionState | null>;
+  reconstruct(shoeId: string, opts?: ReconstructOptions): Promise<SessionState | null>;
 }
 
 const pendingEntry = (s: SessionState): PredictionEntry | undefined =>
@@ -158,7 +166,7 @@ export class SqliteSessionStore implements SessionStore {
 
   async submitResult(shoeId: string, winner: Winner, opts: SubmitOptions = {}): Promise<SessionState> {
     const now = opts.now ?? new Date().toISOString();
-    const current = await this.reconstruct(shoeId);
+    const current = await this.reconstruct(shoeId, opts);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     const lockedTarget = current.currentPrediction?.targetRound;
     // HARD INVARIANT: the lock for target N must already be persisted & valid.
@@ -182,7 +190,7 @@ export class SqliteSessionStore implements SessionStore {
     opts: StartLiveOptions = {},
   ): Promise<SessionState> {
     const now = opts.now ?? new Date().toISOString();
-    const current = await this.reconstruct(shoeId);
+    const current = await this.reconstruct(shoeId, opts);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     const next = editHistoryPure(current, roundNumber, edit, { ...opts, now });
     const revisionId = latestRevisionId(current.revisions, next.revisions);
@@ -200,7 +208,7 @@ export class SqliteSessionStore implements SessionStore {
     opts: StartLiveOptions = {},
   ): Promise<SessionState> {
     const now = opts.now ?? new Date().toISOString();
-    const current = await this.reconstruct(shoeId);
+    const current = await this.reconstruct(shoeId, opts);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     const next = deleteHistoryPure(current, roundNumber, { ...opts, now });
     const revisionId = latestRevisionId(current.revisions, next.revisions);
@@ -212,7 +220,10 @@ export class SqliteSessionStore implements SessionStore {
     return next;
   }
 
-  async reconstruct(shoeId: string): Promise<SessionState | null> {
+  async reconstruct(
+    shoeId: string,
+    opts: ReconstructOptions = {},
+  ): Promise<SessionState | null> {
     const cursor = await this.lpe.getState(shoeId);
     if (!cursor) return null;
     const rounds = await this.loadRounds(shoeId);
@@ -247,6 +258,8 @@ export class SqliteSessionStore implements SessionStore {
       const regenerated = computePrediction(state.rounds, state.environment, shoeId, {
         now,
         historyConfirmed: true,
+        profile: opts.profile,
+        matcherCorpus: opts.matcherCorpus,
         ...(shoeThreshold != null ? { balancedConfig: balancedDecisionConfig(shoeThreshold) } : {}),
       });
       const entries = [
@@ -399,7 +412,7 @@ export class MemorySessionStore implements SessionStore {
   }
 
   async submitResult(shoeId: string, winner: Winner, opts: SubmitOptions = {}): Promise<SessionState> {
-    const current = await this.reconstruct(shoeId);
+    const current = await this.reconstruct(shoeId, opts);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     if (!pendingEntry(current)) {
       throw new Error('Lock-before-result violation: no valid persisted lock for the next target.');
@@ -415,7 +428,7 @@ export class MemorySessionStore implements SessionStore {
     edit: RoundEdit,
     opts: StartLiveOptions = {},
   ): Promise<SessionState> {
-    const current = await this.reconstruct(shoeId);
+    const current = await this.reconstruct(shoeId, opts);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     const next = editHistoryPure(current, roundNumber, edit, opts);
     await this.write(shoeId, next);
@@ -427,14 +440,17 @@ export class MemorySessionStore implements SessionStore {
     roundNumber: number,
     opts: StartLiveOptions = {},
   ): Promise<SessionState> {
-    const current = await this.reconstruct(shoeId);
+    const current = await this.reconstruct(shoeId, opts);
     if (!current) throw new Error(`No persisted session for shoe ${shoeId}.`);
     const next = deleteHistoryPure(current, roundNumber, opts);
     await this.write(shoeId, next);
     return next;
   }
 
-  async reconstruct(shoeId: string): Promise<SessionState | null> {
+  async reconstruct(
+    shoeId: string,
+    _opts: ReconstructOptions = {},
+  ): Promise<SessionState | null> {
     const raw = await this.kv.getItem(webKey(shoeId), '');
     if (!raw) return null;
     try {

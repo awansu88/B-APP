@@ -8,6 +8,7 @@
  * foundation for Stage B2.
  */
 import { computePrediction } from '@/src/domain/session/engine';
+import { familyOf, ModuleFamily } from '@/src/domain/decision';
 import { SessionEnvironment } from '@/src/domain/session/environment';
 import { ShoeStatus, RoundSource } from '@/src/domain/models/enums';
 import { Winner } from '@/src/domain/models/outcome';
@@ -21,6 +22,7 @@ import { getBundledMatcherCorpus, matcherCorpusFromSources } from '@/src/workflo
 import {
   aggregateMatcherAudits,
   computeMatcherStatsFromDataset,
+  matcherReadinessFromCorpus,
   type StoredMatcherAudit,
 } from '@/src/domain/observability';
 
@@ -86,6 +88,11 @@ describe('production corpus wiring', () => {
     expect(c.eligible).toBe(true);
     expect(c.candidates).toHaveLength(178918);
     expect(c.candidates.some((candidate) => candidate.sourceShoeId.startsWith('corpus001-'))).toBe(true);
+    expect(matcherReadinessFromCorpus(c)).toMatchObject({
+      completedShoes: 1000,
+      nonTieRounds: 66086,
+      eligibility: 'ELIGIBLE',
+    });
   });
 
   it('A2) caches an immutable bundled prepared corpus by identity', () => {
@@ -120,7 +127,7 @@ describe('production corpus wiring', () => {
   });
 
   it('C) user history contributes while the ACTIVE shoe and its candidates are excluded', () => {
-    const archived = Array.from({ length: 5 }, (_, i) => shoe(`user-${i}`));
+    const archived = Array.from({ length: 2 }, (_, i) => shoe(`user-${i}`));
     const archivedRounds = archived.flatMap((record) => roundsFromString(record.id, BASE + 'P'));
     const active = shoe('user-active', ShoeStatus.ACTIVE);
     const dataset = emptyDataset({
@@ -129,7 +136,7 @@ describe('production corpus wiring', () => {
     });
     const c = matcherCorpusFromSources(dataset, active.id);
     const userNonTies = archivedRounds.filter((round) => round.winner !== Winner.TIE).length;
-    expect(c.completedShoes).toBe(1005);
+    expect(c.completedShoes).toBe(1002);
     expect(c.nonTieRounds).toBe(66086 + userNonTies);
     expect(c.candidates.some((candidate) => candidate.sourceShoeId === archived[0].id)).toBe(true);
     expect(c.candidates.some((candidate) => candidate.sourceShoeId === active.id)).toBe(false);
@@ -198,11 +205,16 @@ describe('production corpus wiring', () => {
     const corpus = prepareCorpus(dataset.shoes, dataset.rounds, 'cur');
     const prediction = computePrediction(currentRounds, SessionEnvironment.LIVE_FORWARD, 'cur', {
       now: NOW,
-      profile: 'BALANCED',
       matcherCorpus: corpus,
     });
     expect(prediction.matcherAudit?.signal).toBe('PLAYER');
-    expect(prediction.moduleResults.some((m) => m.moduleId === 'historical-matcher' && m.status === 'ACTIVE')).toBe(true);
+    const activeMatcher = prediction.moduleResults.filter(
+      (m) => m.moduleId === 'historical-matcher' && m.status === 'ACTIVE',
+    );
+    expect(prediction.profileComparison?.selectedProfile).toBe('BALANCED');
+    expect(activeMatcher).toHaveLength(1);
+    expect(activeMatcher[0]).toMatchObject({ reliability: 0.3 });
+    expect(familyOf(activeMatcher[0].moduleId)).toBe(ModuleFamily.HISTORICAL);
   });
 
   it('I) a controlled eligible ABSTAIN does not create an ACTIVE matcher vote', () => {

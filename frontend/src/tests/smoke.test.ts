@@ -12,7 +12,7 @@ import { buildDiagnosticsSnapshot } from '@/src/diagnostics';
 describe('B-APP smoke — locked version registry & core enums', () => {
   it('exposes the locked version registry', () => {
     expect(VERSION_REGISTRY.app).toBe('0.1.0');
-    expect(VERSION_REGISTRY.engine).toBe('ENGINE-001');
+    expect(VERSION_REGISTRY.engine).toBe('ENGINE-002');
     expect(VERSION_REGISTRY.config).toBe('CFG-001');
     expect(VERSION_REGISTRY.databaseSchema).toBe('DB-002');
     expect(VERSION_REGISTRY.roadmap).toBe('ROADMAP-001');
@@ -54,7 +54,7 @@ describe('B-APP smoke — locked version registry & core enums', () => {
 
   it('builds a diagnostics snapshot from the locked config', () => {
     const snapshot = buildDiagnosticsSnapshot();
-    expect(snapshot.versions.engine).toBe('ENGINE-001');
+    expect(snapshot.versions.engine).toBe('ENGINE-002');
     expect(snapshot.thresholds.minWarmupNonTie).toBe(8);
     expect(typeof snapshot.generatedAt).toBe('string');
   });

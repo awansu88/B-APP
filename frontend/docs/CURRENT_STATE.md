@@ -300,3 +300,26 @@ serialize/restart reconstruction. Predictions are locked BEFORE their result
 
 ## Native persistence status
 - **IMPLEMENTED_NOT_RUNTIME_VERIFIED** (Milestone 2; unchanged this milestone).
+
+## HMATCH-002 production promotion
+
+HMATCH-002 is now an official production voter. The matcher-enabled `BALANCED`
+profile is the default and accepted production path; `STRICT` remains available
+only as an internal legacy/control profile. Persisted `STRICT` UI preferences
+migrate to production on hydration, while existing locked predictions remain
+verbatim. New locks are identified by `ENGINE-002` and retain the already
+matcher-aware `DECISION-003`/`DECISION-004` and `BALCFG-001` identifiers.
+
+Settings reports the dynamic matcher as `ACTIVE — QUALITY GATED`; its static
+`ALL_MODULES` placeholder remains disabled so it cannot create a duplicate vote.
+Statistics readiness is derived from the same prepared production corpus as
+runtime matching (`BAPP-CORPUS-001` plus eligible archived user shoes, excluding
+the active shoe), so an empty user dataset reports 1,000 completed shoes and
+66,086 non-Tie rounds. No corpus rows are persisted and DB-002 is unchanged.
+
+### PR #9 native recovery correction
+`SqliteSessionStore.reconstruct` now accepts the official profile and an already-prepared
+production `MatcherCorpus` for the missing-pending-lock recovery case. Initial restart and
+all internal submit/edit/delete reconstruction calls pass that context, while BALCFG-001
+continues to be recovered from surviving immutable shoe locks. Existing pending locks are
+returned verbatim and are never recomputed.

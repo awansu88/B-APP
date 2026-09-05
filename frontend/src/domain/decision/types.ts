@@ -16,7 +16,7 @@ export enum ModuleFamily {
   CONTEXT = 'CONTEXT', // regime-transition (context modifier)
   STRUCTURE = 'STRUCTURE', // derived-road (SHADOW_ONLY)
   RISK = 'RISK', // volatility (SHADOW_ONLY)
-  HISTORICAL = 'HISTORICAL', // historical-matcher (DISABLED)
+  HISTORICAL = 'HISTORICAL', // dynamic historical-matcher vote
   QUALITY = 'QUALITY', // data-quality-guard (non-directional)
 }
 

@@ -27,7 +27,7 @@ export interface UiPreferences {
   readonly showDirectionalLean: boolean;
   /** Show the compact secondary STRICT-vs-BALANCED decision-comparison section. */
   readonly showDecisionComparison: boolean;
-  /** Selected engine profile (versioned). Default STRICT / DECISION-001. */
+  /** Selected engine profile (versioned). Default production/BALANCED. */
   readonly engineMode: EngineProfileId;
   /**
    * M7.1 Patch 4 — the NEXT-shoe Balanced Threshold-Lab preset. This is a
@@ -71,13 +71,19 @@ async function hydrate(): Promise<void> {
   state = {
     showDirectionalLean: lean !== false,
     showDecisionComparison: comparison === true,
-    engineMode: isEngineProfileId(mode) ? mode : DEFAULT_ENGINE_PROFILE_ID,
+    // ENGINE-002 promotes the matcher-enabled BALANCED path to production.
+    // Persisted STRICT (and unknown legacy values) deterministically migrate;
+    // immutable locks keep their originally recorded selected profile/version.
+    engineMode: DEFAULT_ENGINE_PROFILE_ID,
     nextBalancedThreshold: isBalancedThreshold(nextThreshold)
       ? nextThreshold
       : DEFAULT_BALANCED_THRESHOLD,
   };
   hydrated = true;
   emit();
+  if (!isEngineProfileId(mode) || mode !== DEFAULT_ENGINE_PROFILE_ID) {
+    void storage.setItem(KEY_ENGINE_MODE, DEFAULT_ENGINE_PROFILE_ID);
+  }
 }
 void hydrate();
 
@@ -104,7 +110,7 @@ export function setEngineMode(value: EngineProfileId): void {
 
 /**
  * Synchronous read of the current engine mode for non-React callers (e.g. the
- * session store at lock time). Returns the last hydrated value (STRICT until
+ * session store at lock time). Returns the production default until
  * hydration completes).
  */
 export function getEngineMode(): EngineProfileId {

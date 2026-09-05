@@ -151,3 +151,11 @@ Filter** → **Prediction Draft** (with independent ACTIVE and SHADOW records).
 The Milestone-0 placeholders `categorizeConfidence`, `evaluateStep`, and
 `evaluateThreeWinSequence` remain unimplemented (they throw); the pipeline uses
 its own `categoryFromConfidence`. Locking/evaluation are Milestone 5.
+
+## ENGINE-002 — official Historical Matcher promotion
+- The accepted/default production profile is the matcher-enabled BALANCED path.
+- HMATCH-002 directional results enter the ordinary VOTE-001 family pipeline once as HISTORICAL evidence (reliability 0.30).
+- HMATCH-002 ABSTAIN creates no ModuleAnalysis and changes no vote/support count.
+- STRICT/DECISION-001 remains a legacy/control path and is not a normal operator mode.
+- Existing locks retain their stored versions and are never recomputed. New production locks carry ENGINE-002.
+- HMATCH-002, MATCHFP-001, matcher constants, confidence, risk, and roadmap semantics are unchanged.
