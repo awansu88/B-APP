@@ -180,3 +180,8 @@ Update `docs/CURRENT_STATE.md`, this file, `docs/KNOWN_ISSUES.md`,
 - ENGINE-002 identifies the official-default promotion. HMATCH-002, MATCHFP-001, DECISION-003/004, BALCFG-001, VOTE-001, CONF-001, and RISK-001 semantics are unchanged.
 - The dynamic `MatcherAudit -> matcherModuleAnalysis()` path remains the sole matcher voter. ABSTAIN remains a true no-vote.
 - Settings/Statistics use production corpus truth; bundled data remains runtime-only and DB-002 remains unchanged.
+
+### PR #9 recovery follow-up
+Native missing-pending-lock recovery must be called with `{ profile, matcherCorpus }` from
+the workflow. `useLiveSession` and SessionStore submit/edit/delete paths now do this. The
+store does not construct a corpus; BALCFG-001 still comes from surviving shoe locks.

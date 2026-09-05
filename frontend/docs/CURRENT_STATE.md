@@ -316,3 +316,10 @@ Statistics readiness is derived from the same prepared production corpus as
 runtime matching (`BAPP-CORPUS-001` plus eligible archived user shoes, excluding
 the active shoe), so an empty user dataset reports 1,000 completed shoes and
 66,086 non-Tie rounds. No corpus rows are persisted and DB-002 is unchanged.
+
+### PR #9 native recovery correction
+`SqliteSessionStore.reconstruct` now accepts the official profile and an already-prepared
+production `MatcherCorpus` for the missing-pending-lock recovery case. Initial restart and
+all internal submit/edit/delete reconstruction calls pass that context, while BALCFG-001
+continues to be recovered from surviving immutable shoe locks. Existing pending locks are
+returned verbatim and are never recomputed.

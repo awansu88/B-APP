@@ -10,7 +10,8 @@
     "fingerprintVersion": "MATCHFP-001 unchanged",
     "readinessSource": "BAPP-CORPUS-001 + eligible archived user shoes - active shoe",
     "databaseSchema": "DB-002 unchanged",
-    "oldLocksRewritten": false
+    "oldLocksRewritten": false,
+    "nativeRecoveryContext": "profile + prepared MatcherCorpus supplied by workflow; BALCFG recovered from surviving locks"
   },
   "project": "B-APP Baccarat Engine",
   "gitRepositoryRoot": "/app",

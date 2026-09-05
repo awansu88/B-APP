@@ -145,7 +145,10 @@ export function useLiveSession(
           // Development diagnostic: SQLite/DB-002 is the production architecture.
           console.warn('[useLiveSession] persistence via AsyncStorage fallback (not SQLite/DB-002).');
         }
-        let next = await store.reconstruct(shoeId);
+        let next = await store.reconstruct(shoeId, {
+          profile: getEngineMode(),
+          matcherCorpus: corpusRef.current,
+        });
         if (!next) {
           next = await store.startLive(shoeId, roundsRef.current, environment, {
             historyConfirmed: true,

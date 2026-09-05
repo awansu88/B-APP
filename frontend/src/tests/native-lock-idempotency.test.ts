@@ -36,7 +36,18 @@ import {
   type LockedPrediction,
   type PredictionEntry,
 } from '@/src/domain/session';
-import { balancedDecisionConfig, DECISION_004_VERSION } from '@/src/domain/decision';
+import {
+  balancedDecisionConfig,
+  DECISION_004_VERSION,
+  familyOf,
+  ModuleFamily,
+} from '@/src/domain/decision';
+import {
+  MATCH_FINGERPRINT_VERSION,
+  fingerprintsForPrefix,
+  type HistoricalCandidate,
+  type MatcherCorpus,
+} from '@/src/domain/matcher';
 import { SqliteSessionStore } from '@/src/workflows/session/session-store';
 
 const NOW = '2026-01-01T00:00:00.000Z';
@@ -85,6 +96,31 @@ const entryOf = (p: LockedPrediction): PredictionEntry => ({
   actualWinner: null,
   operatorAction: null,
   invalidated: false,
+});
+
+/** Eligible controlled corpus whose exact fingerprints produce a directional signal. */
+function directionalCorpus(rounds: readonly RoundRecord[], continuation: Winner): MatcherCorpus {
+  const candidates: HistoricalCandidate[] = [];
+  for (const fingerprint of fingerprintsForPrefix(rounds).values()) {
+    for (let copy = 0; copy < 10; copy += 1) {
+      candidates.push({
+        sourceShoeId: `recovery-${continuation}-${fingerprint.window}-${copy}`,
+        endpoint: rounds.length,
+        continuation,
+        window: fingerprint.window,
+        fingerprint,
+        fingerprintVersion: MATCH_FINGERPRINT_VERSION,
+      });
+    }
+  }
+  return { completedShoes: 100, nonTieRounds: 5000, eligible: true, candidates };
+}
+
+const abstainCorpus = (): MatcherCorpus => ({
+  completedShoes: 100,
+  nonTieRounds: 5000,
+  eligible: true,
+  candidates: [],
 });
 
 /** Wrapper that throws a NON-constraint error for statements matching `failOn`. */
@@ -370,21 +406,134 @@ describe('M7.2 lock idempotency — restart immutability', () => {
       'DELETE FROM locked_prediction_entries WHERE shoe_id = ? AND target_round_number = ? AND invalidated = 0;',
       ['s1', pendingTarget],
     );
-    const recovered = await store.reconstruct('s1');
+    const recovered = await store.reconstruct('s1', { profile: 'BALANCED' });
     const rp = recovered!.currentPrediction as LockedPrediction & {
       balancedThreshold?: number;
       balancedConfigVersion?: string;
       decisionConfigVersion?: string;
     };
     expect(rp.targetRound).toBe(pendingTarget);
-    // ACCEPTED Patch-4 recovery semantics: the regenerated pending lock is
-    // STRICT-official (recovery does not carry the UI-selected profile) BUT it
-    // MUST preserve the shoe's IMMUTABLE BALCFG-001 threshold recovered from the
-    // surviving valid locks — so it is never a contradictory lock. This patch
-    // does not change that; it only guarantees no duplicate is created.
+    expect(rp.profileComparison?.selectedProfile).toBe('BALANCED');
+    // Recovery preserves the shoe's immutable BALCFG-001 threshold from the
+    // surviving valid locks rather than consulting the next-shoe preference.
     expect(rp.balancedConfigVersion).toBe('BALCFG-001');
     expect(rp.balancedThreshold).toBe(0.52);
     expect(await new LockedPredictionRepository(db).countValidForTarget('s1', pendingTarget)).toBe(1);
+  });
+
+  it('directional recovery is semantically equivalent to a normal production lock', async () => {
+    const { db, rounds } = await seeded('s1', 12);
+    const store = new SqliteSessionStore(db);
+    await store.startLive('s1', rounds, SessionEnvironment.LIVE_FORWARD, {
+      now: NOW,
+      profile: 'BALANCED',
+      matcherCorpus: directionalCorpus(rounds, Winner.PLAYER),
+      balancedConfig: balancedDecisionConfig(0.52),
+    });
+
+    const nextRounds = [...rounds, makeRound('s1', 13, Winner.BANKER)];
+    const corpus = directionalCorpus(nextRounds, Winner.PLAYER);
+    const normalState = await store.submitResult('s1', Winner.BANKER, {
+      now: nowAt(1),
+      operatorAction: OperatorAction.NOT_PLAYED,
+      profile: 'BALANCED',
+      matcherCorpus: corpus,
+      balancedConfig: balancedDecisionConfig(0.52),
+    });
+    const normal = normalState.currentPrediction!;
+    await db.runAsync(
+      'DELETE FROM locked_prediction_entries WHERE shoe_id = ? AND target_round_number = ? AND invalidated = 0;',
+      ['s1', normal.targetRound],
+    );
+
+    const recovered = (await store.reconstruct('s1', {
+      profile: 'BALANCED',
+      matcherCorpus: corpus,
+    }))!.currentPrediction!;
+    const fields = (p: LockedPrediction) => ({
+      decision: p.decision,
+      side: p.side,
+      confidence: p.confidence,
+      playerScore: p.playerScore,
+      bankerScore: p.bankerScore,
+      category: p.category,
+      matcherAudit: p.matcherAudit,
+      selectedProfile: p.profileComparison?.selectedProfile,
+      decisionConfigVersion: p.decisionConfigVersion,
+      balancedConfigVersion: p.balancedConfigVersion,
+      balancedThreshold: p.balancedThreshold,
+      engineVersion: p.engineVersion,
+    });
+    expect(fields(recovered)).toEqual(fields(normal));
+    expect(recovered.matcherAudit?.signal).toBe('PLAYER');
+    const active = recovered.moduleResults.filter(
+      (module) => module.moduleId === 'historical-matcher' && module.status === 'ACTIVE',
+    );
+    expect(active).toHaveLength(1);
+    expect(active[0].reliability).toBe(0.3);
+    expect(familyOf(active[0].moduleId)).toBe(ModuleFamily.HISTORICAL);
+    expect(await new LockedPredictionRepository(db).countValidForTarget('s1', normal.targetRound)).toBe(1);
+  });
+
+  it('ABSTAIN recovery persists its audit and contributes no active matcher module', async () => {
+    const { db, rounds } = await seeded('s1', 12);
+    const store = new SqliteSessionStore(db);
+    await store.startLive('s1', rounds, SessionEnvironment.LIVE_FORWARD, {
+      now: NOW,
+      profile: 'BALANCED',
+      matcherCorpus: abstainCorpus(),
+    });
+    await db.runAsync('DELETE FROM locked_prediction_entries WHERE shoe_id = ?;', ['s1']);
+    const recovered = (await store.reconstruct('s1', {
+      profile: 'BALANCED',
+      matcherCorpus: abstainCorpus(),
+    }))!.currentPrediction!;
+    expect(recovered.matcherAudit?.signal).toBe('ABSTAIN');
+    expect(
+      recovered.moduleResults.filter(
+        (module) => module.moduleId === 'historical-matcher' && module.status === 'ACTIVE',
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('submitResult passes matcher context into its internal missing-lock recovery', async () => {
+    const { db, rounds } = await seeded('s1', 12);
+    const store = new SqliteSessionStore(db);
+    await store.startLive('s1', rounds, SessionEnvironment.LIVE_FORWARD, {
+      now: NOW,
+      profile: 'BALANCED',
+      balancedConfig: balancedDecisionConfig(0.53),
+    });
+    const afterFirst = await store.submitResult('s1', Winner.BANKER, {
+      now: nowAt(1),
+      operatorAction: OperatorAction.NOT_PLAYED,
+      profile: 'BALANCED',
+      balancedConfig: balancedDecisionConfig(0.53),
+    });
+    const lostTarget = afterFirst.currentPrediction!.targetRound;
+    const corpus = directionalCorpus(afterFirst.rounds, Winner.BANKER);
+    await db.runAsync(
+      'DELETE FROM locked_prediction_entries WHERE shoe_id = ? AND target_round_number = ? AND invalidated = 0;',
+      ['s1', lostTarget],
+    );
+
+    const submitted = await store.submitResult('s1', Winner.PLAYER, {
+      now: nowAt(2),
+      operatorAction: OperatorAction.NOT_PLAYED,
+      profile: 'BALANCED',
+      matcherCorpus: corpus,
+      balancedConfig: balancedDecisionConfig(0.53),
+    });
+    const repairedAndResolved = submitted.predictions.find(
+      (entry) => entry.prediction.targetRound === lostTarget && !entry.invalidated,
+    )!.prediction;
+    expect(repairedAndResolved.matcherAudit?.signal).toBe('BANKER');
+    expect(
+      repairedAndResolved.moduleResults.filter(
+        (module) => module.moduleId === 'historical-matcher' && module.status === 'ACTIVE',
+      ),
+    ).toHaveLength(1);
+    expect(repairedAndResolved.balancedThreshold).toBe(0.53);
   });
 });
 
